@@ -1469,6 +1469,8 @@ function gadget(p){
       const roomMode=room.game_mode||'knockout';
       gameMode=roomMode;
       $('modeTxt').textContent=roomMode==='knockout'?'KNOCKOUT 3v3':roomMode==='showdown'?'SOLO SHOWDOWN':'1v1 DUEL';
+      $('modeBtn').disabled=!!user && room.host_id!==user.id;
+      $('modeBtn').title=room.host_id===user?.id?'Choose the party game mode':'Only the party leader chooses the game mode';
       el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.every(p=>p.is_ready) ? 'inline-block':'none';
       status('Lobby connected · '+players.length+'/2 players · '+roomMode.toUpperCase()+'. Both players ready to start.');
       if(user && room.host_id===user.id && players.length===2 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
@@ -1697,6 +1699,7 @@ function gadget(p){
       if(error){status('Could not leave party: '+error.message,true);return;}
       if(roomChannel){const old=roomChannel;roomChannel=null;await db.removeChannel(old);}
       currentRoom=null;roomStartRequestedFor=null;
+      $('modeBtn').disabled=false;$('modeBtn').title='Choose game mode';
       const b=el('play');b.textContent='PLAY';b.classList.remove('ready');b.onclick=()=>{beep(500,.1);matchmake();};
       window.DaBrawlGame?.setRoomMenuState([],null,'');
       el('roomMenuBar').style.display='none';show('menu');status('You left the party.');
