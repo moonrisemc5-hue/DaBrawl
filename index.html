@@ -1498,6 +1498,7 @@ function gadget(p){
         .on('postgres_changes',{event:'*',schema:'public',table:'game_room_players',filter:'room_id=eq.'+currentRoom.id},()=>{void refreshRoom();})
         .on('postgres_changes',{event:'*',schema:'public',table:'game_rooms',filter:'id=eq.'+currentRoom.id},()=>{void refreshRoom();})
         .on('presence',{event:'sync'},()=>{void refreshRoom();})
+        .on('broadcast',{event:'room-refresh'},()=>{void refreshRoom();})
         .on('broadcast',{event:'room-match-start'},async({payload})=>{
           if(!payload || !Array.isArray(payload.roster) || activeMatchId) return;
           const {data:{user}}=await db.auth.getUser();
@@ -1659,8 +1660,34 @@ function gadget(p){
     el('createRoomBtn').addEventListener('click',createRoom);
     el('joinRoomBtn').addEventListener('click',joinRoom);
     el('startRoomBtn').addEventListener('click',startRoomGame);
-    async function toggleRoomReady(){if(!currentRoom){status('Join a room first.',true);return;}const {data:{user}}=await db.auth.getUser();if(!user)return;const {data:mine,error:meErr}=await db.from('game_room_players').select('is_ready').eq('room_id',currentRoom.id).eq('user_id',user.id).single();if(meErr){status(meErr.message,true);return;}const {error}=await db.from('game_room_players').update({is_ready:!mine.is_ready}).eq('room_id',currentRoom.id).eq('user_id',user.id);if(error){status(error.message,true);return;}await refreshRoom();}
+    let readyBusy=false;
+    async function toggleRoomReady(){
+      if(readyBusy)return;readyBusy=true;
+      try{
+        if(!currentRoom){status('Join a room first.',true);return;}
+        const {data:{user},error:authError}=await db.auth.getUser();
+        if(authError||!user){status('Sign in again to change READY.',true);return;}
+        const {data:mine,error:meErr}=await db.from('game_room_players').select('is_ready').eq('room_id',currentRoom.id).eq('user_id',user.id).maybeSingle();
+        if(meErr||!mine){status('Your party slot was not found. Reopen the room and try again.',true);return;}
+        const {error}=await db.from('game_room_players').update({is_ready:!mine.is_ready}).eq('room_id',currentRoom.id).eq('user_id',user.id);
+        if(error){status('READY failed: '+error.message,true);return;}
+        status(!mine.is_ready?'READY saved. Waiting for party…':'You are not ready.');
+        await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
+        await refreshRoom();
+      }catch(err){status('READY failed: '+(err?.message||String(err)),true);}
+      finally{readyBusy=false;}
+    }
+    async function updateRoomBrawler(brawler){
+      if(!currentRoom||!['kuku','shachi','saiyan'].includes(brawler))return;
+      const {data:{user}}=await db.auth.getUser();if(!user)return;
+      const {error}=await db.from('game_room_players').update({character_id:brawler,is_ready:false}).eq('room_id',currentRoom.id).eq('user_id',user.id);
+      if(error){status('Brawler selection sync failed: '+error.message,true);return;}
+      await roomChannel?.track({userId:user.id,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler});
+      await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
+      await refreshRoom();
+    }
     window.DaBrawlNet.toggleReady=toggleRoomReady;
+    window.DaBrawlNet.updateBrawler=updateRoomBrawler;
     window.DaBrawlNet.openRoom=()=>show('onlineLobby');
     el('roomMenuStart').addEventListener('click',startRoomGame);
     el('roomMenuCode').addEventListener('click',()=>show('onlineLobby'));
