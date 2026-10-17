@@ -1678,10 +1678,8 @@ function gadget(p){
             if(!matchChannel || activeMatchId!==matchId) return;
             const player=window.DaBrawlGame?.getLocalState();
             if(player) void matchChannel.send({type:'broadcast',event:'player-state',payload:{player}});
-            // Background tabs are throttled by browsers. Keep the real player slot instead
-            // of permanently replacing them with a bot after a short silence.
-            const now=Date.now();
-            for(const [id,last] of seenAt) if(now-last>20000) seenAt.set(id,now);
+            // Do not replace a temporarily silent player with a bot: browsers throttle background tabs.
+            // The player's next state packet will resynchronize them when their tab becomes active again.
           },50);
         },650);
       });
