@@ -1457,7 +1457,7 @@ function gadget(p){
       const code=el('roomCodeInput').value.trim().toUpperCase();
       if(!code){status('Enter a room code.',true);return;}
       status('Joining room…');
-      const {data:roomId,error}=await db.rpc('join_dabrawl_room',{p_room_code:code,p_character_id:'kuku'});
+      const {data:roomId,error}=await db.rpc('join_dabrawl_room',{p_room_code:code,p_character_id:(localStorage.getItem('dabrawl_b')||'kuku')});
       if(error){status(error.message,true);return;}
       const {data:room,error:re}=await db.from('game_rooms').select('*').eq('id',roomId).single();
       if(re){status(re.message,true);return;}
