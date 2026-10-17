@@ -99,8 +99,8 @@
     <h2>FRIENDS &amp; ROOM CODES</h2>
     <div id="onlineStatus" style="max-width:560px;font:16px Arial,sans-serif;color:#cbd5e1">Sign in to create a room code or join a friend.</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:min(92vw,520px)">
-      <input id="onlineEmail" type="email" autocomplete="email" placeholder="Email" style="box-sizing:border-box;width:100%;padding:12px;border:3px solid #000;border-radius:10px;font:18px Arial,sans-serif">
-      <input id="onlinePassword" type="password" autocomplete="current-password" placeholder="Password" style="box-sizing:border-box;width:100%;padding:12px;border:3px solid #000;border-radius:10px;font:18px Arial,sans-serif">
+      <input id="onlineEmail" type="text" autocomplete="username" maxlength="20" placeholder="Username (3–20 letters, numbers or _)" style="box-sizing:border-box;width:100%;padding:12px;border:3px solid #000;border-radius:10px;font:18px Arial,sans-serif">
+      <input id="onlinePassword" type="password" autocomplete="current-password" minlength="6" placeholder="Password (at least 6 characters)" style="box-sizing:border-box;width:100%;padding:12px;border:3px solid #000;border-radius:10px;font:18px Arial,sans-serif">
       <button class="btn" id="onlineSignIn">SIGN IN</button><button class="btn purple" id="onlineSignUp">CREATE ACCOUNT</button>
     </div>
     <div id="roomControls" style="display:none;flex-direction:column;align-items:center;gap:10px;width:min(92vw,520px)">
@@ -620,11 +620,11 @@ function gadget(p){
     let mmI, mmTimeout;
     function matchmake(){
       show('mm'); let remaining=10; clearInterval(mmI); clearTimeout(mmTimeout);
-      $('mmTxt').textContent = 'WAITING FOR PLAYERS: '+remaining+'s';
-      $('mmHint').textContent = 'Waiting up to 10 seconds before filling empty slots with bots…';
+      $('mmTxt').textContent = 'PLAYERS JOINED: 1/6 · '+remaining+'s';
+      $('mmHint').textContent = 'Waiting up to 10 seconds for players to join…';
       mmI = setInterval(() => {
         remaining--;
-        if(remaining>0){ $('mmTxt').textContent = 'WAITING FOR PLAYERS: '+remaining+'s'; return; }
+        if(remaining>0){ $('mmTxt').textContent = 'PLAYERS JOINED: 1/6 · '+remaining+'s'; return; }
         clearInterval(mmI); mmI=null;
         $('mmTxt').textContent = 'BOTS JOINING!';
         $('mmHint').textContent = 'No match found. Filling the empty slots with bots…';
@@ -1154,16 +1154,20 @@ function gadget(p){
       el('onlinePassword').style.display = user ? 'none' : 'block';
       el('onlineSignIn').style.display = user ? 'none' : 'inline-block';
       el('onlineSignUp').style.display = user ? 'none' : 'inline-block';
-      el('onlineUser').textContent = user ? 'Signed in: '+user.email : '';
+      el('onlineUser').textContent = user ? 'Signed in as: '+(user.user_metadata?.username || (user.email||'').split('@')[0]) : '';
       if(user) status('Signed in. Create a room or enter a friend’s room code.');
     }
     async function auth(mode){
-      const email=el('onlineEmail').value.trim(), password=el('onlinePassword').value;
-      if(!email || password.length<6){status('Enter an email and a password with at least 6 characters.',true);return;}
-      status(mode==='up'?'Creating account…':'Signing in…');
-      const result=mode==='up' ? await db.auth.signUp({email,password}) : await db.auth.signInWithPassword({email,password});
+      const username=el('onlineEmail').value.trim().toLowerCase(), password=el('onlinePassword').value;
+      if(!/^[a-z0-9_]{3,20}$/.test(username)){status('Username must be 3–20 characters: letters, numbers, or underscores.',true);return;}
+      if(password.length<6){status('Password must have at least 6 characters.',true);return;}
+      // Supabase Auth requires an email-shaped identifier. Users only enter a username; no email is collected.
+      // Email confirmation must be disabled in Supabase Auth settings for this email-free flow.
+      const email=username+'@dabrawl.game';
+      status(mode==='up'?'Creating your account…':'Signing in…');
+      const result=mode==='up' ? await db.auth.signUp({email,password,options:{data:{username}}}) : await db.auth.signInWithPassword({email,password});
       if(result.error){status(result.error.message,true);return;}
-      if(mode==='up' && !result.data.session){status('Account created. Check your email to confirm it, then sign in.');return;}
+      if(mode==='up' && !result.data.session){status('Account created, but email confirmation is enabled on the server. Disable Confirm email in Supabase Auth settings to finish username-only sign-in.',true);return;}
       await updateAuthUI();
     }
     async function refreshRoom(){
