@@ -473,7 +473,7 @@
       setTimeout(()=>{ p.muiCharging=0; KM.push({o:p,a:p.a,x:p.x,y:p.y,len:MW*T,w:100,d:7000,t:.8,m:.8,tk:0,col:'#ffffff',destroys:true}); shake=35; playKameSound(); }, 1200);
     }
     function fire(p,s){
-      if(networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet) window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,super:!!s});
+      if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet) window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,super:false});
       K=p.k; if(s&&K.lg){ leap(p,0); return; }
       const n = s?K.sp:K.pel, sp = s?K.ss:K.spr;
       for(let i=0;i<n;i++){
