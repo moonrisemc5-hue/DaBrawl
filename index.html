@@ -37,8 +37,8 @@
     .mid > * { pointer-events: auto; }
     .plus { width: 62px; height: 62px; border-radius: 50%; font: inherit; font-size: 42px; line-height: 1; color: #fff; background: #0b132b; border: 4px solid #000; box-shadow: 0 5px 0 #000; cursor: pointer; pointer-events: auto; z-index: 300; }
     .plus.room-menu-slot { width: clamp(130px,19vw,220px); height: min(290px,42vh); min-height:220px; border-radius:18px; padding:8px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:5px; background:linear-gradient(180deg,#1c2b4b88,#10172bcc); border:2px solid #52627d; box-shadow:none; font-size:14px; line-height:1.15; white-space:normal; }
-    .room-menu-slot .room-face { width:100%;height:245px;max-height:36vh;object-fit:contain;border:0;border-radius:0;display:block;background:transparent;box-shadow:none;flex-shrink:1; }
-    .room-menu-slot .room-name { color:#fff;font-size:18px;font-weight:800;text-shadow:0 2px 4px #000;max-width:100%;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center; }
+    .room-menu-slot .room-face { width:100%;height:265px;max-height:39vh;object-fit:contain;border:0;border-radius:0;display:block;background:transparent;box-shadow:none;flex-shrink:1; }
+    .room-menu-slot .room-name { color:#fff;font-size:18px;font-weight:800;text-shadow:0 2px 4px #000;max-width:100%;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;white-space:nowrap;text-align:center; }
     .room-menu-slot .room-brawler { color:#fde68a;font-size:12px;letter-spacing:.5px; }
     .room-menu-slot .room-ready { color:#fca5a5;font-size:13px; }
     .room-menu-slot.ready { border-color:#22c55e; box-shadow:inset 0 -4px #22c55e; }
@@ -1234,7 +1234,7 @@ function gadget(p){
           const username=String(p.name||('Player '+p.slot)).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
           const brawler=String(p.brawler||'kuku');
           btn.innerHTML='<canvas class="room-face" width="220" height="280"></canvas><span class="room-name">'+username+'</span><span class="room-brawler">'+brawler.toUpperCase()+'</span><span class="room-ready">'+(p.ready?'✓ READY':'NOT READY')+'</span>';
-          const avatar=btn.querySelector('canvas'); if(avatar) requestAnimationFrame(()=>rb(avatar,brawler,2.65,8));
+          const avatar=btn.querySelector('canvas'); if(avatar) requestAnimationFrame(()=>rb(avatar,brawler,3.1,5));
           btn.title=username+' · '+brawler.toUpperCase()+(p.ready?' · READY':' · NOT READY');
           btn.setAttribute('aria-label',username+', '+brawler+(p.ready?' ready':' not ready'));
           btn.onclick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.openRoom?.();};
