@@ -36,6 +36,13 @@
     .mid { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 16px; pointer-events: none; z-index: 220; }
     .mid > * { pointer-events: auto; }
     .plus { width: 62px; height: 62px; border-radius: 50%; font: inherit; font-size: 42px; line-height: 1; color: #fff; background: #0b132b; border: 4px solid #000; box-shadow: 0 5px 0 #000; cursor: pointer; pointer-events: auto; z-index: 300; }
+    .plus.room-menu-slot { width: clamp(108px,15vw,170px); height: 136px; border-radius: 16px; padding: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:linear-gradient(160deg,#243b68,#10172b); border-color:#facc15; font-size:14px; line-height:1.15; white-space:normal; }
+    .room-menu-slot .room-face { width:52px;height:52px;border:3px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;background:linear-gradient(#facc15,#f97316);box-shadow:0 3px 0 #000; }
+    .room-menu-slot .room-name { color:#fff;font-size:17px;text-shadow:2px 2px #000; }
+    .room-menu-slot .room-ready { color:#fca5a5;font-size:13px; }
+    .room-menu-slot.ready { border-color:#22c55e; box-shadow:0 5px 0 #000,0 0 14px #22c55e88; }
+    #roomMenuBar { display:none; position:absolute; top:12%; left:50%; transform:translateX(-50%); z-index:301; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; width:min(92vw,640px); }
+    #roomMenuBar button { font-size:16px; padding:7px 14px; }
     #pv { width: min(300px, 46vh); height: min(300px, 46vh); pointer-events: none; }
     #dpv { pointer-events: none; }
     #bn { font-size: 30px; color: var(--y); text-shadow: 2px 2px 0 #000; }
@@ -77,6 +84,7 @@
       <div style="font-size:30px;color:var(--y);-webkit-text-stroke:1px #000">DaBrawl</div>
     </div>
     <button class="btn purple" id="bra">BRAWLERS</button>
+    <div id="roomMenuBar"><button class="btn purple" id="roomMenuCode">ROOM CODE</button><button class="btn y" id="roomMenuStart" style="display:none">START MATCH</button></div>
     <div class="mid">
       <button class="plus" id="prevBtn" aria-label="Add a friend by code" title="Friends / room code" style="margin-bottom:0">+</button>
       <div style="pointer-events:auto">
@@ -572,9 +580,11 @@ function gadget(p){
         if(p.netRemote){
           const target=p.netTarget;
           if(target){
-            const blend=1-Math.exp(-Math.min(dt,0.05)*14);
-            p.x += (target.x-p.x)*blend;
-            p.y += (target.y-p.y)*blend;
+            const age=Math.min(0.10,Math.max(0,(Date.now()-(p.netTargetAt||Date.now()))/1000));
+            const tx=target.x+(p.netVx||0)*age, ty=target.y+(p.netVy||0)*age;
+            const blend=1-Math.exp(-Math.min(dt,0.05)*28);
+            p.x += (tx-p.x)*blend;
+            p.y += (ty-p.y)*blend;
             if(Number.isFinite(target.a)){
               const delta=Math.atan2(Math.sin(target.a-p.a),Math.cos(target.a-p.a));
               p.a += delta*blend;
@@ -627,7 +637,7 @@ function gadget(p){
             const ti=Math.floor(b.x/T), tj=Math.floor(b.y/T);
             if(b.r<=0){ dead=true; puff(b.x,b.y,1,'#ffe9a0',.3); }
             else if(b.bn>0 && tile(b.x,b.y)=='#'){ b.x-=b.vx*k; b.y-=b.vy*k; if(tile(b.x+b.vx*k,b.y)=='#') b.vx=-b.vx; else b.vy=-b.vy; b.bn--; }
-            else if(tile(b.x,b.y)=='#'){ dead=true; if(b.s && ti>0 && tj>0 && ti<MW-1 && tj<MH-1){ M[tj][ti]='.'; puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
+            else if(tile(b.x,b.y)=='#'){ dead=true; if(b.s && ti>0 && tj>0 && ti<MW-1 && tj<MH-1){ M[tj][ti]='.'; if(networkMode && b.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
             else if(networkMode && b.o?.netRemote){ /* remote owner's browser resolves hits */ }
           else for(const e of P){ if(e!==b.o && e.alive && !e.lp && !(e.tf>0) && (gameMode=='showdown'||e.t!=b.t) && Math.hypot(e.x-b.x,e.y-b.y)<20+(b.z>9?b.z-9:0)){ dmg(e,b); dead=true; break; } }
           }
@@ -760,12 +770,13 @@ function gadget(p){
       K=p.k; let len=0; const c = Math.cos(p.a), s = Math.sin(p.a), mx_ = 300+ch*260, isMax = ch>=0.95;
       while(len<mx_){
         if(!isMax && tile(p.x+c*len, p.y+s*len)=='#') break;
-        if(isMax && tile(p.x+c*len, p.y+s*len)=='#'){ const ti=Math.floor((p.x+c*len)/T), tj=Math.floor((p.y+s*len)/T); if(ti>0&&tj>0&&ti<MW-1&&tj<MH-1) M[tj][ti]='.'; }
+        if(isMax && tile(p.x+c*len, p.y+s*len)=='#'){ const ti=Math.floor((p.x+c*len)/T), tj=Math.floor((p.y+s*len)/T); if(ti>0&&tj>0&&ti<MW-1&&tj<MH-1){ M[tj][ti]='.'; if(networkMode && p===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); } }
         len+=8;
       }
       p.chg=0; p.kcd = (p.form<=1?3:5); p.burst=0;
       const startDmg = K.kd||700, maxDmg = K.kmax||2200, actualDmg = startDmg + ch*(maxDmg - startDmg);
       let kameCol = K.aura || '#4cf'; if(p.form === 2) kameCol = '#ff3a3a'; else if(p.form === 3) kameCol = '#38bdf8';
+      if(networkMode && p===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('kame',p.a,{charge:ch});
       KM.push({o:p, a:p.a, x:p.x, y:p.y, len, w:14+ch*40, d:actualDmg, t:.6, m:.6, tk:0, col:kameCol, destroys:isMax, isMaxChg:isMax});
       shake = 8+ch*12; playKameSound();
     }
@@ -1202,6 +1213,26 @@ function gadget(p){
         G={ph:'count',t:3.2,w:[0,0],r:1,res:''}; gasDist=0;
         show('game');
       },
+      setRoomMenuState(players,currentUserId,roomCode){
+        const buttons=[$('prevBtn'),$('nextBtn')], icons={kuku:'🥊',shachi:'🐋',saiyan:'🐉'};
+        const slots=[1,2].map(slot=>players.find(p=>p.slot===slot));
+        buttons.forEach((btn,i)=>{
+          const p=slots[i];
+          if(!p){
+            btn.classList.remove('room-menu-slot','ready'); btn.innerHTML='+'; btn.title='Friends / room code'; btn.setAttribute('aria-label','Add a friend by code');
+            btn.onclick=()=>window.DaBrawlNet?.openRoom?.(); return;
+          }
+          btn.classList.add('room-menu-slot'); btn.classList.toggle('ready',p.ready);
+          btn.innerHTML='<span class="room-face">'+(icons[p.brawler]||'🥊')+'</span><span class="room-name">'+String(p.brawler||'kuku').toUpperCase()+'</span><span class="room-ready">'+(p.ready?'✓ READY':(p.userId===currentUserId?'TAP TO READY':'NOT READY'))+'</span>';
+          btn.title=p.userId===currentUserId?'Click to toggle READY':'Click to open room lobby';
+          btn.setAttribute('aria-label',(p.brawler||'Brawler')+(p.ready?' ready':' not ready'));
+          btn.onclick=()=>p.userId===currentUserId ? window.DaBrawlNet?.toggleReady?.() : window.DaBrawlNet?.openRoom?.();
+        });
+        $('roomMenuBar').style.display=players.length?'flex':'none';
+        $('roomMenuCode').textContent='ROOM '+roomCode+' · LOBBY';
+        const allReady=slots.every(p=>p&&p.ready);
+        $('roomMenuStart').style.display=allReady&&slots.some(p=>p.userId===currentUserId&&p.slot===1)?'inline-block':'none';
+      },
       getLocalState(){
         if(!me) return null;
         const p=me;
@@ -1212,9 +1243,15 @@ function gadget(p){
         const p=P.find(q=>q.netId===state.id);
         if(!p || p===me) return;
         // Keep position smooth; update health/combat fields from the owner's snapshot.
-        p.netTarget = {x:state.x ?? p.x, y:state.y ?? p.y, a:state.a ?? p.a};
+        const nx=state.x ?? p.x, ny=state.y ?? p.y, now=Date.now();
+        const elapsed=Math.max(0.025,Math.min(0.20,(now-(p.netTargetAt||now))/1000));
+        p.netVx=(nx-(p.netTarget?.x ?? p.x))/elapsed; p.netVy=(ny-(p.netTarget?.y ?? p.y))/elapsed;
+        const maxSpeed=900, speed=Math.hypot(p.netVx,p.netVy);
+        if(speed>maxSpeed){p.netVx=p.netVx/speed*maxSpeed;p.netVy=p.netVy/speed*maxSpeed;}
+        p.netTarget = {x:nx,y:ny,a:state.a ?? p.a}; p.netTargetAt=now;
         for(const k of ['hp','mh','alive','sc','am','cd','gcd','tf','tfn','form','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my']) if(state[k]!==undefined) p[k]=state[k];
-        p.netLast=Date.now();
+        if(p.b==='saiyan' && Number.isFinite(state.form)) p.k=Object.assign({},BR.saiyan,FM[state.form]||{});
+        p.netLast=now;
       },
       applyRemoteAction(msg){
         if(!msg || !msg.playerId) return;
@@ -1226,9 +1263,20 @@ function gadget(p){
           if(amount>0) dmg(me,{d:amount,o:p,s:0,vx:Number(msg.vx)||0,vy:Number(msg.vy)||0});
           return;
         }
+        if(msg.action==='wall-break'){
+          const i=Number(msg.i),j=Number(msg.j);
+          if(Number.isInteger(i)&&Number.isInteger(j)&&i>0&&j>0&&i<MW-1&&j<MH-1&&M[j]?.[i]==='#'){
+            M[j][i]='.'; puff(i*T+T/2,j*T+T/2,8,'#8a5a2b',1.2);
+          }
+          return;
+        }
         if(!p.alive) return;
         if(Number.isFinite(msg.angle)) p.a=msg.angle;
-        if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.k.sy) sTap(p); else tryFire(p); }
+        if(msg.action==='kame'){
+          p.a=Number.isFinite(msg.angle)?msg.angle:p.a;
+          p.kcd=0; kame(p,Math.max(0,Math.min(1,Number(msg.charge)||0)));
+        }
+        else if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.k.sy) sTap(p); else tryFire(p); }
         else if(msg.action==='super'){ p.sc=1; p.tf=0; sup(p); }
         else if(msg.action==='gadget'){ p.gcd=0; p.dash=0; gadget(p); }
       },
@@ -1372,13 +1420,14 @@ function gadget(p){
       const {data:players,error:pe}=await db.from('game_room_players').select('player_slot,character_id,is_ready,user_id').eq('room_id',room.id).order('player_slot');
       if(pe){status(pe.message,true);return;}
       el('activeRoom').textContent='ROOM CODE: '+room.room_code;
-      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:2},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);return '<div style="width:140px;min-height:88px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><div style="font-size:28px">'+(p?(p.is_ready?'🟢':'🧍'):'＋')+'</div><div>'+(p?('Player '+p.player_slot):'Empty slot')+'</div><small>'+(p?(p.character_id||'KUKU')+' · '+(p.is_ready?'READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>';
       const {data:{user}}=await db.auth.getUser();
       const mine=players.find(p=>p.user_id===user?.id);
+      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:2},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);return '<div style="width:140px;min-height:88px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><div style="font-size:28px">'+(p?(p.is_ready?'🟢':'🧍'):'＋')+'</div><div>'+(p?('Player '+p.player_slot):'Empty slot')+'</div><small>'+(p?(p.character_id||'KUKU')+' · '+(p.is_ready?'READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>';
+      window.DaBrawlGame?.setRoomMenuState(players.map(p=>({slot:p.player_slot,brawler:p.character_id||'kuku',ready:!!p.is_ready,userId:p.user_id})),user?.id,room.room_code);
       el('readyRoomBtn').style.display=user && mine ? 'inline-block':'none';
       el('readyRoomBtn').textContent=mine?.is_ready?'NOT READY':'READY';
       el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.every(p=>p.is_ready) ? 'inline-block':'none';
-      status('Lobby connected · '+players.length+'/6 players. Everyone in the room must be ready before the host can start.');
+      status('Lobby connected · '+players.length+'/2 players. Both players must be ready before the host can start.');
     }
     async function createRoom(){
       const btn=el('createRoomBtn');
@@ -1395,7 +1444,7 @@ function gadget(p){
           if(error){if(error.code==='23505')continue;status('Room creation failed: '+error.message+' ('+(error.code||'database error')+').',true);return;}
           const {error:joinError}=await db.from('game_room_players').insert({room_id:room.id,user_id:user.id,player_slot:1,character_id:localStorage.getItem('dabrawl_b')||'kuku',is_ready:false});
           if(joinError){status('Room was created, but adding you failed: '+joinError.message+' ('+(joinError.code||'database error')+'). Check game_room_players insert permissions in Supabase.',true);return;}
-          currentRoom=room; subscribeRoom(); await refreshRoom();return;
+          currentRoom=room; subscribeRoom(); await refreshRoom(); show('menu'); return;
         }
         status('Could not create a unique room code after 5 tries. Try again.',true);
       } catch(err) {
@@ -1412,7 +1461,7 @@ function gadget(p){
       if(error){status(error.message,true);return;}
       const {data:room,error:re}=await db.from('game_rooms').select('*').eq('id',roomId).single();
       if(re){status(re.message,true);return;}
-      currentRoom=room;subscribeRoom();await refreshRoom();
+      currentRoom=room;subscribeRoom();await refreshRoom();show('menu');
     }
     function subscribeRoom(){
       if(roomChannel)db.removeChannel(roomChannel);
@@ -1543,7 +1592,7 @@ function gadget(p){
             if(player) void matchChannel.send({type:'broadcast',event:'player-state',payload:{player}});
             const now=Date.now();
             for(const [id,last] of seenAt) if(now-last>6000){window.DaBrawlGame?.makeRemoteBot(id);seenAt.delete(id);}
-          },50);
+          },80);
         },650);
       });
     }
@@ -1562,7 +1611,7 @@ function gadget(p){
       if(matchChannel){const old=matchChannel;matchChannel=null;await db.removeChannel(old);}
       if(window.DaBrawlGame) window.DaBrawlGame.endNetworkGame();
     }
-    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,isInParty:()=>!!currentRoom};
+    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,isInParty:()=>!!currentRoom,toggleReady:null,openRoom:null};
 
     const openFriends = async () => { show('onlineLobby'); await updateAuthUI(); };
     el('prevBtn').addEventListener('click', openFriends);
@@ -1571,7 +1620,12 @@ function gadget(p){
     el('createRoomBtn').addEventListener('click',createRoom);
     el('joinRoomBtn').addEventListener('click',joinRoom);
     el('startRoomBtn').addEventListener('click',startRoomGame);
-    el('readyRoomBtn').addEventListener('click',async()=>{if(!currentRoom){status('Join a room first.',true);return;}const {data:{user}}=await db.auth.getUser();if(!user)return;const {data:mine,error:meErr}=await db.from('game_room_players').select('is_ready').eq('room_id',currentRoom.id).eq('user_id',user.id).single();if(meErr){status(meErr.message,true);return;}const {error}=await db.from('game_room_players').update({is_ready:!mine.is_ready}).eq('room_id',currentRoom.id).eq('user_id',user.id);if(error){status(error.message,true);return;}await refreshRoom();});
+    async function toggleRoomReady(){if(!currentRoom){status('Join a room first.',true);return;}const {data:{user}}=await db.auth.getUser();if(!user)return;const {data:mine,error:meErr}=await db.from('game_room_players').select('is_ready').eq('room_id',currentRoom.id).eq('user_id',user.id).single();if(meErr){status(meErr.message,true);return;}const {error}=await db.from('game_room_players').update({is_ready:!mine.is_ready}).eq('room_id',currentRoom.id).eq('user_id',user.id);if(error){status(error.message,true);return;}await refreshRoom();}
+    window.DaBrawlNet.toggleReady=toggleRoomReady;
+    window.DaBrawlNet.openRoom=()=>show('onlineLobby');
+    el('roomMenuStart').addEventListener('click',startRoomGame);
+    el('roomMenuCode').addEventListener('click',()=>show('onlineLobby'));
+    el('readyRoomBtn').addEventListener('click',toggleRoomReady);
     el('refreshRoomBtn').addEventListener('click',refreshRoom);
     el('onlineSignOut').addEventListener('click',async()=>{if(roomChannel)await db.removeChannel(roomChannel);roomChannel=null;currentRoom=null;await db.auth.signOut();await updateAuthUI();status('Signed out.');});
     db.auth.onAuthStateChange(()=>{setTimeout(updateAuthUI,0);});
