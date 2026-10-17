@@ -573,6 +573,7 @@ function gadget(p){
       if(G.ph=='play'){
         for(const p of P){
           if(!p.alive) continue;
+          if(p.netRemote) continue;
           K=p.k; p.am = Math.min(3, p.am + dt/K.rel); p.nh+=dt;
           if(p.nh>3 && p.hp<p.mh && !p.isDummy){
             p.hc = (p.hc||0) + dt;
@@ -1181,9 +1182,9 @@ function gadget(p){
         const p=P.find(q=>q.netId===msg.playerId);
         if(!p || p===me || !p.alive) return;
         if(Number.isFinite(msg.angle)) p.a=msg.angle;
-        if(msg.action==='fire'){ if(p.k.sy) sTap(p); else tryFire(p); }
-        else if(msg.action==='super') sup(p);
-        else if(msg.action==='gadget') gadget(p);
+        if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.k.sy) sTap(p); else tryFire(p); }
+        else if(msg.action==='super'){ p.sc=1; p.tf=0; sup(p); }
+        else if(msg.action==='gadget'){ p.gcd=0; p.dash=0; gadget(p); }
       },
       makeRemoteBot(id){
         const p=P.find(q=>q.netId===id);
@@ -1286,7 +1287,7 @@ function gadget(p){
       } catch(e){ localDisplayName='Brawler-'+clientId.slice(0,4); }
       queueChannel=db.channel('dabrawl-quickplay-'+queueMode,{config:{presence:{key:clientId},broadcast:{self:false}}});
       queueChannel.on('broadcast',{event:'match-start'},({payload})=>{
-        if(queueDone || !payload || !Array.isArray(payload.roster) || !payload.roster.some(p=>p.id===clientId)) return;
+        if(activeMatchId || !payload || !Array.isArray(payload.roster) || !payload.roster.some(p=>p.id===clientId)) return;
         queueDone=true; clearInterval(queueTimer); queueTimer=null;
         void startOnlineMatch(payload.roster,payload.matchId,payload.mode);
       });
@@ -1321,7 +1322,8 @@ function gadget(p){
       });
     }
     async function startOnlineMatch(roster,matchId,mode){
-      if(!roster.some(p=>p.id===clientId)) return;
+      if(activeMatchId || !roster.some(p=>p.id===clientId)) return;
+      activeMatchId=matchId;
       clearInterval(queueTimer); queueTimer=null;
       if(queueChannel){const old=queueChannel;queueChannel=null;await db.removeChannel(old);}
       activeMatchId=matchId; seenAt.clear();
