@@ -531,7 +531,10 @@ function gadget(p){
     function dmg(t,b){
       // Only the target's browser changes their health. The attacker's browser sends a hit request.
       if(networkMode && t.netRemote){
-        if(b?.o===me && t.netId && window.DaBrawlNet){
+        // The host's bots must be able to damage the other human too.
+        // Only the victim's client applies the actual health change.
+        const canRequestHit = b?.o===me || (isNetworkHost && b?.o?.isBot);
+        if(canRequestHit && t.netId && window.DaBrawlNet){
           window.DaBrawlNet.sendAction('damage',0,{targetId:t.netId,damage:Math.max(0,Number(b.d)||0),vx:Number(b.vx)||0,vy:Number(b.vy)||0});
         }
         return;
@@ -592,9 +595,10 @@ function gadget(p){
           if(target){
             // Interpolate toward the last authoritative snapshot without velocity extrapolation.
             // Extrapolating across network jitter caused overshoot and visible teleporting.
-            const age=Math.min(0.045,Math.max(0,(Date.now()-(p.netTargetAt||Date.now()))/1000));
+            const age=Math.min(0.075,Math.max(0,(Date.now()-(p.netTargetAt||Date.now()))/1000));
             const tx=target.x+(p.netVx||0)*age, ty=target.y+(p.netVy||0)*age;
-            const blend=1-Math.exp(-Math.min(dt,0.05)*28);
+            // Follow incoming snapshots more firmly to reduce visible trailing on the non-host client.
+            const blend=1-Math.exp(-Math.min(dt,0.05)*42);
             p.x += (tx-p.x)*blend;
             p.y += (ty-p.y)*blend;
             if(Number.isFinite(target.a)){
