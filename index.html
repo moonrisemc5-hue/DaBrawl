@@ -1453,7 +1453,7 @@ function gadget(p){
       const mine=players.find(p=>p.user_id===user?.id);
       if(user && !mine){
         if(roomChannel){const oldChannel=roomChannel;roomChannel=null;try{await db.removeChannel(oldChannel);}catch(e){}}
-        currentRoom=null;roomStartRequestedFor=null;
+        currentRoom=null;roomStartRequestedFor=null;$('modeBtn').disabled=false;$('modeBtn').title='Choose game mode';
         const playButton=el('play');playButton.textContent='PLAY';playButton.classList.remove('ready');playButton.onclick=()=>{beep(500,.1);matchmake();};
         window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';show('menu');
         return;
@@ -1523,7 +1523,7 @@ function gadget(p){
         .on('broadcast',{event:'party-kicked'},async({payload})=>{
           const {data:{user}}=await db.auth.getUser();
           if(!user||payload?.userId!==user.id)return;
-          const old=roomChannel;roomChannel=null;currentRoom=null;roomStartRequestedFor=null;
+          const old=roomChannel;roomChannel=null;currentRoom=null;roomStartRequestedFor=null;$('modeBtn').disabled=false;$('modeBtn').title='Choose game mode';
           if(old)try{await db.removeChannel(old);}catch(e){}
           const b=el('play');b.textContent='PLAY';b.classList.remove('ready');b.onclick=()=>{beep(500,.1);matchmake();};
           window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';show('menu');status('You were removed from the party.');
