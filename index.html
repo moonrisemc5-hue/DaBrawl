@@ -78,27 +78,26 @@
     </div>
     <button class="btn purple" id="bra">BRAWLERS</button>
     <div class="mid">
-      <button class="plus" id="prevBtn" style="margin-bottom:0">‹</button>
+      <button class="plus" id="prevBtn" aria-label="Add a friend by code" title="Friends / room code" style="margin-bottom:0">+</button>
       <div style="pointer-events:auto">
         <div id="bn">KUKU</div>
         <canvas id="pv" width="300" height="300"></canvas>
       </div>
-      <button class="plus" id="nextBtn" style="margin-bottom:0">›</button>
+      <button class="plus" id="nextBtn" aria-label="Add a friend by code" title="Friends / room code" style="margin-bottom:0">+</button>
     </div>
     <div style="position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:flex-end;gap:10px;z-index:300">
       <button class="mode-sel" id="modeBtn">🎮 <span id="modeTxt">KNOCKOUT 3v3</span> ▾</button>
       <div style="display:flex;gap:12px">
         <button class="btn" id="testPlay" style="background:linear-gradient(#3a0ca3,#4cc9f0);font-size:32px;padding:8px 24px">TEST PLAY</button>
         <button class="btn y" id="play">PLAY</button>
-        <button class="btn" id="onlineBtn" style="font-size:24px;padding:8px 16px;background:linear-gradient(#059669,#065f46)">ONLINE</button>
       </div>
     </div>
     <small style="position:absolute;left:12px;bottom:10px;text-align:left;z-index:300">WASD move · mouse aim · F Auto-Aim Shot · Space Super · E/Shift Gadget</small>
   </div>
 
   <div class="scr" id="onlineLobby" style="z-index:500;background:radial-gradient(circle at 50% 20%,#26365d,#080d1d 82%);">
-    <h2>ONLINE BRAWL</h2>
-    <div id="onlineStatus" style="max-width:560px;font:16px Arial,sans-serif;color:#cbd5e1">Connect to DaBrawl online</div>
+    <h2>FRIENDS &amp; ROOM CODES</h2>
+    <div id="onlineStatus" style="max-width:560px;font:16px Arial,sans-serif;color:#cbd5e1">Sign in to create a room code or join a friend.</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:min(92vw,520px)">
       <input id="onlineEmail" type="email" autocomplete="email" placeholder="Email" style="box-sizing:border-box;width:100%;padding:12px;border:3px solid #000;border-radius:10px;font:18px Arial,sans-serif">
       <input id="onlinePassword" type="password" autocomplete="current-password" placeholder="Password" style="box-sizing:border-box;width:100%;padding:12px;border:3px solid #000;border-radius:10px;font:18px Arial,sans-serif">
@@ -154,8 +153,8 @@
   </div>
   <div class="scr" id="mm">
     <canvas id="mmLogo" width="120" height="120"></canvas>
-    <h2 id="mmTxt" style="font-size:38px;color:var(--y)">PLAYERS JOINED: 1/6</h2>
-    <small>Finding opponents & teammates...</small>
+    <h2 id="mmTxt" style="font-size:38px;color:var(--y)">WAITING FOR PLAYERS: 10s</h2>
+    <small id="mmHint">Waiting up to 10 seconds before filling empty slots with bots…</small>
     <button class="btn" id="bk2" style="margin-top:20px">CANCEL</button>
   </div>
   <div class="scr" id="loading">
@@ -418,7 +417,7 @@
     $('bra').onclick = () => show('brs');
     $('bk1').onclick = () => show('menu');
     $('modeBtn').onclick = () => { gameMode = gameMode=='knockout' ? 'showdown' : 'knockout'; $('modeTxt').textContent = gameMode=='knockout' ? 'KNOCKOUT 3v3' : 'SOLO SHOWDOWN'; beep(400,.1); };
-    $('bk2').onclick = () => { clearInterval(mmI); show('menu'); };
+    $('bk2').onclick = () => { clearInterval(mmI); clearTimeout(mmTimeout); mmI=null; mmTimeout=null; show('menu'); };
     function autoAimAndShoot(p){
       if(p.muiCharging > 0 || KM.some(k => k.o === p)) return;
       let b = 600, a = null;
@@ -618,10 +617,19 @@ function gadget(p){
         }
       }
     }
-    let mmI;
+    let mmI, mmTimeout;
     function matchmake(){
-      show('mm'); let n=1; $('mmTxt').textContent = 'PLAYERS JOINED: 1/6'; clearInterval(mmI);
-      mmI = setInterval(() => { n++; $('mmTxt').textContent = 'PLAYERS JOINED: ' + n + '/6'; if(n>=6){ clearInterval(mmI); setTimeout(() => startLoadingScreen(false), 500); } }, 500);
+      show('mm'); let remaining=10; clearInterval(mmI); clearTimeout(mmTimeout);
+      $('mmTxt').textContent = 'WAITING FOR PLAYERS: '+remaining+'s';
+      $('mmHint').textContent = 'Waiting up to 10 seconds before filling empty slots with bots…';
+      mmI = setInterval(() => {
+        remaining--;
+        if(remaining>0){ $('mmTxt').textContent = 'WAITING FOR PLAYERS: '+remaining+'s'; return; }
+        clearInterval(mmI); mmI=null;
+        $('mmTxt').textContent = 'BOTS JOINING!';
+        $('mmHint').textContent = 'No match found. Filling the empty slots with bots…';
+        mmTimeout = setTimeout(() => startLoadingScreen(false), 900);
+      }, 1000);
     }
     function finish(){
       const win = gameMode=='showdown' ? me.alive : G.w[0]>=2, d = win ? 8 : -4;
@@ -1126,7 +1134,6 @@ function gadget(p){
       if(b.id === 'bra') { show('brs'); e.preventDefault(); }
       else if(b.id === 'bk1') { show('menu'); e.preventDefault(); }
       else if(b.id === 'bk3') { show('brs'); e.preventDefault(); }
-      else if(b.id === 'onlineBtn') { show('onlineLobby'); e.preventDefault(); }
       else if(b.id === 'onlineBack') { show('menu'); e.preventDefault(); }
     }, true);
     window.onload = () => { initLogos(); updateMenuUI(); try { startMenuMusic(); } catch(err) { console.warn('Menu audio unavailable:', err); } requestAnimationFrame(loop); };
@@ -1199,7 +1206,9 @@ function gadget(p){
         .on('postgres_changes',{event:'*',schema:'public',table:'game_rooms',filter:'id=eq.'+currentRoom.id},refreshRoom)
         .subscribe();
     }
-    el('onlineBtn').addEventListener('click',async()=>{show('onlineLobby');await updateAuthUI();});
+    const openFriends = async () => { show('onlineLobby'); await updateAuthUI(); };
+    el('prevBtn').addEventListener('click', openFriends);
+    el('nextBtn').addEventListener('click', openFriends);
     el('onlineBack').addEventListener('click',()=>show('menu'));
     el('onlineSignIn').addEventListener('click',()=>auth('in'));
     el('onlineSignUp').addEventListener('click',()=>auth('up'));
