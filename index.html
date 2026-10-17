@@ -1535,9 +1535,9 @@ function gadget(p){
       status('Starting the 1v1 room match…');
       try {
         const sent=await roomChannel.send({type:'broadcast',event:'room-match-start',payload});
-        if(sent?.status && sent.status!=='ok'){status('Could not notify your friend: '+(sent.status||'Realtime send failed')+'. Check Supabase Realtime settings.',true);return;}
+        if(sent?.status && sent.status!=='ok'){roomStartRequestedFor=null;status('Could not notify your friend: '+(sent.status||'Realtime send failed')+'. Check Supabase Realtime settings.',true);return;}
         await startOnlineMatch(roster,matchId,'duel',user.id);
-      } catch(err){status('Could not start room match: '+(err?.message||String(err)),true);}
+      } catch(err){roomStartRequestedFor=null;status('Could not start room match: '+(err?.message||String(err)),true);}
     }
 
     // Public quick-play queue: Presence tracks who is waiting; Broadcast carries game state/actions.
