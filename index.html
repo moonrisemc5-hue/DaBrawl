@@ -1038,7 +1038,7 @@ function gadget(p){
         g.shadowBlur = 0;
       }
       g.restore();
-      g.strokeStyle = p===me ? '#4f4' : (gameMode=='showdown' ? '#f80' : (p.t===me.t ? '#39f' : '#f44'));
+      g.strokeStyle = p===me ? '#4f4' : (gameMode=='showdown' ? '#f80' : ((me && p.t===me.t) ? '#39f' : '#f44'));
       g.lineWidth = 4; g.beginPath(); g.ellipse(0,13,22,11,0,0,6.283); g.stroke();
       if(p.tf>0){
         const aura=(FM[p.tfn]&&FM[p.tfn].aura)||'#ffd21f';
@@ -1196,9 +1196,19 @@ function gadget(p){
       } catch(err){ console.error('Draw loop error recovered:', err); }
     }
     let last = 0;
+    let lastLoopError='';
     function loop(t){
       requestAnimationFrame(loop); const dt = Math.min(.05, (t-last)/1000||0); last = t;
-      if(scr == 'game'){ try { upd(dt); draw(); } catch(err){ if(P.length === 0) startGame(isTestMode); } }
+      if(scr == 'game'){
+        try { upd(dt); draw(); }
+        catch(err){
+          console.error('DaBrawl game loop failed:',err);
+          const msg=String(err&&err.message||err);
+          if(msg!==lastLoopError){lastLoopError=msg;const hint=$('mmHint');if(hint)hint.textContent='Game error: '+msg;}
+          // Keep the scene visible if a single simulation update fails.
+          try { draw(); } catch(drawErr){console.error('DaBrawl render failed:',drawErr);}
+        }
+      }
     }
     // Defensive click routing: keep primary navigation usable on mobile browsers.
     document.addEventListener('click', e => {
