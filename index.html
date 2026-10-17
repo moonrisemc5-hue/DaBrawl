@@ -437,7 +437,11 @@
     $('testPlay').onclick = () => { beep(500,.1); startLoadingScreen(true); };
     $('bra').onclick = () => show('brs');
     $('bk1').onclick = () => show('menu');
-    $('modeBtn').onclick = () => { gameMode = gameMode==='knockout' ? 'showdown' : gameMode==='showdown' ? 'duel' : 'knockout'; $('modeTxt').textContent = gameMode==='knockout' ? 'KNOCKOUT 3v3' : gameMode==='showdown' ? 'SOLO SHOWDOWN' : '1v1 DUEL'; beep(400,.1); };
+    $('modeBtn').onclick = () => {
+      if(window.DaBrawlNet?.isInParty?.()){ window.DaBrawlNet.changeRoomMode?.(); return; }
+      gameMode = gameMode==='knockout' ? 'showdown' : gameMode==='showdown' ? 'duel' : 'knockout';
+      $('modeTxt').textContent = gameMode==='knockout' ? 'KNOCKOUT 3v3' : gameMode==='showdown' ? 'SOLO SHOWDOWN' : '1v1 DUEL'; beep(400,.1);
+    };
     $('bk2').onclick = () => { clearInterval(mmI); clearTimeout(mmTimeout); mmI=null; mmTimeout=null; if(window.DaBrawlNet) window.DaBrawlNet.cancelMatchmaking(); show('menu'); };
     function autoAimAndShoot(p){
       if(p.muiCharging > 0 || KM.some(k => k.o === p)) return;
@@ -1441,6 +1445,7 @@ function gadget(p){
       if(!currentRoom)return;
       const {data:room,error}=await db.from('game_rooms').select('*').eq('id',currentRoom.id).single();
       if(error){status(error.message,true);return;}
+      currentRoom={...currentRoom,...room};
       const {data:players,error:pe}=await db.from('game_room_players').select('player_slot,character_id,is_ready,user_id').eq('room_id',room.id).order('player_slot');
       if(pe){status(pe.message,true);return;}
       el('activeRoom').textContent='ROOM CODE: '+room.room_code;
@@ -1461,8 +1466,11 @@ function gadget(p){
       window.DaBrawlGame?.setRoomMenuState(players.map(p=>({slot:p.player_slot,brawler:p.character_id||'kuku',ready:!!p.is_ready,userId:p.user_id,name:roomNameFor(p.user_id)})),user?.id,room.room_code,room.host_id===user?.id);
       el('readyRoomBtn').style.display=user && mine ? 'inline-block':'none';
       el('readyRoomBtn').textContent=mine?.is_ready?'NOT READY':'READY';
+      const roomMode=room.game_mode||'knockout';
+      gameMode=roomMode;
+      $('modeTxt').textContent=roomMode==='knockout'?'KNOCKOUT 3v3':roomMode==='showdown'?'SOLO SHOWDOWN':'1v1 DUEL';
       el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.every(p=>p.is_ready) ? 'inline-block':'none';
-      status('Lobby connected · '+players.length+'/2 players. Ready up to start automatically.');
+      status('Lobby connected · '+players.length+'/2 players · '+roomMode.toUpperCase()+'. Both players ready to start.');
       if(user && room.host_id===user.id && players.length===2 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
         roomStartRequestedFor=room.id;
         void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
@@ -1509,6 +1517,14 @@ function gadget(p){
         .on('postgres_changes',{event:'*',schema:'public',table:'game_rooms',filter:'id=eq.'+currentRoom.id},()=>{void refreshRoom();})
         .on('presence',{event:'sync'},()=>{void refreshRoom();})
         .on('broadcast',{event:'room-refresh'},()=>{void refreshRoom();})
+        .on('broadcast',{event:'party-kicked'},async({payload})=>{
+          const {data:{user}}=await db.auth.getUser();
+          if(!user||payload?.userId!==user.id)return;
+          const old=roomChannel;roomChannel=null;currentRoom=null;roomStartRequestedFor=null;
+          if(old)try{await db.removeChannel(old);}catch(e){}
+          const b=el('play');b.textContent='PLAY';b.classList.remove('ready');b.onclick=()=>{beep(500,.1);matchmake();};
+          window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';show('menu');status('You were removed from the party.');
+        })
         .on('broadcast',{event:'room-match-start'},async({payload})=>{
           if(!payload || !Array.isArray(payload.roster) || activeMatchId) return;
           const {data:{user}}=await db.auth.getUser();
@@ -1532,14 +1548,17 @@ function gadget(p){
       if(currentRoom.host_id!==user.id){status('Only the room host can start the match.',true);return;}
       const {data:players,error}=await db.from('game_room_players').select('player_slot,character_id,user_id,is_ready').eq('room_id',currentRoom.id).order('player_slot');
       if(error){status('Could not load room players: '+error.message,true);return;}
-      if(players.length<2){status('Waiting for a friend to join this room.',true);return;}
+      if(players.length!==2){status('A room match needs exactly two players right now.',true);return;}
       if(!players.every(p=>p.is_ready)){status('Both players must press READY before the match can start.',true);return;}
+      const {data:room,error:roomError}=await db.from('game_rooms').select('game_mode').eq('id',currentRoom.id).single();
+      if(roomError){status('Could not read the leader’s game mode: '+roomError.message,true);return;}
+      const mode=room?.game_mode||'knockout';
       const presence=roomChannel?.presenceState?.()||{};
       const live=Object.values(presence).flat().filter(p=>p&&p.userId);
-      const roster=players.slice(0,2).map((p,i)=>({id:p.user_id,name:live.find(x=>x.userId===p.user_id)?.name||(p.user_id===user.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Player '+p.player_slot),brawler:p.character_id||'kuku',bot:false,team:i}));
+      const roster=players.map((p,i)=>({id:p.user_id,name:live.find(x=>x.userId===p.user_id)?.name||(p.user_id===user.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Player '+p.player_slot),brawler:p.character_id||'kuku',bot:false,team:i}));
       const matchId='room-'+currentRoom.id+'-'+Date.now().toString(36);
-      const payload={matchId,mode:'duel',roster};
-      status('Starting the 1v1 room match…');
+      const payload={matchId,mode,roster};
+      status('Starting '+mode.toUpperCase()+'…');
       try {
         const sent=await roomChannel.send({type:'broadcast',event:'room-match-start',payload});
         if(sent?.status && sent.status!=='ok'){roomStartRequestedFor=null;status('Could not notify your friend: '+(sent.status||'Realtime send failed')+'. Check Supabase Realtime settings.',true);return;}
@@ -1711,8 +1730,11 @@ function gadget(p){
     window.DaBrawlNet.updateBrawler=updateRoomBrawler;
     window.DaBrawlNet.removePartyMember=async targetId=>{
       if(!currentRoom)return;
+      const {data:{user}}=await db.auth.getUser();
+      if(!user||currentRoom.host_id!==user.id){status('Only the party leader can kick players.',true);return;}
       const {error}=await db.rpc('kick_dabrawl_room_player',{p_room_id:currentRoom.id,p_target_user_id:targetId});
       if(error){status('Could not remove player: '+error.message,true);return;}
+      await roomChannel?.send({type:'broadcast',event:'party-kicked',payload:{userId:targetId}});
       await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
       await refreshRoom();
     };
