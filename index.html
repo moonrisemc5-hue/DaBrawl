@@ -1288,7 +1288,7 @@ function gadget(p){
       const payload={matchId,mode:'knockout',roster};
       status('Starting the room match…');
       const sent=await roomChannel.send({type:'broadcast',event:'room-match-start',payload});
-      if(sent==='error'){status('Could not notify your friend. Check Realtime settings.',true);return;}
+      if(sent?.status && sent.status!=='ok'){status('Could not notify your friend. Check Realtime settings.',true);return;}
       await startOnlineMatch(roster,matchId,'knockout',user.id);
     }
 
@@ -1318,6 +1318,7 @@ function gadget(p){
         void startOnlineMatch(payload.roster,payload.matchId,payload.mode);
       });
       queueChannel.subscribe(async statusValue=>{
+        if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){ $('mmTxt').textContent='CONNECTION ERROR'; $('mmHint').textContent='Online matchmaking could not connect. Check Supabase Realtime settings, then try again.'; status('Online matchmaking connection failed: '+statusValue,true); return; }
         if(statusValue!=='SUBSCRIBED') return;
         try {
           await queueChannel.track({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
@@ -1340,7 +1341,7 @@ function gadget(p){
               while(roster.length<6){const i=roster.length;roster.push({id:null,name:botNames[Math.floor(Math.random()*botNames.length)]+' BOT',brawler:randomBrawler(),bot:true});}
               const payload={matchId,mode:queueMode,roster};
               $('mmTxt').textContent='BOTS JOINING!'; $('mmHint').textContent='Starting with '+humans.length+' real player(s) and '+(6-humans.length)+' bots…';
-              void queueChannel.send({type:'broadcast',event:'match-start',payload}).then(()=>startOnlineMatch(roster,matchId,queueMode)).catch(err=>{ $('mmHint').textContent='Could not notify the other players: '+(err.message||err); queueDone=false; });
+              void queueChannel.send({type:'broadcast',event:'match-start',payload}).then(sent=>{if(sent?.status && sent.status!=='ok'){ $('mmHint').textContent='Realtime could not notify the other players. Check Supabase settings.'; queueDone=false; return;} return startOnlineMatch(roster,matchId,queueMode);}).catch(err=>{ $('mmHint').textContent='Could not notify the other players: '+(err.message||err); queueDone=false; });
               return;
             }
             remaining--;
