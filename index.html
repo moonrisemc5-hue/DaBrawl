@@ -42,7 +42,7 @@
     .room-menu-slot .room-brawler { color:#fde68a;font-size:12px;letter-spacing:.5px; }
     .room-menu-slot .room-ready { color:#fca5a5;font-size:13px; }
     .room-menu-slot.ready { border-color:#22c55e; box-shadow:inset 0 -4px #22c55e; }
-    .room-menu-slot .room-kick { position:absolute;top:6px;right:6px;background:#7f1d1d;color:#fff;border:1px solid #fca5a5;border-radius:8px;padding:4px 7px;font-size:11px;z-index:4; }
+    .room-menu-slot .room-kick { position:absolute;top:6px;right:6px;background:#7f1d1d;color:#fff;border:1px solid #fca5a5;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:900;z-index:4;cursor:pointer;user-select:none; }
     #roomMenuBar { display:none; position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:301; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; width:min(92vw,640px); }
     #roomMenuBar button { font-size:16px; padding:7px 14px; }
     #roomMenuBar { display:none; position:absolute; top:12%; left:50%; transform:translateX(-50%); z-index:301; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; width:min(92vw,640px); }
@@ -307,7 +307,7 @@
     const solid = (x,y) => { const t = tile(x,y); return t=='#' || t=='~'; };
     const hitW = (x,y,r) => solid(x-r,y-r) || solid(x+r,y-r) || solid(x-r,y+r) || solid(x+r,y+r);
     const BR = {
-      kuku: {nm:'KUKU', rarity:'COMMON', rarityCol:'#00c0ff', hp:7000, spd:135, pel:8, dmg:312.5, spr:.34, rng:340, bs:550, rel:1.6, sd:333.3, sp:12, ss:.55, sr:400, w:140, z:2.5, cm:0.6, cls:'DAMAGE DEALER', atkNm:'2500 DMG', supNm:'WALL BREAKER', info:'Kuku fires 8 rapid buckshot pellets!'},
+      kuku: {nm:'KUKU', rarity:'COMMON', rarityCol:'#00c0ff', hp:7000, spd:135, pel:8, dmg:312.5, spr:.43, rng:300, bs:550, rel:1.6, sd:333.3, sp:12, ss:.55, sr:400, w:140, z:2.5, cm:0.6, cls:'DAMAGE DEALER', atkNm:'2500 DMG', supNm:'WALL BREAKER', info:'Kuku fires 8 rapid buckshot pellets!'},
       shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:8000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2500, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
       saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'FIGHTER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'}
     };
@@ -1238,12 +1238,12 @@ function gadget(p){
           btn.classList.add('room-menu-slot'); btn.classList.toggle('ready',p.ready);
           const username=String(p.name||('Player '+p.slot)).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
           const brawler=String(p.brawler||'kuku');
-          btn.innerHTML='<canvas class="room-face" width="260" height="320"></canvas><span class="room-name" title="'+username+'">'+username+'</span><span class="room-brawler">'+brawler.toUpperCase()+'</span><span class="room-ready">'+(p.ready?'✓ READY':'NOT READY')+'</span>'+(isHost?'<button class="room-kick" type="button">REMOVE</button>':'');
+          btn.innerHTML='<canvas class="room-face" width="260" height="320"></canvas><span class="room-name" title="'+username+'">'+username+'</span><span class="room-brawler">'+brawler.toUpperCase()+'</span><span class="room-ready">'+(p.ready?'✓ READY':'NOT READY')+'</span>'+(isHost?'<span class="room-kick" role="button" tabindex="0" title="Remove from party">REMOVE</span>':'');
           const avatar=btn.querySelector('canvas'); if(avatar) requestAnimationFrame(()=>rb(avatar,brawler,3.1,5));
           btn.title=username+' · '+brawler.toUpperCase()+(p.ready?' · READY':' · NOT READY');
           btn.setAttribute('aria-label',username+', '+brawler+(p.ready?' ready':' not ready'));
           btn.onclick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.openRoom?.();};
-          const remove=btn.querySelector('.room-kick');if(remove)remove.onclick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.removePartyMember?.(p.userId);};
+          const remove=btn.querySelector('.room-kick');if(remove){const kick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.removePartyMember?.(p.userId);};remove.onclick=kick;remove.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){kick(e);}};}
         });
         $('roomMenuBar').style.display=players.length?'flex':'none';
         $('roomMenuCode').textContent='ROOM '+roomCode+' · PARTY';
@@ -1474,6 +1474,7 @@ function gadget(p){
       if(user && room.host_id===user.id && players.length===2 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
         roomStartRequestedFor=room.id;
         void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
+        setTimeout(()=>{if(!activeMatchId&&roomStartRequestedFor===room.id)roomStartRequestedFor=null;},5000);
       }
     }
     async function createRoom(){
@@ -1726,7 +1727,23 @@ function gadget(p){
       await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
       await refreshRoom();
     }
+    async function changeRoomMode(){
+      if(!currentRoom)return;
+      const {data:{user}}=await db.auth.getUser();
+      if(!user||currentRoom.host_id!==user.id){status('Only the party leader can choose the game mode.',true);return;}
+      const modes=['knockout','showdown','duel'];
+      const current=currentRoom.game_mode||'knockout';
+      const next=modes[(modes.indexOf(current)+1)%modes.length];
+      const {error}=await db.from('game_rooms').update({game_mode:next}).eq('id',currentRoom.id).eq('host_id',user.id);
+      if(error){status('Could not change party mode: '+error.message,true);return;}
+      currentRoom.game_mode=next;gameMode=next;
+      $('modeTxt').textContent=next==='knockout'?'KNOCKOUT 3v3':next==='showdown'?'SOLO SHOWDOWN':'1v1 DUEL';
+      status('Party leader selected '+next.toUpperCase()+'.');
+      await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
+      await refreshRoom();
+    }
     window.DaBrawlNet.toggleReady=toggleRoomReady;
+    window.DaBrawlNet.changeRoomMode=changeRoomMode;
     window.DaBrawlNet.updateBrawler=updateRoomBrawler;
     window.DaBrawlNet.removePartyMember=async targetId=>{
       if(!currentRoom)return;
