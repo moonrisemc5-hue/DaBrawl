@@ -1314,7 +1314,8 @@ function gadget(p){
         })
         .subscribe(statusValue=>{if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT') status('Room live connection failed. Check Supabase Realtime settings.',true);});
     }
-    async function startRoomGame(){
+    let roomCountdownTimer=null;
+    async function startRoomGame(skipCountdown=false){
       if(!currentRoom || !roomChannel){status('Create or join a room first.',true);return;}
       const {data:{user}}=await db.auth.getUser(); if(!user){status('Sign in first.',true);return;}
       if(currentRoom.host_id!==user.id){status('Only the room host can start the match.',true);return;}
@@ -1322,6 +1323,21 @@ function gadget(p){
       if(error){status(error.message,true);return;}
       if(players.length<2){status('Waiting for a friend to join this room.',true);return;}
        if(!players.every(p=>p.is_ready)){status('Everyone must press READY before the match can start.',true);return;}
+      if(!skipCountdown){
+        if(roomCountdownTimer) return;
+        let seconds=10;
+        el('startRoomBtn').disabled=true;
+        el('startRoomBtn').textContent='STARTING IN '+seconds+'…';
+        status('Waiting 10 seconds for more players. Empty slots will become bots.');
+        roomCountdownTimer=setInterval(()=>{
+          seconds--;
+          if(seconds>0){el('startRoomBtn').textContent='STARTING IN '+seconds+'…';return;}
+          clearInterval(roomCountdownTimer);roomCountdownTimer=null;
+          el('startRoomBtn').disabled=false;el('startRoomBtn').textContent='START MATCH';
+          void startRoomGame(true);
+        },1000);
+        return;
+      }
       let roster=players.slice(0,6).map((p,i)=>({id:p.user_id,name:p.display_name||('Player '+(i+1)),brawler:p.character_id||'kuku',bot:false}));
       const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova'];
       while(roster.length<6) roster.push({id:null,name:botNames[roster.length%botNames.length]+' BOT',brawler:randomBrawler(),bot:true});
