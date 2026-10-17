@@ -109,7 +109,7 @@
       <div style="display:flex;gap:8px;width:100%;justify-content:center"><input id="roomCodeInput" maxlength="8" placeholder="ROOM CODE" style="min-width:0;width:180px;padding:10px;border:3px solid #000;border-radius:10px;font:22px Arial,sans-serif;text-transform:uppercase"><button class="btn" id="joinRoomBtn">JOIN</button></div>
       <div id="activeRoom" style="font:20px Arial,sans-serif;color:#fde047"></div>
       <div id="roomPlayers" style="font:16px Arial,sans-serif;color:#fff"></div>
-      <button class="btn y" id="startRoomBtn" style="display:none">START MATCH</button>
+      <button class="btn" id="readyRoomBtn" style="display:none">READY</button><button class="btn y" id="startRoomBtn" style="display:none">START MATCH</button>
       <button class="btn" id="refreshRoomBtn">REFRESH LOBBY</button><button class="btn purple" id="onlineSignOut">SIGN OUT</button>
     </div>
     <button class="btn" id="onlineBack">BACK</button>
@@ -414,11 +414,11 @@
     $('leaveBtn').onclick = () => { show('menu'); isTestMode = false; };
     $('again').onclick = () => { beep(500,.1); startLoadingScreen(isTestMode); };
     $('home').onclick = () => { beep(300,.1); show('menu'); isTestMode = false; };
-    $('play').onclick = () => { beep(500,.1); matchmake(); };
+    $('play').onclick = () => { beep(500,.1); if(gameMode==='duel' && window.DaBrawlNet?.isInParty()){ alert('1v1 is only available from solo PLAY, not while you are in a room/party.'); return; } matchmake(); };
     $('testPlay').onclick = () => { beep(500,.1); startLoadingScreen(true); };
     $('bra').onclick = () => show('brs');
     $('bk1').onclick = () => show('menu');
-    $('modeBtn').onclick = () => { gameMode = gameMode=='knockout' ? 'showdown' : 'knockout'; $('modeTxt').textContent = gameMode=='knockout' ? 'KNOCKOUT 3v3' : 'SOLO SHOWDOWN'; beep(400,.1); };
+    $('modeBtn').onclick = () => { gameMode = gameMode==='knockout' ? 'showdown' : gameMode==='showdown' ? 'duel' : 'knockout'; $('modeTxt').textContent = gameMode==='knockout' ? 'KNOCKOUT 3v3' : gameMode==='showdown' ? 'SOLO SHOWDOWN' : '1v1 DUEL'; beep(400,.1); };
     $('bk2').onclick = () => { clearInterval(mmI); clearTimeout(mmTimeout); mmI=null; mmTimeout=null; if(window.DaBrawlNet) window.DaBrawlNet.cancelMatchmaking(); show('menu'); };
     function autoAimAndShoot(p){
       if(p.muiCharging > 0 || KM.some(k => k.o === p)) return;
@@ -639,7 +639,7 @@ function gadget(p){
       }, 1000);
     }
     function finish(){
-      const win = gameMode=='showdown' ? me.alive : G.w[0]>=2, d = win ? 8 : -4;
+      const win = (gameMode==='showdown' || gameMode==='duel') ? me.alive : G.w[0]>=2, d = win ? 8 : -4;
       tr = Math.max(0, tr + d); bTrophies[selB] = Math.max(0, (bTrophies[selB]||0) + d); saveTrophies();
       $('rt').textContent = win ? 'VICTORY!' : 'DEFEAT'; $('rt').style.color = win ? '#ffd21f' : '#ff5a5a'; $('rd').textContent = (d>0?'+':'')+d+' 🏆'; show('res');
     }
@@ -1109,8 +1109,8 @@ function gadget(p){
           tx(G.w[0], W/2-50, 38, 30, '#6bb6ff'); tx(isTestMode?'∞':'VS', W/2, 36, 20, '#ffd21f'); tx(G.w[1], W/2+50, 38, 30, '#ff7a7a');
           for(const t of[0,1]) P.filter(p=>p.t==t).forEach((p,i) => circ(W/2+(t?1:-1)*(110+i*22), 28, 8, p.alive?(t?'#f44':'#39f'):'#555', 1));
         }
-        tx(isTestMode?'PRACTICE':(gameMode=='showdown'?'SHOWDOWN':'KNOCKOUT'), 14, 32, 22, '#fff', 'left');
-        tx(gameMode=='showdown'?'10 Players':'Round '+G.r, 14, 56, 16, '#ffd21f', 'left');
+        tx(isTestMode?'PRACTICE':(gameMode=='showdown'?'SHOWDOWN':gameMode==='duel'?'1V1 DUEL':'KNOCKOUT'), 14, 32, 22, '#fff', 'left');
+        tx(gameMode==='showdown'?'10 Players':gameMode==='duel'?'1v1':'Round '+G.r, 14, 56, 16, '#ffd21f', 'left');
         const s = $('sup'), r = Math.round(me.sc*100);
         s.style.background = me.sc>=1 ? 'linear-gradient(#ffe45c,#ff9a00)' : 'linear-gradient(to top,#d9a900 '+r+'%,#444 '+r+'%)';
         s.textContent = me.sc>=1 ? 'SUPER' : r+'%';
@@ -1149,11 +1149,11 @@ function gadget(p){
     window.DaBrawlGame = {
       startNetworkGame(roster, matchId, mode, localId){
         networkMode = true; isTestMode = false; gameMode = mode || 'knockout';
-        $('modeTxt').textContent = gameMode === 'showdown' ? 'SOLO SHOWDOWN' : 'KNOCKOUT 3v3';
+        $('modeTxt').textContent = gameMode === 'showdown' ? 'SOLO SHOWDOWN' : gameMode === 'duel' ? '1v1 DUEL' : 'KNOCKOUT 3v3';
         P=[]; me=null; build(); B=[]; F=[]; MT=[]; KM=[];
         roster.forEach((entry,idx)=>{
-          const team = gameMode === 'showdown' ? idx % 2 : (idx < 3 ? 0 : 1);
-          const slot = gameMode === 'showdown' ? idx : idx % 3;
+          const team = entry.team!==undefined ? entry.team : gameMode === 'showdown' ? idx % 2 : gameMode === 'duel' ? idx % 2 : (idx < 3 ? 0 : 1);
+          const slot = gameMode === 'showdown' || gameMode === 'duel' ? idx : idx % 3;
           const brawler = BR[entry.brawler] ? entry.brawler : 'kuku';
           const p = mk(team,slot,!entry.bot,entry.name,brawler,false);
           p.netId = entry.bot ? null : entry.id;
@@ -1270,10 +1270,13 @@ function gadget(p){
       const {data:players,error:pe}=await db.from('game_room_players').select('player_slot,character_id,is_ready,user_id').eq('room_id',room.id).order('player_slot');
       if(pe){status(pe.message,true);return;}
       el('activeRoom').textContent='ROOM CODE: '+room.room_code;
-      el('roomPlayers').innerHTML=players.map(p=>'Player '+p.player_slot+' · '+(p.character_id||'Choosing brawler')+' · '+(p.is_ready?'READY':'NOT READY')).join('<br>');
+      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:6},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);return '<div style="width:112px;min-height:88px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><div style="font-size:28px">'+(p?(p.is_ready?'🟢':'🧍'):'＋')+'</div><div>'+(p?('Player '+p.player_slot):'Empty slot')+'</div><small>'+(p?(p.character_id||'KUKU')+' · '+(p.is_ready?'READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>');
       const {data:{user}}=await db.auth.getUser();
-      el('startRoomBtn').style.display=user && room.host_id===user.id ? 'inline-block':'none';
-      status('Lobby connected · '+players.length+'/2 players. Share the code with your friend.');
+      const mine=players.find(p=>p.user_id===user?.id);
+      el('readyRoomBtn').style.display=user && mine ? 'inline-block':'none';
+      el('readyRoomBtn').textContent=mine?.is_ready?'NOT READY':'READY';
+      el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.every(p=>p.is_ready) ? 'inline-block':'none';
+      status('Lobby connected · '+players.length+'/6 players. Everyone in the room must be ready before the host can start.');
     }
     async function createRoom(){
       const {data:{user}}=await db.auth.getUser(); if(!user){status('Sign in first.',true);return;}
@@ -1317,6 +1320,7 @@ function gadget(p){
       const {data:players,error}=await db.from('game_room_players').select('player_slot,character_id,user_id').eq('room_id',currentRoom.id).order('player_slot');
       if(error){status(error.message,true);return;}
       if(players.length<2){status('Waiting for a friend to join this room.',true);return;}
+       if(!players.every(p=>p.is_ready)){status('Everyone must press READY before the match can start.',true);return;}
       let roster=players.slice(0,6).map((p,i)=>({id:p.user_id,name:'Player '+(i+1),brawler:p.character_id||'kuku',bot:false}));
       const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova'];
       while(roster.length<6) roster.push({id:null,name:botNames[roster.length%botNames.length]+' BOT',brawler:randomBrawler(),bot:true});
@@ -1338,9 +1342,10 @@ function gadget(p){
       const state=queueChannel ? queueChannel.presenceState() : {};
       const all=Object.values(state).flat().filter(p=>p && p.clientId);
       const unique=new Map(); for(const p of all) if(!unique.has(p.clientId)) unique.set(p.clientId,p);
-      return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,6);
+      return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,queueMode==='duel'?2:6);
     }
     async function beginMatchmaking(mode){
+      if(mode==='duel' && currentRoom){status('1v1 is only available from solo PLAY, not in a room/party.',true);show('onlineLobby');return;}
       cancelMatchmaking(false); queueMode=mode||'knockout'; queueDone=false; queueStartedAt=Date.now();
       show('mm'); $('mmTxt').textContent='CONNECTING TO PLAYERS…'; $('mmHint').textContent='Connecting to DaBrawl online matchmaking…';
       try {
@@ -1360,21 +1365,23 @@ function gadget(p){
           await queueChannel.track({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
           $('mmHint').textContent='Waiting up to 10 seconds for real players. Bots fill every remaining slot.';
           let remaining=10;
+          const target=queueMode==='duel'?2:6;
           const update=()=>{
             const count=queuePlayers().length;
-            $('mmTxt').textContent='PLAYERS JOINED: '+Math.min(6,count)+'/6 · '+remaining+'s';
+            $('mmTxt').textContent='PLAYERS JOINED: '+Math.min(target,count)+'/'+target+' · '+remaining+'s';
             if(remaining<=0){
               clearInterval(queueTimer); queueTimer=null;
               if(queueDone) return;
               queueDone=true;
               let humans=queuePlayers();
               if(!humans.some(p=>p.clientId===clientId)) humans.push({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
-              humans=humans.sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,6);
+              humans=humans.sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,target);
               if(humans[0]?.clientId!==clientId){ $('mmTxt').textContent='WAITING FOR MATCH HOST…'; $('mmHint').textContent='The first player in the queue is starting the match…'; return; }
               const matchId='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
               const roster=humans.map((p,i)=>({id:p.clientId,name:String(p.name||('Player '+(i+1))).slice(0,20),brawler:p.brawler||'kuku',bot:false}));
               const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax','Vex','Zane'];
-              while(roster.length<6){const i=roster.length;roster.push({id:null,name:botNames[Math.floor(Math.random()*botNames.length)]+' BOT',brawler:randomBrawler(),bot:true});}
+              while(roster.length<target){const i=roster.length;roster.push({id:null,name:botNames[Math.floor(Math.random()*botNames.length)]+' BOT',brawler:randomBrawler(),bot:true});}
+               if(queueMode==='knockout'){const teams=[0,0,0,1,1,1];for(let i=teams.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[teams[i],teams[j]]=[teams[j],teams[i]];}roster.forEach((p,i)=>p.team=teams[i]);}
               const payload={matchId,mode:queueMode,roster};
               $('mmTxt').textContent='BOTS JOINING!'; $('mmHint').textContent='Starting with '+humans.length+' real player(s) and '+(6-humans.length)+' bots…';
               void queueChannel.send({type:'broadcast',event:'match-start',payload}).then(sent=>{if(sent?.status && sent.status!=='ok'){ $('mmHint').textContent='Realtime could not notify the other players. Check Supabase settings.'; queueDone=false; return;} return startOnlineMatch(roster,matchId,queueMode);}).catch(err=>{ $('mmHint').textContent='Could not notify the other players: '+(err.message||err); queueDone=false; });
@@ -1429,7 +1436,7 @@ function gadget(p){
       if(matchChannel){const old=matchChannel;matchChannel=null;await db.removeChannel(old);}
       if(window.DaBrawlGame) window.DaBrawlGame.endNetworkGame();
     }
-    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction};
+    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,isInParty:()=>!!currentRoom};
 
     const openFriends = async () => { show('onlineLobby'); await updateAuthUI(); };
     el('prevBtn').addEventListener('click', openFriends);
@@ -1440,6 +1447,7 @@ function gadget(p){
     el('createRoomBtn').addEventListener('click',createRoom);
     el('joinRoomBtn').addEventListener('click',joinRoom);
     el('startRoomBtn').addEventListener('click',startRoomGame);
+    el('readyRoomBtn').addEventListener('click',async()=>{if(!currentRoom){status('Join a room first.',true);return;}const {data:{user}}=await db.auth.getUser();if(!user)return;const {data:mine,error:meErr}=await db.from('game_room_players').select('is_ready').eq('room_id',currentRoom.id).eq('user_id',user.id).single();if(meErr){status(meErr.message,true);return;}const {error}=await db.from('game_room_players').update({is_ready:!mine.is_ready}).eq('room_id',currentRoom.id).eq('user_id',user.id);if(error){status(error.message,true);return;}await refreshRoom();});
     el('refreshRoomBtn').addEventListener('click',refreshRoom);
     el('onlineSignOut').addEventListener('click',async()=>{if(roomChannel)await db.removeChannel(roomChannel);roomChannel=null;currentRoom=null;await db.auth.signOut();await updateAuthUI();status('Signed out.');});
     db.auth.onAuthStateChange(()=>{setTimeout(updateAuthUI,0);});
