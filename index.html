@@ -1198,7 +1198,24 @@ function gadget(p){
   </script>
 
   <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    // Load Supabase with a backup CDN. If both fail, show the real startup problem
+    // instead of leaving the sign-in buttons silently dead.
+    let createClient;
+    try {
+      ({ createClient } = await import('https://esm.sh/@supabase/supabase-js@2'));
+    } catch (firstImportError) {
+      try {
+        ({ createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'));
+      } catch (secondImportError) {
+        const statusEl = document.getElementById('onlineStatus');
+        if (statusEl) {
+          statusEl.textContent = 'Login system could not load. Check your connection or try refreshing. Details: ' + (secondImportError?.message || firstImportError?.message || 'Supabase library unavailable');
+          statusEl.style.color = '#fca5a5';
+        }
+        console.error('DaBrawl Supabase startup failed:', firstImportError, secondImportError);
+        throw secondImportError;
+      }
+    }
     const SUPABASE_URL = 'https://xqbfjpjdweibdbpeefze.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_6fzoQyw9JuuLHuGVbdyIjw_C9RTVQuu';
     const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
@@ -1219,6 +1236,7 @@ function gadget(p){
     el('onlineSignIn').addEventListener('click', () => { void auth('in'); });
     el('onlineSignUp').addEventListener('click', () => { void auth('up'); });
     el('onlinePassword').addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); void auth('in'); } });
+    window.__daBrawlAuthReady = true;
     let authBusy = false;
     async function auth(mode){
       if(authBusy) return;
