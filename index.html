@@ -1267,10 +1267,10 @@ function gadget(p){
       if(!currentRoom)return;
       const {data:room,error}=await db.from('game_rooms').select('*').eq('id',currentRoom.id).single();
       if(error){status(error.message,true);return;}
-      const {data:players,error:pe}=await db.from('game_room_players').select('player_slot,character_id,is_ready,user_id').eq('room_id',room.id).order('player_slot');
+      const {data:players,error:pe}=await db.from('game_room_players').select('player_slot,character_id,is_ready,user_id,display_name').eq('room_id',room.id).order('player_slot');
       if(pe){status(pe.message,true);return;}
       el('activeRoom').textContent='ROOM CODE: '+room.room_code;
-      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:6},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);return '<div style="width:112px;min-height:88px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><div style="font-size:28px">'+(p?(p.is_ready?'🟢':'🧍'):'＋')+'</div><div>'+(p?('Player '+p.player_slot):'Empty slot')+'</div><small>'+(p?(p.character_id||'KUKU')+' · '+(p.is_ready?'READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>');
+      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:6},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);return '<div style="width:112px;min-height:88px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><div style="font-size:28px">'+(p?(p.is_ready?'🟢':'🧍'):'＋')+'</div><div>'+(p?(p.display_name||('Player '+p.player_slot)):'Empty slot')+'</div><small>'+(p?(p.character_id||'KUKU')+' · '+(p.is_ready?'READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>');
       const {data:{user}}=await db.auth.getUser();
       const mine=players.find(p=>p.user_id===user?.id);
       el('readyRoomBtn').style.display=user && mine ? 'inline-block':'none';
@@ -1285,7 +1285,8 @@ function gadget(p){
         const code=Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b%32]).join('');
         const {data:room,error}=await db.from('game_rooms').insert({room_code:code,host_id:user.id}).select('*').single();
         if(error){if(error.code==='23505')continue;status(error.message,true);return;}
-        const {error:joinError}=await db.from('game_room_players').insert({room_id:room.id,user_id:user.id,player_slot:1,character_id:'kuku',is_ready:false});
+        const displayName=user.user_metadata?.username || (user.email||'Player').split('@')[0];
+        const {error:joinError}=await db.from('game_room_players').insert({room_id:room.id,user_id:user.id,player_slot:1,character_id:localStorage.getItem('dabrawl_b')||'kuku',is_ready:false,display_name:displayName});
         if(joinError){status(joinError.message,true);return;}
         currentRoom=room; subscribeRoom(); await refreshRoom();return;
       }
@@ -1317,11 +1318,11 @@ function gadget(p){
       if(!currentRoom || !roomChannel){status('Create or join a room first.',true);return;}
       const {data:{user}}=await db.auth.getUser(); if(!user){status('Sign in first.',true);return;}
       if(currentRoom.host_id!==user.id){status('Only the room host can start the match.',true);return;}
-      const {data:players,error}=await db.from('game_room_players').select('player_slot,character_id,user_id').eq('room_id',currentRoom.id).order('player_slot');
+      const {data:players,error}=await db.from('game_room_players').select('player_slot,character_id,user_id,is_ready,display_name').eq('room_id',currentRoom.id).order('player_slot');
       if(error){status(error.message,true);return;}
       if(players.length<2){status('Waiting for a friend to join this room.',true);return;}
        if(!players.every(p=>p.is_ready)){status('Everyone must press READY before the match can start.',true);return;}
-      let roster=players.slice(0,6).map((p,i)=>({id:p.user_id,name:'Player '+(i+1),brawler:p.character_id||'kuku',bot:false}));
+      let roster=players.slice(0,6).map((p,i)=>({id:p.user_id,name:p.display_name||('Player '+(i+1)),brawler:p.character_id||'kuku',bot:false}));
       const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova'];
       while(roster.length<6) roster.push({id:null,name:botNames[roster.length%botNames.length]+' BOT',brawler:randomBrawler(),bot:true});
       const matchId='room-'+currentRoom.id+'-'+Date.now().toString(36);
