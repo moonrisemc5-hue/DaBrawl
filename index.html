@@ -1650,7 +1650,7 @@ function gadget(p){
       queueChannel.on('broadcast',{event:'match-start'},({payload})=>{
         if(activeMatchId || !payload || !Array.isArray(payload.roster) || !payload.roster.some(p=>p.id===clientId)) return;
         queueDone=true; clearInterval(queueTimer); queueTimer=null;
-        void startOnlineMatch(payload.roster,payload.matchId,payload.mode);
+        void startOnlineMatch(payload.roster,payload.matchId,payload.mode,clientId,payload.hostId||payload.roster.find(p=>!p.bot)?.id);
       });
       queueChannel.subscribe(async statusValue=>{
         if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){ $('mmTxt').textContent='CONNECTION ERROR'; $('mmHint').textContent='Online matchmaking could not connect. Check Supabase Realtime settings, then try again.'; status('Online matchmaking connection failed: '+statusValue,true); return; }
@@ -1678,7 +1678,7 @@ function gadget(p){
             if(queueMode==='duel') roster.forEach((p,i)=>p.team=i);
             if(queueMode==='showdown') roster.forEach((p,i)=>p.team=i);
             if(queueMode==='knockout'){const teams=[0,0,0,1,1,1];for(let i=teams.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[teams[i],teams[j]]=[teams[j],teams[i]];}roster.forEach((p,i)=>p.team=teams[i]);}
-            const payload={matchId,mode:queueMode,roster};
+            const payload={matchId,mode:queueMode,roster,hostId:clientId};
             $('mmTxt').textContent='MATCH FOUND!'; $('mmHint').textContent='Starting with '+humans.length+' real player(s) and '+(target-humans.length)+' bots…';
             try {
               const sent=await queueChannel.send({type:'broadcast',event:'match-start',payload});
