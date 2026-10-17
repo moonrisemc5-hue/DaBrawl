@@ -1314,8 +1314,7 @@ function gadget(p){
               while(roster.length<6){const i=roster.length;roster.push({id:null,name:botNames[Math.floor(Math.random()*botNames.length)]+' BOT',brawler:randomBrawler(),bot:true});}
               const payload={matchId,mode:queueMode,roster};
               $('mmTxt').textContent='BOTS JOINING!'; $('mmHint').textContent='Starting with '+humans.length+' real player(s) and '+(6-humans.length)+' bots…';
-              queueChannel.send({type:'broadcast',event:'match-start',payload});
-              void startOnlineMatch(roster,matchId,queueMode);
+              void queueChannel.send({type:'broadcast',event:'match-start',payload}).then(()=>startOnlineMatch(roster,matchId,queueMode)).catch(err=>{ $('mmHint').textContent='Could not notify the other players: '+(err.message||err); queueDone=false; });
               return;
             }
             remaining--;
