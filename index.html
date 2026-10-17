@@ -853,7 +853,7 @@ function gadget(p){
       }
       return false;
     }
-    function xform(p){ p.tfn = p.form+1; p.tf = 1.8; p.sc=0; p.chg=0; p.burst=0; p.am=3; p.holdT=0; p.hw=false; if(networkMode && p===me) window.DaBrawlNet?.sendAction('transform',p.a,{form:p.tfn}); playTransformSound(p.tfn >= 4 ? 'galaxy' : 'normal'); }
+    function xform(p){ p.tfn = p.form+1; p.tf = 1.8; p.sc=0; p.chg=0; p.burst=0; p.am=3; p.holdT=0; p.hw=false; if(networkMode && window.DaBrawlNet){ if(p===me) window.DaBrawlNet.sendAction('transform',p.a,{form:p.tfn}); else if(isNetworkHost && p.isBot && p.netId) window.DaBrawlNet.sendAction('transform',p.a,{form:p.tfn,playerId:p.netId}); } playTransformSound(p.tfn >= 4 ? 'galaxy' : 'normal'); }
     function tfx(p,dt){
       p.tf-=dt; const fm = FM[p.tfn]; shake = Math.max(shake, 14); const col = fm.aura || '#ffd21f';
       if(p.tfn >= 4 && Math.random()<.6) F.push({k:'pillar', x:p.x, y:p.y, c:'#ffffff', l:.3, m:.3});
