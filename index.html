@@ -632,7 +632,11 @@ function gadget(p){
         for(const p of P){
           if(!p.alive) continue;
           // Remote players still need local-only visual animation updates (transform auras, particles).
-          if(p.netRemote){ if(p.tf>0) tfx(p,dt); continue; }
+          if(p.netRemote){
+            if(p.tf>0) tfx(p,dt);
+            else if(p.k?.sy && p.burst>0) burstU(p,dt); // Remote Saiyans must animate their released ki-blast burst too.
+            continue;
+          }
           K=p.k; p.am = Math.min(3, p.am + dt/K.rel); p.nh+=dt;
           if(p.nh>3 && p.hp<p.mh && !p.isDummy){
             p.hc = (p.hc||0) + dt;
