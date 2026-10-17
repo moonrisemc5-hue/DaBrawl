@@ -87,7 +87,7 @@
       <div style="font-size:30px;color:var(--y);-webkit-text-stroke:1px #000">DaBrawl</div>
     </div>
     <button class="btn purple" id="bra">BRAWLERS</button>
-    <div id="roomMenuBar"><button class="btn purple" id="roomMenuCode">ROOM CODE</button><button class="btn y" id="roomMenuStart" style="display:none">START MATCH</button></div>
+    <div id="roomMenuBar"><button class="btn purple" id="roomMenuCode">ROOM CODE</button><button class="btn" id="roomLeaveBtn">LEAVE PARTY</button><button class="btn y" id="roomMenuStart" style="display:none">START MATCH</button></div>
     <div class="mid">
       <button class="plus" id="prevBtn" aria-label="Add a friend by code" title="Friends / room code" style="margin-bottom:0">+</button>
       <div style="pointer-events:auto">
@@ -1241,6 +1241,7 @@ function gadget(p){
         });
         $('roomMenuBar').style.display=players.length?'flex':'none';
         $('roomMenuCode').textContent='ROOM '+roomCode+' · PARTY';
+        $('roomLeaveBtn').style.display=players.length?'inline-block':'none';
         const mine=players.find(p=>p.userId===currentUserId);
         const readyBtn=$('play');
         if(mine){
@@ -1660,6 +1661,17 @@ function gadget(p){
     el('createRoomBtn').addEventListener('click',createRoom);
     el('joinRoomBtn').addEventListener('click',joinRoom);
     el('startRoomBtn').addEventListener('click',startRoomGame);
+    async function leaveParty(){
+      if(!currentRoom)return;
+      const room=currentRoom;
+      const {error}=await db.rpc('leave_dabrawl_room',{p_room_id:room.id});
+      if(error){status('Could not leave party: '+error.message,true);return;}
+      if(roomChannel){const old=roomChannel;roomChannel=null;await db.removeChannel(old);}
+      currentRoom=null;roomStartRequestedFor=null;
+      const b=el('play');b.textContent='PLAY';b.classList.remove('ready');b.onclick=()=>{beep(500,.1);matchmake();};
+      window.DaBrawlGame?.setRoomMenuState([],null,'');
+      el('roomMenuBar').style.display='none';show('menu');status('You left the party.');
+    }
     let readyBusy=false;
     async function toggleRoomReady(){
       if(readyBusy)return;readyBusy=true;
@@ -1690,6 +1702,7 @@ function gadget(p){
     window.DaBrawlNet.updateBrawler=updateRoomBrawler;
     window.DaBrawlNet.openRoom=()=>show('onlineLobby');
     el('roomMenuStart').addEventListener('click',startRoomGame);
+    el('roomLeaveBtn').addEventListener('click',leaveParty);
     el('roomMenuCode').addEventListener('click',()=>show('onlineLobby'));
     el('readyRoomBtn').addEventListener('click',toggleRoomReady);
     el('refreshRoomBtn').addEventListener('click',refreshRoom);
