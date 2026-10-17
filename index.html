@@ -609,7 +609,7 @@ function gadget(p){
           if(dead) B.splice(i,1);
         }
         if(!isTestMode){
-          if(gameMode == 'showdown'){
+          if(gameMode == 'showdown' || gameMode == 'duel'){
             const aliveCount = P.filter(p=>p.alive).length;
             if(aliveCount<=1 || !me.alive){
               const win = me.alive && aliveCount==1; G.res = win?'VICTORY!':'DEFEAT'; G.ph='end'; G.t=2.6; beep(win?600:200,.5,.15,'triangle',win?300:-100);
