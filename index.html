@@ -1215,6 +1215,10 @@ function gadget(p){
       el('onlineUser').textContent = user ? 'Signed in as: '+(user.user_metadata?.username || (user.email||'').split('@')[0]) : '';
       if(user) status('Signed in. Create a room or enter a friend’s room code.');
     }
+    // Bind authentication controls early so later lobby setup errors cannot leave them inert.
+    el('onlineSignIn').addEventListener('click', () => { void auth('in'); });
+    el('onlineSignUp').addEventListener('click', () => { void auth('up'); });
+    el('onlinePassword').addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); void auth('in'); } });
     let authBusy = false;
     async function auth(mode){
       if(authBusy) return;
@@ -1460,8 +1464,6 @@ function gadget(p){
     el('prevBtn').addEventListener('click', openFriends);
     el('nextBtn').addEventListener('click', openFriends);
     el('onlineBack').addEventListener('click',()=>show('menu'));
-    el('onlineSignIn').addEventListener('click',()=>auth('in'));
-    el('onlineSignUp').addEventListener('click',()=>auth('up'));
     el('createRoomBtn').addEventListener('click',createRoom);
     el('joinRoomBtn').addEventListener('click',joinRoom);
     el('startRoomBtn').addEventListener('click',startRoomGame);
