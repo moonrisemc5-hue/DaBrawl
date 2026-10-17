@@ -1304,7 +1304,10 @@ function gadget(p){
               clearInterval(queueTimer); queueTimer=null;
               if(queueDone) return;
               queueDone=true;
-              const humans=queuePlayers().slice(0,6);
+              let humans=queuePlayers();
+              if(!humans.some(p=>p.clientId===clientId)) humans.push({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
+              humans=humans.sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,6);
+              if(humans[0]?.clientId!==clientId){ $('mmTxt').textContent='WAITING FOR MATCH HOST…'; $('mmHint').textContent='The first player in the queue is starting the match…'; return; }
               const matchId='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
               const roster=humans.map((p,i)=>({id:p.clientId,name:String(p.name||('Player '+(i+1))).slice(0,20),brawler:p.brawler||'kuku',bot:false}));
               const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax','Vex','Zane'];
