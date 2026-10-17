@@ -425,7 +425,7 @@
       if(p.muiCharging > 0 || KM.some(k => k.o === p)) return;
       let b = 600, a = null;
       for(const e of P){
-        if(e===p || !e.alive || (gameMode=='knockout' && e.t==p.t) || !sees(p.t,e)) continue;
+        if(e===p || !e.alive || (gameMode!=='showdown' && e.t==p.t) || !sees(p.t,e)) continue;
         const d = Math.hypot(e.x - p.x, e.y - p.y); if(d < b){ b = d; a = Math.atan2(e.y - p.y, e.x - p.x); }
       }
       if(a !== null){ p.a = a; p.autoAimTimer = 0.4; }
@@ -536,7 +536,7 @@ function gadget(p){
       }
       K=b.k; if(K.sy){ syAI(b,dt); return; }
       let tg=null, bd=1e9;
-      for(const e of P){ if(e===b||!e.alive||(gameMode=='knockout'&&e.t==b.t)) continue; const d=Math.hypot(e.x-b.x, e.y-b.y); if(d<bd){ bd=d; tg=e; } }
+      for(const e of P){ if(e===b||!e.alive||(gameMode!=='showdown'&&e.t==b.t)) continue; const d=Math.hypot(e.x-b.x, e.y-b.y); if(d<bd){ bd=d; tg=e; } }
       if(!tg){ step(b,0,0,dt); return; }
       const a = Math.atan2(tg.y-b.y, tg.x-b.x); b.sw-=dt; if(b.sw<=0){ b.sw=.7+Math.random()*1.4; b.sd=Math.random()<.5?-1:1; }
       const low = b.hp<b.mh*.3, want = low?270:K.w, f = bd>want+40?1:bd<want-40?-1:0;
@@ -628,11 +628,12 @@ function gadget(p){
     function matchmake(){
       if(window.DaBrawlNet){ window.DaBrawlNet.beginMatchmaking(gameMode); return; }
       show('mm'); let remaining=10; clearInterval(mmI); clearTimeout(mmTimeout);
-      $('mmTxt').textContent = 'PLAYERS JOINED: 1/6 · '+remaining+'s';
+      const target = gameMode==='duel' ? 2 : gameMode==='showdown' ? 10 : 6;
+      $('mmTxt').textContent = 'PLAYERS JOINED: 1/'+target+' · '+remaining+'s';
       $('mmHint').textContent = 'Waiting up to 10 seconds for players to join…';
       mmI = setInterval(() => {
         remaining--;
-        if(remaining>0){ $('mmTxt').textContent = 'PLAYERS JOINED: 1/6 · '+remaining+'s'; return; }
+        if(remaining>0){ $('mmTxt').textContent = 'PLAYERS JOINED: 1/'+target+' · '+remaining+'s'; return; }
         clearInterval(mmI); mmI=null;
         $('mmTxt').textContent = 'BOTS JOINING!';
         $('mmHint').textContent = 'No match found. Filling the empty slots with bots…';
@@ -1197,6 +1198,41 @@ function gadget(p){
 
   </script>
 
+  <script>
+    // Keep login failures visible even if the ES module fails before attaching handlers.
+    window.addEventListener('error', event => {
+      const statusEl = document.getElementById('onlineStatus');
+      if (statusEl && !window.__daBrawlAuthReady) {
+        statusEl.textContent = 'Login system failed to start: ' + (event.message || 'JavaScript error') + '. Refresh the page and try again.';
+        statusEl.style.color = '#fca5a5';
+      }
+    });
+    window.addEventListener('unhandledrejection', event => {
+      const statusEl = document.getElementById('onlineStatus');
+      if (statusEl && !window.__daBrawlAuthReady) {
+        statusEl.textContent = 'Login system could not connect: ' + (event.reason?.message || String(event.reason || 'unknown error'));
+        statusEl.style.color = '#fca5a5';
+      }
+    });
+    window.addEventListener('click', event => {
+      const button = event.target.closest && event.target.closest('#onlineSignIn, #onlineSignUp');
+      if (button && !window.__daBrawlAuthReady) {
+        const statusEl = document.getElementById('onlineStatus');
+        if (statusEl) {
+          statusEl.textContent = 'Login system has not started yet. Please wait a moment; if this message stays, refresh the page and tell me the exact text.';
+          statusEl.style.color = '#fca5a5';
+        }
+      }
+    }, true);
+    setTimeout(() => {
+      const statusEl = document.getElementById('onlineStatus');
+      if (statusEl && !window.__daBrawlAuthReady && document.getElementById('onlineLobby')?.classList.contains('on')) {
+        statusEl.textContent = 'Login system is still loading. Check your connection, then refresh if it stays here.';
+        statusEl.style.color = '#fca5a5';
+      }
+    }, 2500);
+  </script>
+
   <script type="module">
     // Load Supabase with a backup CDN. If both fail, show the real startup problem
     // instead of leaving the sign-in buttons silently dead.
@@ -1378,11 +1414,12 @@ function gadget(p){
     let queueChannel=null, matchChannel=null, queueTimer=null, stateTimer=null, queueStartedAt=0, queueMode='knockout', queueDone=false, localDisplayName='Brawler', activeMatchId=null;
     const seenAt = new Map();
     const randomBrawler = () => ['kuku','shachi','saiyan'][Math.floor(Math.random()*3)];
+    function queueTarget(mode=queueMode){ return mode==='duel' ? 2 : mode==='showdown' ? 10 : 6; }
     function queuePlayers(){
       const state=queueChannel ? queueChannel.presenceState() : {};
       const all=Object.values(state).flat().filter(p=>p && p.clientId);
       const unique=new Map(); for(const p of all) if(!unique.has(p.clientId)) unique.set(p.clientId,p);
-      return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,queueMode==='duel'?2:6);
+      return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,queueTarget());
     }
     async function beginMatchmaking(mode){
       if(mode==='duel' && currentRoom){status('1v1 is only available from solo PLAY, not in a room/party.',true);show('onlineLobby');return;}
@@ -1405,7 +1442,7 @@ function gadget(p){
           await queueChannel.track({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
           $('mmHint').textContent='Waiting up to 10 seconds for real players. Bots fill every remaining slot.';
           let remaining=10;
-          const target=queueMode==='duel'?2:6;
+          const target=queueTarget();
           const update=()=>{
             const count=queuePlayers().length;
             $('mmTxt').textContent='PLAYERS JOINED: '+Math.min(target,count)+'/'+target+' · '+remaining+'s';
@@ -1421,9 +1458,11 @@ function gadget(p){
               const roster=humans.map((p,i)=>({id:p.clientId,name:String(p.name||('Player '+(i+1))).slice(0,20),brawler:p.brawler||'kuku',bot:false}));
               const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax','Vex','Zane'];
               while(roster.length<target){const i=roster.length;roster.push({id:null,name:botNames[Math.floor(Math.random()*botNames.length)]+' BOT',brawler:randomBrawler(),bot:true});}
+              if(queueMode==='duel') roster.forEach((p,i)=>p.team=i);
+              if(queueMode==='showdown') roster.forEach((p,i)=>p.team=i);
                if(queueMode==='knockout'){const teams=[0,0,0,1,1,1];for(let i=teams.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[teams[i],teams[j]]=[teams[j],teams[i]];}roster.forEach((p,i)=>p.team=teams[i]);}
               const payload={matchId,mode:queueMode,roster};
-              $('mmTxt').textContent='BOTS JOINING!'; $('mmHint').textContent='Starting with '+humans.length+' real player(s) and '+(6-humans.length)+' bots…';
+              $('mmTxt').textContent='BOTS JOINING!'; $('mmHint').textContent='Starting with '+humans.length+' real player(s) and '+(target-humans.length)+' bots…';
               void queueChannel.send({type:'broadcast',event:'match-start',payload}).then(sent=>{if(sent?.status && sent.status!=='ok'){ $('mmHint').textContent='Realtime could not notify the other players. Check Supabase settings.'; queueDone=false; return;} return startOnlineMatch(roster,matchId,queueMode);}).catch(err=>{ $('mmHint').textContent='Could not notify the other players: '+(err.message||err); queueDone=false; });
               return;
             }
