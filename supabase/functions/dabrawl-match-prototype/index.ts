@@ -12,16 +12,16 @@ Deno.serve(async (req: Request) => {
       ok: true,
       prototype: "dabrawl-match-prototype",
       stage: "transport-check",
-      websocket: "Connect with ?token=<Supabase access token>&room=<test-room-id>",
-      note: "This isolated endpoint tests server-side WebSocket timing only. It does not replace or modify live matchmaking.",
+      note: "Isolated WebSocket timing/authentication test. Does not replace live matchmaking.",
     }), { headers: { ...cors, "Content-Type": "application/json" } });
   }
 
-  const url = new URL(req.url);
-  const token = url.searchParams.get("token");
-  const room = (url.searchParams.get("room") || "").trim().slice(0, 80);
-  if (!token || token.length > 8192 || !room) {
-    return new Response("Missing or invalid token/room", { status: 400 });
+  const protocols = (req.headers.get("sec-websocket-protocol") || "").split(",").map(p => p.trim());
+  const tokenProtocol = protocols.find(p => p.startsWith("jwt-"));
+  const token = tokenProtocol?.slice(4);
+  const room = (new URL(req.url).searchParams.get("room") || "").trim().slice(0, 80);
+  if (!token || token.length > 8192 || !room || !protocols.includes("dabrawl-prototype")) {
+    return new Response("Missing auth protocol or room", { status: 400 });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
   const { data: { user }, error } = await authClient.auth.getUser(token);
   if (error || !user) return new Response("Unauthorized", { status: 401 });
 
-  const { socket, response } = Deno.upgradeWebSocket(req, { idleTimeout: 0 });
+  const { socket, response } = Deno.upgradeWebSocket(req, { protocol: "dabrawl-prototype", idleTimeout: 0 });
   const startedAt = Date.now();
   let closed = false;
   let tick = 0;
@@ -44,7 +44,6 @@ Deno.serve(async (req: Request) => {
   let closeTimer: number | undefined;
   let resolveClosed!: () => void;
   const closedPromise = new Promise<void>((resolve) => { resolveClosed = resolve; });
-  // Keep the worker alive for this short test session, then reconnect cleanly.
   // @ts-ignore Supabase Edge Runtime provides EdgeRuntime.waitUntil.
   EdgeRuntime.waitUntil(closedPromise);
 
@@ -74,7 +73,6 @@ Deno.serve(async (req: Request) => {
       if (message?.type === "ping") {
         send({ type: "pong", clientSentAt: Number(message.clientSentAt) || 0, serverTime: Date.now() });
       } else if (message?.type === "input") {
-        // Transport-only stage: acknowledge input but do not trust or simulate client state.
         send({ type: "input-ack", seq: Number(message.seq) || 0, serverTime: Date.now(), accepted: true });
       } else {
         send({ type: "error", message: "Unsupported prototype message" });
@@ -93,6 +91,5 @@ Deno.serve(async (req: Request) => {
   };
   socket.onerror = cleanup;
   socket.onclose = cleanup;
-
   return response;
 });
