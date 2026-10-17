@@ -37,8 +37,9 @@
     .mid > * { pointer-events: auto; }
     .plus { width: 62px; height: 62px; border-radius: 50%; font: inherit; font-size: 42px; line-height: 1; color: #fff; background: #0b132b; border: 4px solid #000; box-shadow: 0 5px 0 #000; cursor: pointer; pointer-events: auto; z-index: 300; }
     .plus.room-menu-slot { width: clamp(108px,15vw,170px); height: 136px; border-radius: 16px; padding: 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:linear-gradient(160deg,#243b68,#10172b); border-color:#facc15; font-size:14px; line-height:1.15; white-space:normal; }
-    .room-menu-slot .room-face { width:52px;height:52px;border:3px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;background:linear-gradient(#facc15,#f97316);box-shadow:0 3px 0 #000; }
-    .room-menu-slot .room-name { color:#fff;font-size:17px;text-shadow:2px 2px #000; }
+    .room-menu-slot .room-face { width:64px;height:64px;border:3px solid #000;border-radius:50%;display:block;background:linear-gradient(#facc15,#f97316);box-shadow:0 3px 0 #000;flex-shrink:0; }
+    .room-menu-slot .room-name { color:#fff;font-size:16px;text-shadow:2px 2px #000;max-width:100%;overflow:hidden;text-overflow:ellipsis; }
+    .room-menu-slot .room-brawler { color:#fde68a;font-size:11px;letter-spacing:.5px; }
     .room-menu-slot .room-ready { color:#fca5a5;font-size:13px; }
     .room-menu-slot.ready { border-color:#22c55e; box-shadow:0 5px 0 #000,0 0 14px #22c55e88; }
     #roomMenuBar { display:none; position:absolute; top:12%; left:50%; transform:translateX(-50%); z-index:301; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; width:min(92vw,640px); }
@@ -182,6 +183,7 @@
 <script>
     const $ = i => document.getElementById(i), cv = $('c'); let g = cv.getContext('2d');
     let W, H, DPR, z = 1, scr = 'menu', isTestMode = false, gameMode = 'knockout', networkMode = false;
+    let lastMatchWasOnline=false, lastQueueMode='knockout';
     function rs(){ DPR = devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; }
     addEventListener('resize', rs); rs();
     function drawHilalLogo(c, sz = 100){
@@ -425,7 +427,7 @@
     $('sup').onpointerdown = e => { e.stopPropagation(); if(me.sc>=1 && me.tf<=0){ autoAimAndShoot(me); sup(me); } };
     $('gad').onpointerdown = e => { e.stopPropagation(); gadget(me); };
     $('leaveBtn').onclick = () => { show('menu'); isTestMode = false; };
-    $('again').onclick = () => { beep(500,.1); startLoadingScreen(isTestMode); };
+    $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){gameMode=lastQueueMode;matchmake();}else startLoadingScreen(isTestMode); };
     $('home').onclick = () => { beep(300,.1); show('menu'); isTestMode = false; };
     $('play').onclick = () => { beep(500,.1); if(gameMode==='duel' && window.DaBrawlNet?.isInParty()){ alert('1v1 is only available from solo PLAY, not while you are in a room/party.'); return; } matchmake(); };
     $('testPlay').onclick = () => { beep(500,.1); startLoadingScreen(true); };
@@ -580,11 +582,11 @@ function gadget(p){
         if(p.netRemote){
           const target=p.netTarget;
           if(target){
-            const age=Math.min(0.10,Math.max(0,(Date.now()-(p.netTargetAt||Date.now()))/1000));
-            const tx=target.x+(p.netVx||0)*age, ty=target.y+(p.netVy||0)*age;
-            const blend=1-Math.exp(-Math.min(dt,0.05)*28);
-            p.x += (tx-p.x)*blend;
-            p.y += (ty-p.y)*blend;
+            // Interpolate toward the last authoritative snapshot without velocity extrapolation.
+            // Extrapolating across network jitter caused overshoot and visible teleporting.
+            const blend=1-Math.exp(-Math.min(dt,0.05)*18);
+            p.x += (target.x-p.x)*blend;
+            p.y += (target.y-p.y)*blend;
             if(Number.isFinite(target.a)){
               const delta=Math.atan2(Math.sin(target.a-p.a),Math.cos(target.a-p.a));
               p.a += delta*blend;
@@ -682,6 +684,7 @@ function gadget(p){
       }, 1000);
     }
     function finish(){
+      lastMatchWasOnline=!!networkMode; lastQueueMode=gameMode;
       const win = gameMode==='duel' ? G.w[me.t]>=2 : gameMode==='showdown' ? me.alive : G.w[0]>=2, d = win ? 8 : -4;
       tr = Math.max(0, tr + d); bTrophies[selB] = Math.max(0, (bTrophies[selB]||0) + d); saveTrophies();
       $('rt').textContent = win ? 'VICTORY!' : 'DEFEAT'; $('rt').style.color = win ? '#ffd21f' : '#ff5a5a'; $('rd').textContent = (d>0?'+':'')+d+' 🏆'; show('res');
@@ -1214,7 +1217,7 @@ function gadget(p){
         show('game');
       },
       setRoomMenuState(players,currentUserId,roomCode){
-        const buttons=[$('prevBtn'),$('nextBtn')], icons={kuku:'🥊',shachi:'🐋',saiyan:'🐉'};
+        const buttons=[$('prevBtn'),$('nextBtn')];
         const slots=[1,2].map(slot=>players.find(p=>p.slot===slot));
         buttons.forEach((btn,i)=>{
           const p=slots[i];
@@ -1223,10 +1226,13 @@ function gadget(p){
             btn.onclick=()=>window.DaBrawlNet?.openRoom?.(); return;
           }
           btn.classList.add('room-menu-slot'); btn.classList.toggle('ready',p.ready);
-          btn.innerHTML='<span class="room-face">'+(icons[p.brawler]||'🥊')+'</span><span class="room-name">'+String(p.brawler||'kuku').toUpperCase()+'</span><span class="room-ready">'+(p.ready?'✓ READY':(p.userId===currentUserId?'TAP TO READY':'NOT READY'))+'</span>';
-          btn.title=p.userId===currentUserId?'Click to toggle READY':'Click to open room lobby';
-          btn.setAttribute('aria-label',(p.brawler||'Brawler')+(p.ready?' ready':' not ready'));
-          btn.onclick=()=>p.userId===currentUserId ? window.DaBrawlNet?.toggleReady?.() : window.DaBrawlNet?.openRoom?.();
+          const username=String(p.name||('Player '+p.slot)).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+          const brawler=String(p.brawler||'kuku');
+          btn.innerHTML='<canvas class="room-face" width="100" height="100"></canvas><span class="room-name">'+username+'</span><span class="room-brawler">'+brawler.toUpperCase()+'</span><span class="room-ready">'+(p.ready?'✓ READY':(p.userId===currentUserId?'TAP TO READY':'NOT READY'))+'</span>';
+          const avatar=btn.querySelector('canvas'); if(avatar) requestAnimationFrame(()=>rb(avatar,brawler,1.55,8));
+          btn.title=p.userId===currentUserId?'Click to toggle READY':'Click to view room';
+          btn.setAttribute('aria-label',username+', '+brawler+(p.ready?' ready':' not ready'));
+          btn.onclick=e=>{e.preventDefault();e.stopPropagation();if(p.userId===currentUserId)window.DaBrawlNet?.toggleReady?.();else window.DaBrawlNet?.openRoom?.();};
         });
         $('roomMenuBar').style.display=players.length?'flex':'none';
         $('roomMenuCode').textContent='ROOM '+roomCode+' · LOBBY';
@@ -1422,12 +1428,20 @@ function gadget(p){
       el('activeRoom').textContent='ROOM CODE: '+room.room_code;
       const {data:{user}}=await db.auth.getUser();
       const mine=players.find(p=>p.user_id===user?.id);
-      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:2},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);return '<div style="width:140px;min-height:88px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><div style="font-size:28px">'+(p?(p.is_ready?'🟢':'🧍'):'＋')+'</div><div>'+(p?('Player '+p.player_slot):'Empty slot')+'</div><small>'+(p?(p.character_id||'KUKU')+' · '+(p.is_ready?'READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>';
-      window.DaBrawlGame?.setRoomMenuState(players.map(p=>({slot:p.player_slot,brawler:p.character_id||'kuku',ready:!!p.is_ready,userId:p.user_id})),user?.id,room.room_code);
+      const presence=roomChannel?.presenceState?.()||{};
+      const onlineUsers=Object.values(presence).flat().filter(p=>p&&p.userId);
+      const roomNameFor=id=>onlineUsers.find(p=>p.userId===id)?.name || (id===user?.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Connecting…');
+      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:2},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);const bn=p?.character_id||'kuku';return '<div style="width:150px;min-height:150px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><canvas class="lobby-brawler" data-brawler="'+bn+'" width="100" height="100" style="width:82px;height:82px"></canvas><div style="font-weight:bold">'+(p?String(roomNameFor(p.user_id)).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])):'Empty slot')+'</div><small>'+(p?String(bn).toUpperCase()+' · '+(p.is_ready?'✓ READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>';
+      el('roomPlayers').querySelectorAll('canvas.lobby-brawler').forEach(c=>requestAnimationFrame(()=>rb(c,c.dataset.brawler,1.65,8)));
+      window.DaBrawlGame?.setRoomMenuState(players.map(p=>({slot:p.player_slot,brawler:p.character_id||'kuku',ready:!!p.is_ready,userId:p.user_id,name:roomNameFor(p.user_id)})),user?.id,room.room_code);
       el('readyRoomBtn').style.display=user && mine ? 'inline-block':'none';
       el('readyRoomBtn').textContent=mine?.is_ready?'NOT READY':'READY';
       el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.every(p=>p.is_ready) ? 'inline-block':'none';
-      status('Lobby connected · '+players.length+'/2 players. Both players must be ready before the host can start.');
+      status('Lobby connected · '+players.length+'/2 players. Ready up to start automatically.');
+      if(user && room.host_id===user.id && players.length===2 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
+        roomStartRequestedFor=room.id;
+        void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
+      }
     }
     async function createRoom(){
       const btn=el('createRoomBtn');
@@ -1465,17 +1479,25 @@ function gadget(p){
     }
     function subscribeRoom(){
       if(roomChannel)db.removeChannel(roomChannel);
-      roomChannel=db.channel('dabrawl-lobby-'+currentRoom.id,{config:{broadcast:{self:false}}})
-        .on('postgres_changes',{event:'*',schema:'public',table:'game_room_players',filter:'room_id=eq.'+currentRoom.id},refreshRoom)
-        .on('postgres_changes',{event:'*',schema:'public',table:'game_rooms',filter:'id=eq.'+currentRoom.id},refreshRoom)
+      roomChannel=db.channel('dabrawl-lobby-'+currentRoom.id,{config:{broadcast:{self:false},presence:{key:crypto.randomUUID?crypto.randomUUID():String(Date.now())}}})
+        .on('postgres_changes',{event:'*',schema:'public',table:'game_room_players',filter:'room_id=eq.'+currentRoom.id},()=>{void refreshRoom();})
+        .on('postgres_changes',{event:'*',schema:'public',table:'game_rooms',filter:'id=eq.'+currentRoom.id},()=>{void refreshRoom();})
+        .on('presence',{event:'sync'},()=>{void refreshRoom();})
         .on('broadcast',{event:'room-match-start'},async({payload})=>{
           if(!payload || !Array.isArray(payload.roster) || activeMatchId) return;
           const {data:{user}}=await db.auth.getUser();
           if(user && payload.roster.some(p=>p.id===user.id)) void startOnlineMatch(payload.roster,payload.matchId,payload.mode,user.id);
         })
-        .subscribe(statusValue=>{if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT') status('Room live connection failed. Check Supabase Realtime settings.',true);});
+        .subscribe(async statusValue=>{
+          if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'){status('Room live connection failed. Check Supabase Realtime settings.',true);return;}
+          if(statusValue==='SUBSCRIBED'){
+            const {data:{user}}=await db.auth.getUser();
+            if(user && roomChannel) await roomChannel.track({userId:user.id,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler:localStorage.getItem('dabrawl_b')||'kuku'});
+            await refreshRoom();
+          }
+        });
     }
-    let roomCountdownTimer=null;
+    let roomCountdownTimer=null, roomStartRequestedFor=null;
     async function startRoomGame(){
       if(!currentRoom || !roomChannel){status('Create or join a room first.',true);return;}
       const {data:{user},error:authError}=await db.auth.getUser();
@@ -1486,7 +1508,9 @@ function gadget(p){
       if(error){status('Could not load room players: '+error.message,true);return;}
       if(players.length<2){status('Waiting for a friend to join this room.',true);return;}
       if(!players.every(p=>p.is_ready)){status('Both players must press READY before the match can start.',true);return;}
-      const roster=players.slice(0,2).map((p,i)=>({id:p.user_id,name:'Player '+p.player_slot,brawler:p.character_id||'kuku',bot:false,team:i}));
+      const presence=roomChannel?.presenceState?.()||{};
+      const live=Object.values(presence).flat().filter(p=>p&&p.userId);
+      const roster=players.slice(0,2).map((p,i)=>({id:p.user_id,name:live.find(x=>x.userId===p.user_id)?.name||(p.user_id===user.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Player '+p.player_slot),brawler:p.character_id||'kuku',bot:false,team:i}));
       const matchId='room-'+currentRoom.id+'-'+Date.now().toString(36);
       const payload={matchId,mode:'duel',roster};
       status('Starting the 1v1 room match…');
@@ -1592,7 +1616,7 @@ function gadget(p){
             if(player) void matchChannel.send({type:'broadcast',event:'player-state',payload:{player}});
             const now=Date.now();
             for(const [id,last] of seenAt) if(now-last>6000){window.DaBrawlGame?.makeRemoteBot(id);seenAt.delete(id);}
-          },80);
+          },50);
         },650);
       });
     }
@@ -1614,8 +1638,8 @@ function gadget(p){
     window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,isInParty:()=>!!currentRoom,toggleReady:null,openRoom:null};
 
     const openFriends = async () => { show('onlineLobby'); await updateAuthUI(); };
-    el('prevBtn').addEventListener('click', openFriends);
-    el('nextBtn').addEventListener('click', openFriends);
+    el('prevBtn').addEventListener('click', e=>{if(!currentRoom){e.preventDefault();void openFriends();}});
+    el('nextBtn').addEventListener('click', e=>{if(!currentRoom){e.preventDefault();void openFriends();}});
     el('onlineBack').addEventListener('click',()=>show('menu'));
     el('createRoomBtn').addEventListener('click',createRoom);
     el('joinRoomBtn').addEventListener('click',joinRoom);
