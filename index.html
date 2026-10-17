@@ -1446,6 +1446,13 @@ function gadget(p){
       el('activeRoom').textContent='ROOM CODE: '+room.room_code;
       const {data:{user}}=await db.auth.getUser();
       const mine=players.find(p=>p.user_id===user?.id);
+      if(user && !mine){
+        if(roomChannel){const oldChannel=roomChannel;roomChannel=null;try{await db.removeChannel(oldChannel);}catch(e){}}
+        currentRoom=null;roomStartRequestedFor=null;
+        const playButton=el('play');playButton.textContent='PLAY';playButton.classList.remove('ready');playButton.onclick=()=>{beep(500,.1);matchmake();};
+        window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';show('menu');
+        return;
+      }
       const presence=roomChannel?.presenceState?.()||{};
       const onlineUsers=Object.values(presence).flat().filter(p=>p&&p.userId);
       const roomNameFor=id=>onlineUsers.find(p=>p.userId===id)?.name || (id===user?.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Connecting…');
