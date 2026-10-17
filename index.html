@@ -42,6 +42,7 @@
     .room-menu-slot .room-brawler { color:#fde68a;font-size:12px;letter-spacing:.5px; }
     .room-menu-slot .room-ready { color:#fca5a5;font-size:13px; }
     .room-menu-slot.ready { border-color:#22c55e; box-shadow:inset 0 -4px #22c55e; }
+    .room-menu-slot .room-kick { position:absolute;top:6px;right:6px;background:#7f1d1d;color:#fff;border:1px solid #fca5a5;border-radius:8px;padding:4px 7px;font-size:11px;z-index:4; }
     #roomMenuBar { display:none; position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:301; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; width:min(92vw,640px); }
     #roomMenuBar button { font-size:16px; padding:7px 14px; }
     #roomMenuBar { display:none; position:absolute; top:12%; left:50%; transform:translateX(-50%); z-index:301; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; width:min(92vw,640px); }
@@ -1233,11 +1234,12 @@ function gadget(p){
           btn.classList.add('room-menu-slot'); btn.classList.toggle('ready',p.ready);
           const username=String(p.name||('Player '+p.slot)).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
           const brawler=String(p.brawler||'kuku');
-          btn.innerHTML='<canvas class="room-face" width="220" height="280"></canvas><span class="room-name">'+username+'</span><span class="room-brawler">'+brawler.toUpperCase()+'</span><span class="room-ready">'+(p.ready?'✓ READY':'NOT READY')+'</span>';
+          btn.innerHTML='<canvas class="room-face" width="260" height="320"></canvas><span class="room-name" title="'+username+'">'+username+'</span><span class="room-brawler">'+brawler.toUpperCase()+'</span><span class="room-ready">'+(p.ready?'✓ READY':'NOT READY')+'</span>'+(isHost?'<button class="room-kick" type="button">REMOVE</button>':'');
           const avatar=btn.querySelector('canvas'); if(avatar) requestAnimationFrame(()=>rb(avatar,brawler,3.1,5));
           btn.title=username+' · '+brawler.toUpperCase()+(p.ready?' · READY':' · NOT READY');
           btn.setAttribute('aria-label',username+', '+brawler+(p.ready?' ready':' not ready'));
           btn.onclick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.openRoom?.();};
+          const remove=btn.querySelector('.room-kick');if(remove)remove.onclick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.removePartyMember?.(p.userId);};
         });
         $('roomMenuBar').style.display=players.length?'flex':'none';
         $('roomMenuCode').textContent='ROOM '+roomCode+' · PARTY';
@@ -1700,6 +1702,13 @@ function gadget(p){
     }
     window.DaBrawlNet.toggleReady=toggleRoomReady;
     window.DaBrawlNet.updateBrawler=updateRoomBrawler;
+    window.DaBrawlNet.removePartyMember=async targetId=>{
+      if(!currentRoom)return;
+      const {error}=await db.rpc('kick_dabrawl_room_player',{p_room_id:currentRoom.id,p_target_user_id:targetId});
+      if(error){status('Could not remove player: '+error.message,true);return;}
+      await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
+      await refreshRoom();
+    };
     window.DaBrawlNet.openRoom=()=>show('onlineLobby');
     el('roomMenuStart').addEventListener('click',startRoomGame);
     el('roomLeaveBtn').addEventListener('click',leaveParty);
