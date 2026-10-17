@@ -511,6 +511,8 @@ function gadget(p){
       else if(l>.05){ const m = Math.min(1,l); mv(p, p.mx*m*K.spd*dt, p.my*m*K.spd*dt); p.walk+=dt*12; }
     }
     function dmg(t,b){
+      // A remote player's own browser is authoritative for their health.
+      if(networkMode && t.netRemote) return;
       if(t.tf>0) return;
       if(t.dodge>0){
         t.dodgeFx=0.25; if(!t.afterimages) t.afterimages=[];
@@ -561,7 +563,20 @@ function gadget(p){
             p.afterimages[ai].t -= dt; if(p.afterimages[ai].t <= 0) p.afterimages.splice(ai, 1);
           }
         }
-        if(p.netRemote) continue;
+        // Smooth remote movement toward the latest snapshot and skip local simulation.
+        if(p.netRemote){
+          const target=p.netTarget;
+          if(target){
+            const blend=1-Math.exp(-Math.min(dt,0.05)*14);
+            p.x += (target.x-p.x)*blend;
+            p.y += (target.y-p.y)*blend;
+            if(Number.isFinite(target.a)){
+              const delta=Math.atan2(Math.sin(target.a-p.a),Math.cos(target.a-p.a));
+              p.a += delta*blend;
+            }
+          }
+          continue;
+        }
         if(p.alive && G.ph=='play'){
           const px = p.x/T, py = p.y/T;
           if(px < gasDist || px > MW - gasDist || py < gasDist || py > MH - gasDist){
@@ -1165,6 +1180,7 @@ function gadget(p){
           p.netId = entry.bot ? null : entry.id;
           p.netRemote = !entry.bot && entry.id !== localId;
           p.netLast = Date.now();
+          p.netTarget = {x:p.x,y:p.y,a:p.a};
           P.push(p);
           if(!entry.bot && entry.id === localId) me = p;
         });
@@ -1181,7 +1197,9 @@ function gadget(p){
         if(!state || !state.id) return;
         const p=P.find(q=>q.netId===state.id);
         if(!p || p===me) return;
-        for(const k of ['x','y','a','hp','mh','alive','sc','am','cd','gcd','tf','tfn','form','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my']) if(state[k]!==undefined) p[k]=state[k];
+        // Keep position smooth; update health/combat fields from the owner's snapshot.
+        p.netTarget = {x:state.x ?? p.x, y:state.y ?? p.y, a:state.a ?? p.a};
+        for(const k of ['hp','mh','alive','sc','am','cd','gcd','tf','tfn','form','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my']) if(state[k]!==undefined) p[k]=state[k];
         p.netLast=Date.now();
       },
       applyRemoteAction(msg){
@@ -1342,18 +1360,29 @@ function gadget(p){
       status('Lobby connected · '+players.length+'/6 players. Everyone in the room must be ready before the host can start.');
     }
     async function createRoom(){
-      const {data:{user}}=await db.auth.getUser(); if(!user){status('Sign in first.',true);return;}
+      const btn=el('createRoomBtn');
+      const {data:{user},error:authError}=await db.auth.getUser();
+      if(authError){status('Could not check your login: '+authError.message,true);return;}
+      if(!user){status('Sign in first.',true);return;}
+      if(currentRoom){status('You are already in a room. Leave or refresh the lobby before creating another.',true);return;}
+      if(btn)btn.disabled=true;
       status('Creating room…');
-      for(let i=0;i<5;i++){
-        const code=Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b%32]).join('');
-        const {data:room,error}=await db.from('game_rooms').insert({room_code:code,host_id:user.id}).select('*').single();
-        if(error){if(error.code==='23505')continue;status(error.message,true);return;}
-        const displayName=user.user_metadata?.username || (user.email||'Player').split('@')[0];
-        const {error:joinError}=await db.from('game_room_players').insert({room_id:room.id,user_id:user.id,player_slot:1,character_id:localStorage.getItem('dabrawl_b')||'kuku',is_ready:false,display_name:displayName});
-        if(joinError){status(joinError.message,true);return;}
-        currentRoom=room; subscribeRoom(); await refreshRoom();return;
+      try {
+        for(let i=0;i<5;i++){
+          const code=Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b%32]).join('');
+          const {data:room,error}=await db.from('game_rooms').insert({room_code:code,host_id:user.id}).select('*').single();
+          if(error){if(error.code==='23505')continue;status('Room creation failed: '+error.message+' ('+(error.code||'database error')+').',true);return;}
+          const displayName=user.user_metadata?.username || (user.email||'Player').split('@')[0];
+          const {error:joinError}=await db.from('game_room_players').insert({room_id:room.id,user_id:user.id,player_slot:1,character_id:localStorage.getItem('dabrawl_b')||'kuku',is_ready:false,display_name:displayName});
+          if(joinError){status('Room was created, but adding you failed: '+joinError.message+' ('+(joinError.code||'database error')+'). Check game_room_players insert permissions in Supabase.',true);return;}
+          currentRoom=room; subscribeRoom(); await refreshRoom();return;
+        }
+        status('Could not create a unique room code after 5 tries. Try again.',true);
+      } catch(err) {
+        status('Room creation crashed: '+(err?.message||String(err)),true);
+      } finally {
+        if(btn)btn.disabled=false;
       }
-      status('Could not create a unique room code. Try again.',true);
     }
     async function joinRoom(){
       const code=el('roomCodeInput').value.trim().toUpperCase();
@@ -1497,10 +1526,10 @@ function gadget(p){
           stateTimer=setInterval(()=>{
             if(!matchChannel || activeMatchId!==matchId) return;
             const player=window.DaBrawlGame?.getLocalState();
-            if(player) matchChannel.send({type:'broadcast',event:'player-state',payload:{player}});
+            if(player) void matchChannel.send({type:'broadcast',event:'player-state',payload:{player}});
             const now=Date.now();
-            for(const [id,last] of seenAt) if(now-last>4500){window.DaBrawlGame?.makeRemoteBot(id);seenAt.delete(id);}
-          },80);
+            for(const [id,last] of seenAt) if(now-last>6000){window.DaBrawlGame?.makeRemoteBot(id);seenAt.delete(id);}
+          },120);
         },650);
       });
     }
