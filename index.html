@@ -1563,7 +1563,7 @@ function gadget(p){
       try {
         const sent=await roomChannel.send({type:'broadcast',event:'room-match-start',payload});
         if(sent?.status && sent.status!=='ok'){roomStartRequestedFor=null;status('Could not notify your friend: '+(sent.status||'Realtime send failed')+'. Check Supabase Realtime settings.',true);return;}
-        await startOnlineMatch(roster,matchId,'duel',user.id);
+        await startOnlineMatch(roster,matchId,mode,user.id);
       } catch(err){roomStartRequestedFor=null;status('Could not start room match: '+(err?.message||String(err)),true);}
     }
 
@@ -1654,7 +1654,7 @@ function gadget(p){
         if(statusValue!=='SUBSCRIBED') return;
         setTimeout(()=>{
           if(!matchChannel || activeMatchId!==matchId) return;
-          window.DaBrawlGame?.startNetworkGame(roster,matchId,mode,clientId);
+          window.DaBrawlGame?.startNetworkGame(roster,matchId,mode,localId);
           clearInterval(stateTimer);
           stateTimer=setInterval(()=>{
             if(!matchChannel || activeMatchId!==matchId) return;
