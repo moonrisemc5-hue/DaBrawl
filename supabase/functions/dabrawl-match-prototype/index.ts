@@ -25,7 +25,9 @@ Deno.serve(async (req: Request) => {
   EdgeRuntime.waitUntil(closedPromise);
   const send=(data:unknown)=>{if(socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify(data))};
   socket.onopen=()=>{
-    send({type:"connected",room,userId:user.id,serverTime:Date.now(),maxSessionMs:110000,stage:"authoritative-movement"});
+    const initialPlayer=joined.data?.players?.[user.id];
+    seq=Number(initialPlayer?.seq)||0;
+    send({type:"connected",room,userId:user.id,serverTime:Date.now(),maxSessionMs:110000,stage:"authoritative-movement",lastInputSeq:seq});
     send({type:"match-state",state:joined.data,serverTime:Date.now()});
     interval=setInterval(async()=>{
       if(closed||socket.readyState!==WebSocket.OPEN)return;
