@@ -535,7 +535,13 @@ function gadget(p){
         // Only the victim's client applies the actual health change.
         const canRequestHit = b?.o===me || (isNetworkHost && b?.o?.isBot);
         if(canRequestHit && t.netId && window.DaBrawlNet){
-          window.DaBrawlNet.sendAction('damage',0,{targetId:t.netId,damage:Math.max(0,Number(b.d)||0),vx:Number(b.vx)||0,vy:Number(b.vy)||0});
+          const damage=Math.max(0,Number(b.d)||0);
+          window.DaBrawlNet.sendAction('damage',0,{targetId:t.netId,damage,vx:Number(b.vx)||0,vy:Number(b.vy)||0});
+          // Give the attacker immediate hit confirmation; health remains authoritative on the victim.
+          t.fl=.12;
+          F.push({k:'t',x:t.x,y:t.y-30,vx:0,vy:-60,l:.7,m:.7,tx:String(Math.round(damage)),c:'#ffe45c'});
+          puff(t.x,t.y,8,'#ffe45c',.8); beep(260,.06,.05,'square',-80);
+          window.DaBrawlNet.sendAction('hit-feedback',0,{targetId:t.netId,damage});
         }
         return;
       }
@@ -625,7 +631,8 @@ function gadget(p){
       if(G.ph=='play'){
         for(const p of P){
           if(!p.alive) continue;
-          if(p.netRemote) continue;
+          // Remote players still need local-only visual animation updates (transform auras, particles).
+          if(p.netRemote){ if(p.tf>0) tfx(p,dt); continue; }
           K=p.k; p.am = Math.min(3, p.am + dt/K.rel); p.nh+=dt;
           if(p.nh>3 && p.hp<p.mh && !p.isDummy){
             p.hc = (p.hc||0) + dt;
@@ -835,7 +842,7 @@ function gadget(p){
       }
       return false;
     }
-    function xform(p){ p.tfn = p.form+1; p.tf = 1.8; p.sc=0; p.chg=0; p.burst=0; p.am=3; p.holdT=0; p.hw=false; playTransformSound(p.tfn >= 4 ? 'galaxy' : 'normal'); }
+    function xform(p){ p.tfn = p.form+1; p.tf = 1.8; p.sc=0; p.chg=0; p.burst=0; p.am=3; p.holdT=0; p.hw=false; if(networkMode && p===me) window.DaBrawlNet?.sendAction('transform',p.a,{form:p.tfn}); playTransformSound(p.tfn >= 4 ? 'galaxy' : 'normal'); }
     function tfx(p,dt){
       p.tf-=dt; const fm = FM[p.tfn]; shake = Math.max(shake, 14); const col = fm.aura || '#ffd21f';
       if(p.tfn >= 4 && Math.random()<.6) F.push({k:'pillar', x:p.x, y:p.y, c:'#ffffff', l:.3, m:.3});
@@ -1352,6 +1359,21 @@ function gadget(p){
           const i=Number(msg.i),j=Number(msg.j);
           if(Number.isInteger(i)&&Number.isInteger(j)&&i>0&&j>0&&i<MW-1&&j<MH-1&&M[j]?.[i]==='#'){
             M[j][i]='.'; puff(i*T+T/2,j*T+T/2,8,'#8a5a2b',1.2);
+          }
+          return;
+        }
+        if(msg.action==='transform'){
+          const requestedForm=Math.max(1,Math.min(5,Number(msg.form)||((p.form||0)+1)));
+          p.tfn=requestedForm; p.tf=Math.max(p.tf||0,1.8); p.sc=0; p.chg=0; p.burst=0; p.holdT=0; p.hw=false;
+          playTransformSound(requestedForm>=4?'galaxy':'normal');
+          return;
+        }
+        if(msg.action==='hit-feedback'){
+          const target=P.find(q=>q.netId===msg.targetId);
+          if(target){
+            target.fl=.16;
+            F.push({k:'t',x:target.x,y:target.y-30,vx:0,vy:-60,l:.7,m:.7,tx:String(Math.max(0,Math.round(Number(msg.damage)||0))),c:'#ffe45c'});
+            puff(target.x,target.y,8,'#ffe45c',.8); beep(260,.06,.05,'square',-80);
           }
           return;
         }
