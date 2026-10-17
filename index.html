@@ -1535,7 +1535,7 @@ function gadget(p){
       return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,queueTarget());
     }
     async function beginMatchmaking(mode){
-      if(mode==='duel' && currentRoom){status('1v1 is only available from solo PLAY, not in a room/party.',true);show('onlineLobby');return;}
+      // A completed private-room duel can queue again just like any other online match.
       cancelMatchmaking(false); queueMode=mode||'knockout'; queueDone=false; queueStartedAt=Date.now();
       show('mm'); $('mmTxt').textContent='CONNECTING TO PLAYERS…'; $('mmHint').textContent='Connecting to DaBrawl online matchmaking…';
       try {
