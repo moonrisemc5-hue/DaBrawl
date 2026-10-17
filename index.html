@@ -200,7 +200,7 @@
     }
     function initLogos(){ drawHilalLogo($('logoCv'), 44); drawHilalLogo($('mmLogo'), 120); drawHilalLogo($('ldLogo'), 100); }
     function show(s){
-      if(s !== 'game' && s !== 'loading' && networkMode){ networkMode = false; if(window.DaBrawlNet) window.DaBrawlNet.leaveMatch(); }
+      if(s !== 'game' && s !== 'loading' && s !== 'res' && networkMode){ networkMode = false; if(window.DaBrawlNet) window.DaBrawlNet.leaveMatch(); }
       scr = s; document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id == s));
       $('leaveBtn').style.display = (s == 'game' && isTestMode) ? 'block' : 'none';
       $('hud').classList.toggle('on', s == 'game');
@@ -431,8 +431,8 @@
     $('sup').onpointerdown = e => { e.stopPropagation(); if(me.sc>=1 && me.tf<=0){ autoAimAndShoot(me); sup(me); } };
     $('gad').onpointerdown = e => { e.stopPropagation(); gadget(me); };
     $('leaveBtn').onclick = () => { show('menu'); isTestMode = false; };
-    $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){gameMode=lastQueueMode;matchmake();}else startLoadingScreen(isTestMode); };
-    $('home').onclick = () => { beep(300,.1); show('menu'); isTestMode = false; };
+    $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ if(isNetworkHost) void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
+    $('home').onclick = () => { beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
     $('play').onclick = () => { if(window.DaBrawlNet?.isInParty()){window.DaBrawlNet.toggleReady?.();return;} beep(500,.1); if(gameMode==='duel'){alert('1v1 is only available from solo PLAY, not while you are in a room/party.');return;} matchmake(); };
     $('testPlay').onclick = () => { beep(500,.1); startLoadingScreen(true); };
     $('bra').onclick = () => show('brs');
@@ -698,10 +698,18 @@ function gadget(p){
       }, 1000);
     }
     function finish(){
+      if(scr==='res') return;
       lastMatchWasOnline=!!networkMode; lastQueueMode=gameMode;
       const win = gameMode==='duel' ? G.w[me.t]>=2 : gameMode==='showdown' ? me.alive : G.w[0]>=2, d = win ? 8 : -4;
       tr = Math.max(0, tr + d); bTrophies[selB] = Math.max(0, (bTrophies[selB]||0) + d); saveTrophies();
-      $('rt').textContent = win ? 'VICTORY!' : 'DEFEAT'; $('rt').style.color = win ? '#ffd21f' : '#ff5a5a'; $('rd').textContent = (d>0?'+':'')+d+' 🏆'; show('res');
+      $('rt').textContent = win ? 'VICTORY!' : 'DEFEAT'; $('rt').style.color = win ? '#ffd21f' : '#ff5a5a'; $('rd').textContent = (d>0?'+':'')+d+' 🏆';
+      if(networkMode){
+        $('again').style.display=isNetworkHost?'':'none'; $('home').style.display=isNetworkHost?'':'none';
+        $('mmHint').textContent='';
+        if(isNetworkHost && window.DaBrawlNet) void window.DaBrawlNet.announceMatchEnd(win);
+        if(!isNetworkHost){$('rt').textContent='MATCH OVER';$('rd').textContent='Waiting for the host…';$('home').style.display='none';}
+      } else { $('again').style.display=''; $('home').style.display=''; }
+      show('res');
     }
     function updateMenuUI(){ try { $('bn').textContent = BR[selB].nm; setTimeout(() => rb($('pv'), selB, 2.6, 8), 20); } catch(e){} }
     function rb(c,id,sc,dy){
@@ -1620,7 +1628,7 @@ function gadget(p){
     // Public quick-play queue: Presence tracks who is waiting; Broadcast carries game state/actions.
     const clientId = (crypto.randomUUID ? crypto.randomUUID() : 'p'+Math.random().toString(36).slice(2)+Date.now());
     let activePlayerId=clientId;
-    let queueChannel=null, matchChannel=null, queueTimer=null, stateTimer=null, queueStartedAt=0, queueMode='knockout', queueDone=false, localDisplayName='Brawler', activeMatchId=null;
+    let queueChannel=null, matchChannel=null, queueTimer=null, stateTimer=null, queueStartedAt=0, queueMode='knockout', queueDone=false, localDisplayName='Brawler', activeMatchId=null, activeMatchRoster=null, activeMatchHostId=null, activeMatchLocalId=null;
     const seenAt = new Map();
     const randomBrawler = () => ['kuku','shachi','saiyan'][Math.floor(Math.random()*3)];
     function queueTarget(mode=queueMode){ return mode==='duel' ? 2 : mode==='showdown' ? 10 : 6; }
@@ -1696,10 +1704,20 @@ function gadget(p){
       seenAt.clear();
       $('mmTxt').textContent='GET READY!'; $('mmHint').textContent='Match found. Syncing players…';
       $('ldFill').style.width='100%'; $('ldPct').textContent='100%'; show('loading');
+      activeMatchRoster=roster.map(p=>({...p})); activeMatchHostId=hostId; activeMatchLocalId=localId;
       matchChannel=db.channel('dabrawl-match-'+matchId,{config:{broadcast:{self:false}}});
       matchChannel.on('broadcast',{event:'match-state'},({payload})=>{if(Array.isArray(payload?.players)) for(const player of payload.players){window.DaBrawlGame?.applyRemoteState(player);seenAt.set(player.id,Date.now());}});
       matchChannel.on('broadcast',{event:'player-state'},({payload})=>{if(payload?.player) {window.DaBrawlGame?.applyRemoteState(payload.player);seenAt.set(payload.player.id,Date.now());}});
       matchChannel.on('broadcast',{event:'player-action'},({payload})=>window.DaBrawlGame?.applyRemoteAction(payload));
+      matchChannel.on('broadcast',{event:'match-ended'},({payload})=>{ if(!payload || activeMatchId!==matchId) return; if(scr!=='res'){ $('rt').textContent='MATCH OVER'; $('rd').textContent='Waiting for the host…'; $('again').style.display='none'; $('home').style.display='none'; show('res'); } });
+      matchChannel.on('broadcast',{event:'match-control'},async({payload})=>{
+        if(!payload || activeMatchId!==matchId || payload.hostId!==activeMatchHostId) return;
+        if(payload.action==='leave'){ await leaveMatch(); show('menu'); isTestMode=false; return; }
+        if(payload.action==='rematch' && payload.matchId && Array.isArray(payload.roster)){
+          const next={...payload}; await leaveMatch();
+          await startOnlineMatch(next.roster,next.matchId,next.mode,activeMatchLocalId,next.hostId,next.startAt);
+        }
+      });
       matchChannel.subscribe(statusValue=>{
         if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){ $('mmTxt').textContent='CONNECTION LOST'; $('mmHint').textContent='Could not connect to the match. Check Supabase Realtime settings and try again.'; return; }
         if(statusValue!=='SUBSCRIBED') return;
@@ -1713,9 +1731,22 @@ function gadget(p){
             if(players.length) void matchChannel.send({type:'broadcast',event:'match-state',payload:{sentAt:Date.now(),players}});
             // Do not replace a temporarily silent player with a bot: browsers throttle background tabs.
             // The player's next state packet will resynchronize them when their tab becomes active again.
-          },50);
+          },33);
         },650);
       });
+    }
+    async function announceMatchEnd(win){ if(!matchChannel || !activeMatchId || !isNetworkHost) return; await matchChannel.send({type:'broadcast',event:'match-ended',payload:{win:!!win,hostId:activeMatchHostId}}); }
+    async function requestRematch(){
+      if(!isNetworkHost || !matchChannel || !activeMatchRoster) return;
+      const nextId='rematch-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6), startAt=Date.now()+3000;
+      const payload={action:'rematch',matchId:nextId,mode:lastQueueMode,roster:activeMatchRoster,hostId:activeMatchHostId,startAt};
+      const ch=matchChannel; await ch.send({type:'broadcast',event:'match-control',payload});
+      await leaveMatch(); await startOnlineMatch(payload.roster,payload.matchId,payload.mode,activeMatchLocalId,payload.hostId,payload.startAt);
+    }
+    async function hostLeaveMatch(){
+      if(!isNetworkHost || !matchChannel) return;
+      const ch=matchChannel; await ch.send({type:'broadcast',event:'match-control',payload:{action:'leave',hostId:activeMatchHostId}});
+      await leaveMatch(); show('menu'); isTestMode=false;
     }
     function sendMatchAction(action,angle,extra={}){
       if(!matchChannel || !activeMatchId) return;
@@ -1746,7 +1777,7 @@ function gadget(p){
       if(matchChannel){const old=matchChannel;matchChannel=null;await db.removeChannel(old);}
       if(window.DaBrawlGame) window.DaBrawlGame.endNetworkGame();
     }
-    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,isInParty:()=>!!currentRoom,toggleReady:null,openRoom:null};
+    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,toggleReady:null,openRoom:null};
 
     const openFriends = async () => { show('onlineLobby'); await updateAuthUI(); };
     el('prevBtn').addEventListener('click', e=>{if(!currentRoom){e.preventDefault();void openFriends();}});
