@@ -1218,14 +1218,40 @@ function gadget(p){
       const username=el('onlineEmail').value.trim().toLowerCase(), password=el('onlinePassword').value;
       if(!/^[a-z0-9_]{3,20}$/.test(username)){status('Username must be 3–20 characters: letters, numbers, or underscores.',true);return;}
       if(password.length<6){status('Password must have at least 6 characters.',true);return;}
-      // Supabase Auth requires an email-shaped identifier. Users only enter a username; no email is collected.
-      // Email confirmation must be disabled in Supabase Auth settings for this email-free flow.
-      const email=username+'@dabrawl.game';
+      // The player enters only a username. Supabase Auth stores it in an email-shaped alias;
+      // never ask the player to provide or verify a real email address.
+      const email=username+'@dabrawl.com';
       status(mode==='up'?'Creating your account…':'Signing in…');
-      const result=mode==='up' ? await db.auth.signUp({email,password,options:{data:{username}}}) : await db.auth.signInWithPassword({email,password});
-      if(result.error){status(result.error.message,true);return;}
-      if(mode==='up' && !result.data.session){status('Account created, but email confirmation is enabled on the server. Disable Confirm email in Supabase Auth settings to finish username-only sign-in.',true);return;}
-      await updateAuthUI();
+      try {
+        let result;
+        if(mode==='up'){
+          result=await db.auth.signUp({email,password,options:{data:{username}}});
+        } else {
+          result=await db.auth.signInWithPassword({email,password});
+          // Compatibility with accounts created by the earlier @dabrawl.game alias.
+          if(result.error) result=await db.auth.signInWithPassword({email:username+'@dabrawl.game',password});
+        }
+        if(result.error){
+          const message=String(result.error.message||'');
+          if(/invalid.*email|email.*invalid/i.test(message)){
+            status('The login service rejected the username alias. I updated the game to use a standard email format; refresh the page and try again.',true);
+          } else if(/already registered|already exists|user already/i.test(message)){
+            status('That username already exists. Choose another username or use SIGN IN.',true);
+          } else if(/password/i.test(message) && mode==='up'){
+            status('Password was rejected. Use at least 6 characters.',true);
+          } else {
+            status(message || 'Account request failed. Please try again.',true);
+          }
+          return;
+        }
+        if(mode==='up' && !result.data.session){
+          status('The account was created, but the server is requiring email confirmation. Username-only accounts need Confirm email turned OFF in the Supabase Auth settings.',true);
+          return;
+        }
+        await updateAuthUI();
+      } catch(err) {
+        status('Could not reach the login service. Check your connection and try again.',true);
+      }
     }
     async function refreshRoom(){
       if(!currentRoom)return;
