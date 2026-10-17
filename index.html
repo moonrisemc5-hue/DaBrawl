@@ -185,7 +185,7 @@
   </div>
 <script>
     const $ = i => document.getElementById(i), cv = $('c'); let g = cv.getContext('2d');
-    let W, H, DPR, z = 1, scr = 'menu', isTestMode = false, gameMode = 'knockout', networkMode = false;
+    let W, H, DPR, z = 1, scr = 'menu', isTestMode = false, gameMode = 'knockout', networkMode = false, isNetworkHost = false;
     let lastMatchWasOnline=false, lastQueueMode='knockout';
     function rs(){ DPR = devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; }
     addEventListener('resize', rs); rs();
@@ -369,20 +369,20 @@
       } else if(gameMode === 'duel'){
         // Offline fallback for 1v1: exactly one opponent, never a full 3v3 roster.
         P.push(mk(1,0,0,n.pop()||'Duel Bot',['kuku','shachi','saiyan'][Math.random()*3|0]));
-        G = {ph:'count',t:3.2,w:[0,0],r:1,res:''};
+        G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       } else if(gameMode == 'showdown'){
         for(let i=1; i<10; i++) P.push(mk(i, i, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
-        G = {ph:'count',t:3.2,w:[0,0],r:1,res:''};
+        G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       } else {
         for(let t=0;t<2;t++)for(let i=0;i<3;i++){ if(!t&&!i) continue; P.push(mk(t,i,0,n.pop(),['kuku','shachi','saiyan'][Math.random()*3|0])); }
-        G = {ph:'count',t:3.2,w:[0,0],r:1,res:''};
+        G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       }
       B=[]; F=[]; MT=[]; KM=[]; show('game');
     }
     function resetRound(){
       const savedSc = me ? me.sc : 0; build(); B=[]; F=[]; MT=[]; KM=[];
       P.forEach(p => Object.assign(p, mk(p.t,0,p.human,p.name,p.b,p.isDummy), {sc:p.human?savedSc:0}));
-      G.ph='count'; G.t=3.2;
+      G.ph='count'; G.t=3.2; G.endAt=Date.now()+3200;
     }
     const keys = {}; let mx = 0, my = 0, mdown = false;
     addEventListener('keydown', e => {
@@ -616,7 +616,7 @@ function gadget(p){
       for(let i=MT.length-1;i>=0;i--){ const m=MT[i]; m.t-=dt; if(m.t<=0){ MT.splice(i,1); impact(m); } }
       wf = Math.max(0, wf);
       for(let i=KM.length-1;i>=0;i--){ const k=KM[i]; k.t-=dt; k.x=k.o.x; k.y=k.o.y; k.tk-=dt; if(k.tk<=0){ k.tk=.1; beamHit(k); } if(k.t<=0) KM.splice(i,1); }
-      if(G.ph=='count'){ G.t-=dt; if(G.t<=0) G.ph='play'; }
+      if(G.ph=='count'){ G.t=Math.max(0,((G.endAt||Date.now())-Date.now())/1000); if(G.t<=0) G.ph='play'; }
       else if(G.ph=='end'){ G.t-=dt; if(G.t<=0){ if(G.w[0]>=2||G.w[1]>=2||gameMode=='showdown') finish(); else { G.r++; resetRound(); } } }
       if(G.ph=='play'){
         for(const p of P){
@@ -1222,8 +1222,8 @@ function gadget(p){
   
     // Multiplayer bridge used by the Supabase Realtime layer below.
     window.DaBrawlGame = {
-      startNetworkGame(roster, matchId, mode, localId){
-        networkMode = true; isTestMode = false; gameMode = mode || 'knockout';
+      startNetworkGame(roster, matchId, mode, localId, hostId=localId){
+        networkMode = true; isTestMode = false; isNetworkHost=(localId===hostId); gameMode = mode || 'knockout';
         $('modeTxt').textContent = gameMode === 'showdown' ? 'SOLO SHOWDOWN' : gameMode === 'duel' ? '1v1 DUEL' : 'KNOCKOUT 3v3';
         P=[]; me=null; build(); B=[]; F=[]; MT=[]; KM=[];
         roster.forEach((entry,idx)=>{
@@ -1231,15 +1231,16 @@ function gadget(p){
           const slot = gameMode === 'showdown' || gameMode === 'duel' ? idx : idx % 3;
           const brawler = BR[entry.brawler] ? entry.brawler : 'kuku';
           const p = mk(team,slot,!entry.bot,entry.name,brawler,false);
-          p.netId = entry.bot ? null : entry.id;
-          p.netRemote = !entry.bot && entry.id !== localId;
+          p.netId = entry.id;
+          p.isBot = !!entry.bot;
+          p.netRemote = entry.bot ? !isNetworkHost : entry.id !== localId;
           p.netLast = Date.now();
           p.netTarget = {x:p.x,y:p.y,a:p.a};
           P.push(p);
           if(!entry.bot && entry.id === localId) me = p;
         });
         if(!me){ networkMode=false; show('menu'); return; }
-        G={ph:'count',t:3.2,w:[0,0],r:1,res:''}; gasDist=0;
+        G={ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''}; gasDist=0;
         show('game');
       },
       setRoomMenuState(players,currentUserId,roomCode,isHost){
@@ -1283,6 +1284,13 @@ function gadget(p){
         if(!me) return null;
         const p=me;
         return {id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my};
+      },
+      getNetworkStates(){
+        const pack=p=>({id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my});
+        if(!me) return [];
+        const states=[pack(me)];
+        if(isNetworkHost) for(const p of P) if(p!==me && p.isBot) states.push(pack(p));
+        return states;
       },
       applyRemoteState(state){
         if(!state || !state.id) return;
@@ -1549,7 +1557,7 @@ function gadget(p){
         .on('broadcast',{event:'room-match-start'},async({payload})=>{
           if(!payload || !Array.isArray(payload.roster) || activeMatchId) return;
           const {data:{user}}=await db.auth.getUser();
-          if(user && payload.roster.some(p=>p.id===user.id)) void startOnlineMatch(payload.roster,payload.matchId,payload.mode,user.id);
+          if(user && payload.roster.some(p=>p.id===user.id)) void startOnlineMatch(payload.roster,payload.matchId,payload.mode,user.id,payload.hostId||payload.roster.find(p=>!p.bot)?.id);
         })
         .subscribe(async statusValue=>{
           if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'){status('Room live connection failed. Check Supabase Realtime settings.',true);return;}
@@ -1580,18 +1588,20 @@ function gadget(p){
       const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax'];
       const botBrawlers=['kuku','shachi','saiyan'];
       const target=mode==='knockout'?6:mode==='showdown'?10:2;
+      let seed=0; for(const ch of String(currentRoom.id)) seed=(seed*31+ch.charCodeAt(0))>>>0;
+      const seeded=()=>{seed=(seed*1664525+1013904223)>>>0;return seed;};
       while(roster.length<target){
-        const i=roster.length;
+        const i=roster.length, botIndex=i-players.length;
         const team=mode==='knockout'?(i<3?0:1):i;
-        roster.push({id:null,name:botNames[(i-players.length+botNames.length)%botNames.length]+' BOT',brawler:botBrawlers[Math.floor(Math.random()*botBrawlers.length)],bot:true,team});
+        roster.push({id:'bot-'+currentRoom.id+'-'+i,name:botNames[botIndex%botNames.length]+' BOT',brawler:botBrawlers[seeded()%botBrawlers.length],bot:true,team});
       }
       const matchId='room-'+currentRoom.id+'-'+Date.now().toString(36);
-      const payload={matchId,mode,roster};
+      const payload={matchId,mode,roster,hostId:user.id};
       status('Starting '+mode.toUpperCase()+'…');
       try {
         const sent=await roomChannel.send({type:'broadcast',event:'room-match-start',payload});
         if(sent?.status && sent.status!=='ok'){roomStartRequestedFor=null;status('Could not notify your friend: '+(sent.status||'Realtime send failed')+'. Check Supabase Realtime settings.',true);return;}
-        await startOnlineMatch(roster,matchId,mode,user.id);
+        await startOnlineMatch(roster,matchId,mode,user.id,user.id);
       } catch(err){roomStartRequestedFor=null;status('Could not start room match: '+(err?.message||String(err)),true);}
     }
 
@@ -1666,7 +1676,7 @@ function gadget(p){
         } catch(err){ status('Could not join matchmaking: '+(err.message||err),true); $('mmTxt').textContent='MATCHMAKING ERROR'; }
       });
     }
-    async function startOnlineMatch(roster,matchId,mode,localId=clientId){
+    async function startOnlineMatch(roster,matchId,mode,localId=clientId,hostId=localId){
       if(activeMatchId || !roster.some(p=>p.id===localId)) return;
       activeMatchId=matchId; activePlayerId=localId;
       clearInterval(queueTimer); queueTimer=null;
@@ -1682,12 +1692,12 @@ function gadget(p){
         if(statusValue!=='SUBSCRIBED') return;
         setTimeout(()=>{
           if(!matchChannel || activeMatchId!==matchId) return;
-          window.DaBrawlGame?.startNetworkGame(roster,matchId,mode,localId);
+          window.DaBrawlGame?.startNetworkGame(roster,matchId,mode,localId,hostId);
           clearInterval(stateTimer);
           stateTimer=setInterval(()=>{
             if(!matchChannel || activeMatchId!==matchId) return;
-            const player=window.DaBrawlGame?.getLocalState();
-            if(player) void matchChannel.send({type:'broadcast',event:'player-state',payload:{player}});
+            const players=window.DaBrawlGame?.getNetworkStates?.() || [window.DaBrawlGame?.getLocalState()].filter(Boolean);
+            for(const player of players) if(player) void matchChannel.send({type:'broadcast',event:'player-state',payload:{player}});
             // Do not replace a temporarily silent player with a bot: browsers throttle background tabs.
             // The player's next state packet will resynchronize them when their tab becomes active again.
           },50);
