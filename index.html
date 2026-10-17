@@ -1214,13 +1214,18 @@ function gadget(p){
       el('onlineUser').textContent = user ? 'Signed in as: '+(user.user_metadata?.username || (user.email||'').split('@')[0]) : '';
       if(user) status('Signed in. Create a room or enter a friend’s room code.');
     }
+    let authBusy = false;
     async function auth(mode){
+      if(authBusy) return;
       const username=el('onlineEmail').value.trim().toLowerCase(), password=el('onlinePassword').value;
       if(!/^[a-z0-9_]{3,20}$/.test(username)){status('Username must be 3–20 characters: letters, numbers, or underscores.',true);return;}
       if(password.length<6){status('Password must have at least 6 characters.',true);return;}
       // The player enters only a username. Supabase Auth stores it in an email-shaped alias;
-      // never ask the player to provide or verify a real email address.
+      // the project must have email confirmation disabled for this email-free account flow.
       const email=username+'@dabrawl.com';
+      authBusy=true;
+      const signIn=el('onlineSignIn'), signUp=el('onlineSignUp');
+      signIn.disabled=true; signUp.disabled=true;
       status(mode==='up'?'Creating your account…':'Signing in…');
       try {
         let result;
@@ -1233,8 +1238,10 @@ function gadget(p){
         }
         if(result.error){
           const message=String(result.error.message||'');
-          if(/invalid.*email|email.*invalid/i.test(message)){
-            status('The login service rejected the username alias. I updated the game to use a standard email format; refresh the page and try again.',true);
+          if(/rate limit|email rate limit|too many requests/i.test(message)){
+            status('Supabase has temporarily rate-limited account emails. Stop trying for now and wait for the limit to reset. To prevent this for username-only accounts, the project owner must turn OFF Confirm email in Supabase Dashboard → Authentication → Sign In / Providers (Email). I cannot change that project setting from the game.',true);
+          } else if(/invalid.*email|email.*invalid/i.test(message)){
+            status('The login service rejected the username alias. Please try again later or check the Supabase Auth configuration.',true);
           } else if(/already registered|already exists|user already/i.test(message)){
             status('That username already exists. Choose another username or use SIGN IN.',true);
           } else if(/password/i.test(message) && mode==='up'){
@@ -1251,6 +1258,9 @@ function gadget(p){
         await updateAuthUI();
       } catch(err) {
         status('Could not reach the login service. Check your connection and try again.',true);
+      } finally {
+        authBusy=false;
+        signIn.disabled=false; signUp.disabled=false;
       }
     }
     async function refreshRoom(){
