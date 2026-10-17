@@ -56,27 +56,16 @@ export async function createRoom(characterId = null) {
 }
 
 export async function joinRoom(roomCode, characterId = null) {
-  const user = await requireUser();
+  await requireUser();
   const code = String(roomCode).trim().toUpperCase();
-  const { data: room, error: roomError } = await supabase
-    .from('game_rooms').select('*').eq('room_code', code).eq('status', 'waiting').single();
-  if (roomError) throw new Error('Room not found or it has already started.');
-
-  const { data: existing } = await supabase
-    .from('game_room_players').select('player_slot').eq('room_id', room.id).eq('user_id', user.id).maybeSingle();
-  if (existing) return room;
-
-  const { data: players, error: playersError } = await supabase
-    .from('game_room_players').select('player_slot').eq('room_id', room.id);
-  if (playersError) throw playersError;
-  if ((players ?? []).length >= 2) throw new Error('This room is full.');
-  const slot = (players ?? []).some((player) => player.player_slot === 1) ? 2 : 1;
-
-  const { error } = await supabase.from('game_room_players').insert({
-    room_id: room.id, user_id: user.id, player_slot: slot,
-    character_id: characterId, is_ready: false,
+  const { data: roomId, error } = await supabase.rpc('join_dabrawl_room', {
+    p_room_code: code,
+    p_character_id: characterId,
   });
-  if (error) throw new Error(error.code === '23505' ? 'The room filled just now. Try another room.' : error.message);
+  if (error) throw new Error(error.message || 'Could not join that room.');
+  const { data: room, error: roomError } = await supabase
+    .from('game_rooms').select('*').eq('id', roomId).single();
+  if (roomError) throw roomError;
   return room;
 }
 
