@@ -1505,7 +1505,7 @@ function gadget(p){
             if(humansNow.length<target && Date.now()<deadline) return;
             finalized=true; queueDone=true; clearInterval(queueTimer); queueTimer=null;
             let humans=humansNow;
-            if(!humans.some(p=>p.clientId)) humans.push({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
+            if(!humans.some(p=>p.clientId===clientId)) humans.push({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
             humans=humans.sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,target);
             if(humans[0]?.clientId!==clientId){ $('mmTxt').textContent='WAITING FOR MATCH HOST…'; $('mmHint').textContent='The first player in the queue is starting the match…'; queueDone=false; return; }
             const matchId='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
