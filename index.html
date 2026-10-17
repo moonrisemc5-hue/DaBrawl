@@ -352,6 +352,10 @@
       if(test){
         P.push(mk(1,0,0,'Dummy Kuku','kuku',true)); P.push(mk(1,1,0,'Dummy Shachi','shachi',true));
         G = {ph:'play',t:0,w:[0,0],r:1,res:''};
+      } else if(gameMode === 'duel'){
+        // Offline fallback for 1v1: exactly one opponent, never a full 3v3 roster.
+        P.push(mk(1,0,0,n.pop()||'Duel Bot',['kuku','shachi','saiyan'][Math.random()*3|0]));
+        G = {ph:'count',t:3.2,w:[0,0],r:1,res:''};
       } else if(gameMode == 'showdown'){
         for(let i=1; i<10; i++) P.push(mk(i, i, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
         G = {ph:'count',t:3.2,w:[0,0],r:1,res:''};
@@ -1329,7 +1333,7 @@ function gadget(p){
       const {data:players,error:pe}=await db.from('game_room_players').select('player_slot,character_id,is_ready,user_id,display_name').eq('room_id',room.id).order('player_slot');
       if(pe){status(pe.message,true);return;}
       el('activeRoom').textContent='ROOM CODE: '+room.room_code;
-      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:6},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);return '<div style="width:112px;min-height:88px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><div style="font-size:28px">'+(p?(p.is_ready?'🟢':'🧍'):'＋')+'</div><div>'+(p?(p.display_name||('Player '+p.player_slot)):'Empty slot')+'</div><small>'+(p?(p.character_id||'KUKU')+' · '+(p.is_ready?'READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>');
+      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:6},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);return '<div style="width:112px;min-height:88px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><div style="font-size:28px">'+(p?(p.is_ready?'🟢':'🧍'):'＋')+'</div><div>'+(p?(p.display_name||('Player '+p.player_slot)):'Empty slot')+'</div><small>'+(p?(p.character_id||'KUKU')+' · '+(p.is_ready?'READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>';
       const {data:{user}}=await db.auth.getUser();
       const mine=players.find(p=>p.user_id===user?.id);
       el('readyRoomBtn').style.display=user && mine ? 'inline-block':'none';
