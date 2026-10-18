@@ -189,8 +189,21 @@ function cleanupRoom(room) {
 }
 const server = http.createServer((req,res) => {
   const path = new URL(req.url || "/", "http://localhost").pathname;
-  if (path === "/health") { res.writeHead(200,{"content-type":"application/json","cache-control":"no-store"}); res.end(JSON.stringify({ok:true,service:"dabrawl-authoritative-server",uptimeSeconds:Math.floor(process.uptime()),rooms:rooms.size})); return; }
-  res.writeHead(404,{"content-type":"application/json"}); res.end(JSON.stringify({error:"not found"}));
+  const headers = {"content-type":"application/json","cache-control":"no-store"};
+  if (path === "/health") {
+    // Liveness only; useful before deployment secrets are configured.
+    res.writeHead(200,headers);
+    res.end(JSON.stringify({ok:true,service:"dabrawl-authoritative-server",uptimeSeconds:Math.floor(process.uptime()),rooms:rooms.size,authConfigured:Boolean(auth)}));
+    return;
+  }
+  if (path === "/ready") {
+    // Readiness means authenticated match connections can be accepted.
+    const ready = Boolean(auth);
+    res.writeHead(ready ? 200 : 503,headers);
+    res.end(JSON.stringify({ready,service:"dabrawl-authoritative-server",reason:ready ? undefined : "Missing SUPABASE_URL or SUPABASE_ANON_KEY"}));
+    return;
+  }
+  res.writeHead(404,headers); res.end(JSON.stringify({error:"not found"}));
 });
 const wss = new WebSocketServer({ noServer:true, maxPayload:4096, perMessageDeflate:false, handleProtocols: protocols => protocols.has("dabrawl-v1") ? "dabrawl-v1" : false });
 server.on("upgrade", async (req,socket,head) => {
