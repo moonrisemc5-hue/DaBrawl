@@ -2,6 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer, WebSocket } from "ws";
+import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage } from "./protocol.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -27,7 +28,7 @@ const cleanText = (s, max = 28) => String(s ?? "").replace(/[<>\u0000-\u001f]/g,
 const now = () => Date.now();
 
 function makeRoom(code, mode = "knockout") {
-  return { code, mode: ["knockout", "duel", "showdown"].includes(mode) ? mode : "knockout",
+  return { code, mode: validMode(mode),
     phase: "waiting", createdAt: now(), updatedAt: now(), startedAt: 0, endsAt: 0, tick: 0,
     players: new Map(), projectiles: [], events: [], winner: null };
 }
@@ -36,7 +37,7 @@ function makePlayer(user, msg, slot) {
   return { id: user.id, name: cleanText(msg.name), brawler, team: slot % 2, slot,
     x: slot % 2 ? 620 : 180, y: 150 + Math.floor(slot / 2) * 70, aim: slot % 2 ? Math.PI : 0,
     hp: BRAWLERS[brawler].hp, maxHp: BRAWLERS[brawler].hp, alive: true, meter: 0,
-    form: 0, transformUntil: 0, input: { x: 0, y: 0 }, seq: 0, lastFire: 0, lastSuper: 0,
+    form: 0, transformUntil: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0,
     connected: true, socket: null, lastSeen: now(), invulnerableUntil: 0 };
 }
 function emit(room, type, data = {}) {
@@ -160,7 +161,7 @@ server.on("upgrade", async (req,socket,head) => {
     const {data,error} = await auth.auth.getUser(token);
     if (error || !data.user) { socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n"); socket.destroy(); return; }
     const roomCode = (u.searchParams.get("room") || "").trim().slice(0,64);
-    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(roomCode)) { socket.write("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n"); socket.destroy(); return; }
+    if (!validRoomCode(roomCode)) { socket.write("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n"); socket.destroy(); return; }
     wss.handleUpgrade(req,socket,head,ws => {
       wss.emit("connection",ws,req,{user:data.user,roomCode});
     });
@@ -174,11 +175,11 @@ wss.on("connection", (ws,_req,meta) => {
   catch(err) { ws.close(1008,String(err.message||"Cannot join room").slice(0,120)); return; }
   ws.on("message", raw => {
     try {
-      const m=JSON.parse(raw.toString()); if (!m || typeof m.type!=="string") throw new Error("Invalid message");
+      const m=parseClientMessage(raw.toString());
       if (m.type==="join") {
         if (room.phase!=="waiting" && room.players.size<MAX_PLAYERS) throw new Error("Match already started");
         player.name=cleanText(m.name || player.name); if (BRAWLERS[m.brawler]) player.brawler=m.brawler;
-        if (["knockout","duel","showdown"].includes(m.mode) && room.phase==="waiting") room.mode=m.mode;
+        if (room.phase==="waiting") room.mode=validMode(m.mode);
         if (m.ready===true) startMatch(room);
         emit(room,"player-joined",{playerId:player.id}); sendState(room);
       } else if (m.type==="ready") { if (m.ready===true) startMatch(room); sendState(room); }
@@ -202,12 +203,13 @@ wss.on("connection", (ws,_req,meta) => {
       else throw new Error("Unsupported message type");
     } catch(err) { ws.send(JSON.stringify({type:"error",message:String(err.message||"Invalid message").slice(0,120)})); }
   });
-  ws.on("close",()=>{ player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); room.updatedAt=now(); event(room,"player-disconnected",{playerId:player.id}); });
-  ws.on("error",()=>{ player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); });
+  ws.on("close",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); room.updatedAt=now(); event(room,"player-disconnected",{playerId:player.id}); });
+  ws.on("error",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); });
   emit(room,"player-joined",{playerId:player.id}); sendState(room);
 });
+let lastTickAt=now();
 const ticker=setInterval(()=> {
-  const dt=Math.min(.1,(now()-(globalThis.__lastTick||now()))/1000); globalThis.__lastTick=now();
+  const tickAt=now(); const dt=Math.min(.1,Math.max(0,(tickAt-lastTickAt)/1000)); lastTickAt=tickAt;
   for (const room of rooms.values()) { stepRoom(room,dt||TICK_MS/1000); sendState(room); cleanupRoom(room); }
 },TICK_MS);
 server.listen(PORT,"0.0.0.0",()=>console.log("DaBrawl authoritative server listening on",PORT));
