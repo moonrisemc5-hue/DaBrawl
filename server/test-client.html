@@ -29,7 +29,7 @@
 <h2>Match sandbox</h2>
 <canvas id="arena" width="800" height="520" aria-label="Server snapshot arena"></canvas>
 <p class="muted">Move with WASD or arrow keys. Aim follows the mouse. Click the arena to fire; use buttons for super, transformation, gadget, and ping. This visual is a server snapshot inspector, not the full game client.</p>
-<div class="actions"><button id="fire" disabled>Fire (Space)</button><button id="super" disabled>Super (E)</button><button id="transform" disabled>Transform (T)</button><button id="gadget" disabled>Gadget (Q)</button><button id="ping" class="secondary" disabled>Ping</button></div>
+<div class="actions"><button id="fire" disabled>Fire (Space)</button><button id="super" disabled>Super (E)</button><button id="transform" disabled>Transform (T)</button><button id="gadget" disabled>Gadget (Q)</button><button id="kame" disabled>Kame (full charge)</button><button id="ping" class="secondary" disabled>Ping</button></div>
 <h3>Players</h3><div id="players" class="players"><div class="player">Waiting for a server snapshot…</div></div>
 </div>
 <div class="panel"><h2>Event log</h2><pre id="log">Ready. No token or server URL is stored.</pre></div>
@@ -42,7 +42,7 @@
  const status = (message, kind="") => { $("status").textContent=message; $("dot").className="dot"+(kind?" "+kind:""); };
  const connected = () => ws && ws.readyState===WebSocket.OPEN;
  const send = packet => { if(connected()) ws.send(JSON.stringify(packet)); };
- const enable = on => ["disconnect","ready","fire","super","transform","gadget","ping"].forEach(id => $(id).disabled=!on);
+ const enable = on => ["disconnect","ready","fire","super","transform","gadget","kame","ping"].forEach(id => $(id).disabled=!on);
  function connect(){
   if(ws) ws.close();
   const base=$("server").value.trim(), token=$("token").value.trim(), room=$("room").value.trim();
@@ -76,7 +76,7 @@
  }
  function disconnect(){if(ws){ws.close(1000,"Test disconnected");ws=null;}status("Disconnected");$("connect").disabled=false;enable(false);state=null;draw();}
  function sendReady(){ready=!ready;send({type:"ready",ready});$("ready").textContent=ready?"Set Not Ready":"Set Ready";log("Ready set to "+ready);}
- function action(action){send({type:"action",action});}
+ function action(action,extra={}){send({type:"action",action,...extra});}
  function ping(){lastPing=performance.now();send({type:"ping",clientSentAt:Date.now()});}
  function draw(){
   const c=$("arena"),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);
@@ -84,6 +84,7 @@
   ctx.strokeStyle="#1d2b43";ctx.lineWidth=1;for(let x=0;x<=800;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,520);ctx.stroke()}for(let y=0;y<=520;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(800,y);ctx.stroke()}
   ctx.strokeStyle="#64779a";ctx.strokeRect(28,28,744,464);
   if(!state){ctx.fillStyle="#aebbd5";ctx.font="18px system-ui";ctx.fillText("Waiting for authoritative server snapshot",190,260);return}
+  (state.beams||[]).forEach(b=>{ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.aim);ctx.globalAlpha=.45;ctx.fillStyle="#ffffff";ctx.fillRect(0,-b.width,b.length,b.width*2);ctx.globalAlpha=1;ctx.fillStyle="#dbeafe";ctx.fillRect(0,-b.width*.28,b.length,b.width*.56);ctx.restore()});
   (state.projectiles||[]).forEach(b=>{ctx.fillStyle=b.super?"#ffce63":"#f6f0bb";ctx.beginPath();ctx.arc(b.x,b.y,b.super?6:4,0,Math.PI*2);ctx.fill()});
   (state.players||[]).forEach((p,i)=>{
    ctx.fillStyle=p.alive?(p.team===0?"#60a5fa":"#fb7185"):"#64748b";ctx.beginPath();ctx.arc(p.x,p.y,19,0,Math.PI*2);ctx.fill();
@@ -107,7 +108,7 @@
   if(me){send({type:"input",seq:seq++,x,y,aim});}
  }
  $("connect").addEventListener("click",connect);$("disconnect").addEventListener("click",disconnect);$("ready").addEventListener("click",sendReady);
- $("fire").addEventListener("click",()=>action("fire"));$("super").addEventListener("click",()=>action("super"));$("transform").addEventListener("click",()=>action("transform"));$("gadget").addEventListener("click",()=>action("gadget"));$("ping").addEventListener("click",ping);
+ $("fire").addEventListener("click",()=>action("fire"));$("super").addEventListener("click",()=>action("super"));$("transform").addEventListener("click",()=>action("transform"));$("gadget").addEventListener("click",()=>action("gadget"));$("kame").addEventListener("click",()=>action("kame",{charge:1,angle}));$("ping").addEventListener("click",ping);
  $("arena").addEventListener("mousemove",ev=>{const r=ev.currentTarget.getBoundingClientRect();const x=(ev.clientX-r.left)/r.width*800,y=(ev.clientY-r.top)/r.height*520;const me=state?.players?.find(p=>p.id===currentUserId);if(me)aim=Math.atan2(y-me.y,x-me.x);});
  $("arena").addEventListener("click",()=>action("fire"));
  window.addEventListener("keydown",ev=>{if(["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName))return;const k=ev.key;if([" ","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(k))ev.preventDefault();held.add(k);if(ev.repeat)return;if(k===" ")action("fire");if(k.toLowerCase()==="e")action("super");if(k.toLowerCase()==="t")action("transform");if(k.toLowerCase()==="q")action("gadget");});
