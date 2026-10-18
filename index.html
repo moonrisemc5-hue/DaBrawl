@@ -1535,10 +1535,10 @@ function gadget(p){
         buttons.forEach((btn,i)=>{
           const p=friends[i];
           if(!p){
-            btn.classList.remove('room-menu-slot','ready'); btn.innerHTML='+'; btn.title='Invite a friend by room code'; btn.setAttribute('aria-label','Add a friend by code');
+            btn.classList.remove('room-menu-slot','ready'); delete btn.dataset.roomUserId; btn.innerHTML='+'; btn.title='Invite a friend by room code'; btn.setAttribute('aria-label','Add a friend by code');
             btn.onclick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.openRoom?.();}; return;
           }
-          btn.classList.add('room-menu-slot'); btn.classList.toggle('ready',p.ready);
+          btn.classList.add('room-menu-slot'); btn.classList.toggle('ready',p.ready); btn.dataset.roomUserId=p.userId;
           const username=String(p.name||('Player '+p.slot)).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
           const brawler=String(p.brawler||'kuku');
           btn.innerHTML='<canvas class="room-face" width="260" height="320"></canvas><span class="room-name" title="'+username+'">'+username+'</span><span class="room-brawler">'+brawler.toUpperCase()+'</span><span class="room-ready">'+(p.ready?'✓ READY':'NOT READY')+'</span>'+(isHost?'<span class="room-kick" role="button" tabindex="0" title="Remove from party">REMOVE</span>':'');
@@ -1674,6 +1674,20 @@ function gadget(p){
         if(p && p!==me){ p.netRemote=false; p.human=false; p.netId=null; }
       },
       playShowcase(id,broadcast=false){playMenuShowcase(id,broadcast);},
+      playRoomMemberShowcase(userId,id){
+        if(!userId||!BR[id])return;
+        const btn=[$('prevBtn'),$('nextBtn')].find(node=>node.dataset.roomUserId===userId);
+        const canvas=btn?.querySelector('canvas.room-face');
+        if(!canvas)return;
+        const token=(Number(canvas.dataset.showcaseToken)||0)+1;canvas.dataset.showcaseToken=String(token);
+        const started=performance.now();
+        function frame(now){
+          if(canvas.dataset.showcaseToken!==String(token)||!canvas.isConnected)return;
+          if(!drawShowcaseFrame(canvas,id,(now-started)/1000,3.1,5)){rb(canvas,id,3.1,5);return;}
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      },
       endNetworkGame(){ networkMode=false; }
     };
 
@@ -1937,7 +1951,7 @@ function gadget(p){
         .on('postgres_changes',{event:'*',schema:'public',table:'game_rooms',filter:'id=eq.'+currentRoom.id},()=>{void refreshRoom();})
         .on('presence',{event:'sync'},()=>{void refreshRoom();})
         .on('broadcast',{event:'room-refresh'},()=>{void refreshRoom();})
-        .on('broadcast',{event:'brawler-showcase'},({payload})=>{if(payload?.brawler)window.DaBrawlGame?.playShowcase?.(payload.brawler,false);})
+        .on('broadcast',{event:'brawler-showcase'},({payload})=>{if(payload?.brawler&&payload?.userId)setTimeout(()=>window.DaBrawlGame?.playRoomMemberShowcase?.(payload.userId,payload.brawler),250);})
         .on('broadcast',{event:'room-disbanded'},({payload})=>{
           if(!currentRoom||payload?.roomId!==currentRoom.id)return;
           resetLocalRoomState('The party leader disbanded the room.');
@@ -2173,7 +2187,7 @@ function gadget(p){
       if(matchChannel){const old=matchChannel;matchChannel=null;await db.removeChannel(old);}
       if(window.DaBrawlGame) window.DaBrawlGame.endNetworkGame();
     }
-    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,showcaseBrawler:brawler=>{if(roomChannel&&['kuku','shachi','saiyan'].includes(brawler))void roomChannel.send({type:'broadcast',event:'brawler-showcase',payload:{brawler}});},toggleReady:null,openRoom:null};
+    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,showcaseBrawler:brawler=>{if(roomChannel&&['kuku','shachi','saiyan'].includes(brawler))void db.auth.getUser().then(({data:{user}})=>user?roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler,userId:user.id}}):null);},toggleReady:null,openRoom:null};
 
     let friendsPresenceChannel=null, friendsPresenceTimer=null;
     const friendsEscape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -2445,7 +2459,7 @@ function gadget(p){
       if(error){status('Brawler selection sync failed: '+error.message,true);return;}
       await roomChannel?.track({userId:user.id,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler});
       await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
-      await roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler}});
+      await roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler,userId:user.id}});
       await refreshRoom();
     }
     async function changeRoomMode(){
