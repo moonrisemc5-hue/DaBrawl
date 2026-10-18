@@ -56,3 +56,14 @@ test("only the room owner can configure a room before the match starts", () => {
   assert.equal(canConfigureRoom("owner", "owner", "playing"), false);
   assert.equal(canConfigureRoom("", "owner", "waiting"), false);
 });
+
+test("validates client message schemas before game logic sees them", () => {
+  assert.deepEqual(parseClientMessage('{"type":"ready","ready":true}'), { type: "ready", ready: true });
+  assert.deepEqual(parseClientMessage('{"type":"input","seq":1,"x":0.5,"y":-0.5,"aim":0}'), { type: "input", seq: 1, x: 0.5, y: -0.5, aim: 0 });
+  assert.throws(() => parseClientMessage('{"type":"ready","ready":"yes"}'), /Invalid ready flag/);
+  assert.throws(() => parseClientMessage('{"type":"input","seq":-1,"x":0,"y":0}'), /Invalid input sequence/);
+  assert.throws(() => parseClientMessage('{"type":"input","seq":1,"x":"fast","y":0}'), /Invalid movement axes/);
+  assert.throws(() => parseClientMessage('{"type":"action","action":"teleport"}'), /Unsupported action/);
+  assert.throws(() => parseClientMessage('{"type":"admin"}'), /Unsupported message type/);
+  assert.throws(() => parseClientMessage('{"type":"join","name":"' + "x".repeat(81) + '"}'), /Invalid name/);
+});
