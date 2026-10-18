@@ -455,7 +455,7 @@
     }
     function startGame(test=false){
       isTestMode = test; mapVariant=Math.floor(Math.random()*3); const n = [...NM].sort(() => Math.random()-.5);
-      P = []; me = mk(0,0,1,'You',selB); P.push(me); build();
+      P = []; build(); me = mk(0,0,1,'You',selB); P.push(me);
       if(test){
         P.push(mk(1,0,0,'Dummy Kuku','kuku',true)); P.push(mk(1,1,0,'Dummy Shachi','shachi',true));
         G = {ph:'play',t:0,w:[0,0],r:1,res:''};
