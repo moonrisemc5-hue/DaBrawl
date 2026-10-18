@@ -146,6 +146,7 @@
     <button class="btn" id="friendsRefresh">REFRESH</button><button class="btn" id="friendsBack">BACK</button>
   </div>
 
+  <div id="friendRequestPopup" style="display:none;position:fixed;inset:0;z-index:10000;background:#000c;align-items:center;justify-content:center;padding:20px;box-sizing:border-box"><div style="width:min(92vw,420px);padding:22px;background:#111c35;border:3px solid #60a5fa;border-radius:18px;text-align:center;box-shadow:0 15px 55px #000"><h2 style="margin:0 0 10px;color:#93c5fd">FRIEND REQUEST</h2><p id="friendRequestPopupText" style="color:#e2e8f0;line-height:1.5">Someone wants to be your friend.</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn y" id="friendRequestPopupAccept">ACCEPT</button><button class="btn" id="friendRequestPopupDecline">DECLINE</button></div></div></div>
   <div id="roomInvitePopup" style="display:none;position:fixed;inset:0;z-index:9999;background:#000b;align-items:center;justify-content:center;padding:20px;box-sizing:border-box"><div style="width:min(92vw,420px);padding:22px;background:#111c35;border:3px solid #ffd21f;border-radius:18px;text-align:center;box-shadow:0 15px 55px #000"><h2 style="margin:0 0 10px;color:#ffd21f">ROOM INVITATION</h2><p id="roomInviteText" style="color:#e2e8f0;line-height:1.5">Your friend invited you to join.</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn y" id="roomInviteAccept">JOIN ROOM</button><button class="btn" id="roomInviteDecline">DECLINE</button></div></div></div>
   <div class="scr" id="modePicker">
     <h2>CHOOSE A GAME MODE</h2>
@@ -893,11 +894,11 @@ function gadget(p){
       show('res');
     }
     function updateMenuUI(){ try { $('bn').textContent = BR[selB].nm; if(!menuShowcaseFrame)setTimeout(() => {if(!menuShowcaseFrame)rb($('pv'), selB, 2.6, 8);}, 20); } catch(e){} }
-    function rb(c,id,sc,dy){
+    function rb(c,id,sc,dy,form,angle,tf,tfn,showcasePose){
       try {
         if(!c) return; const ctx = c.getContext('2d'); if(!ctx) return;
         ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,c.width,c.height); ctx.setTransform(sc,0,0,sc,c.width/2,c.height/2+dy);
-        const oldG = g; g = ctx; drawP({x:0,y:0,t:0,b:id,a:arguments[5]??0.15,walk:0,rec:0,fl:0,alive:true,dt:0,hp:1000,mh:1000,k:BR[id],form:arguments[4]||0,tf:arguments[6]||0,tfn:arguments[7]||1,sc:0,afterimages:[]}); g = oldG;
+        const oldG = g; g = ctx; drawP({x:0,y:0,t:0,b:id,a:arguments[5]??0.15,walk:0,rec:0,fl:0,alive:true,dt:0,hp:1000,mh:1000,k:BR[id],form:form||0,tf:tf||0,tfn:tfn||1,showcasePose:showcasePose,sc:0,afterimages:[]}); g = oldG;
       } catch(e){}
     }
     function grid(){
@@ -942,7 +943,8 @@ function gadget(p){
       const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height,cx=w/2,cy=h/2+dy,phase=Math.min(3.35,t);
       let form=0,angle=id==='kuku'?.55:0,tf=0;
       if(id==='saiyan'){if(phase<.75)form=0;else if(phase<2.45){form=1;tf=phase<1.2?1.2-phase:.35;}else form=0;}
-      rb(canvas,id,scale,dy,form,angle,tf,1);c.setTransform(1,0,0,1,0,0);c.save();
+      const armPose=id==='shachi'?Math.max(0,Math.min(1,(phase-.25)/.75))*Math.max(0,Math.min(1,(2.35-phase)/.75)):undefined;
+      rb(canvas,id,scale,dy,form,angle,tf,1,armPose);c.setTransform(1,0,0,1,0,0);c.save();
       if(id==='kuku'){
         const ex=cx+w*.17,ey=cy+h*.17;
         if(phase<1){c.fillStyle='#fff';c.strokeStyle='#713f12';c.lineWidth=3;c.beginPath();c.ellipse(ex,ey,13,18,0,0,Math.PI*2);c.fill();c.stroke();if(phase>.48){c.beginPath();c.moveTo(ex-12,ey-4);c.lineTo(ex-3,ey+2);c.lineTo(ex+3,ey-8);c.lineTo(ex+12,ey-1);c.stroke();}}
@@ -950,33 +952,14 @@ function gadget(p){
           c.fillStyle='#ffd21f';c.strokeStyle='#713f12';c.lineWidth=2.5;c.beginPath();c.ellipse(x,y,12,10,0,0,Math.PI*2);c.fill();c.stroke();c.beginPath();c.ellipse(x-10,y+2,7,4,Math.sin(phase*24)*.8,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#111827';c.beginPath();c.arc(x+4,y-2,1.8,0,Math.PI*2);c.fill();c.fillStyle='#f97316';c.beginPath();c.moveTo(x+10,y);c.lineTo(x+18,y+3);c.lineTo(x+10,y+5);c.fill();
           if(flee>.05){c.globalAlpha=Math.min(.7,flee);c.strokeStyle='#fef3c7';c.lineWidth=2;for(let i=0;i<3;i++){c.beginPath();c.moveTo(x-14-i*5,y+8+i*3);c.lineTo(x-23-i*5,y+8+i*3);c.stroke();}c.globalAlpha=1;}}
       }else if(id==='shachi'){
-        // Smooth celebration: Shachi raises one arm, gives a small happy wave, then lowers it.
-        const clamp01=v=>Math.max(0,Math.min(1,v));
-        const ease=v=>{v=clamp01(v);return v*v*(3-2*v);};
-        const rise=ease((phase-.22)/.82),lower=ease((phase-2.35)/.78);
-        const lift=rise*(1-lower),wave=(phase>1.05&&phase<2.35)?Math.sin((phase-1.05)*Math.PI*2.1)*.13:0;
-        const shoulderX=cx+w*.055,shoulderY=cy-5,upperLen=27,foreLen=25;
-        const angle=.78-2.20*lift+wave;
-        const elbowX=shoulderX+Math.cos(angle)*upperLen,elbowY=shoulderY+Math.sin(angle)*upperLen;
-        const handAngle=angle-.18-.18*lift;
-        const handX=elbowX+Math.cos(handAngle)*foreLen,handY=elbowY+Math.sin(handAngle)*foreLen;
-        c.save();c.lineCap='round';c.lineJoin='round';
-        c.strokeStyle='#111827';c.lineWidth=15;c.beginPath();c.moveTo(shoulderX,shoulderY);c.lineTo(elbowX,elbowY);c.lineTo(handX,handY);c.stroke();
-        c.strokeStyle='#f1c7a5';c.lineWidth=10;c.beginPath();c.moveTo(shoulderX,shoulderY);c.lineTo(elbowX,elbowY);c.lineTo(handX,handY);c.stroke();
-        c.fillStyle='#f5c9a5';c.strokeStyle='#111827';c.lineWidth=2.5;c.beginPath();c.arc(handX,handY,8.5,0,Math.PI*2);c.fill();c.stroke();
-        c.strokeStyle='#f5c9a5';c.lineWidth=3;
-        for(let j=0;j<3;j++){const a=handAngle-.55+j*.42,fx=handX+Math.cos(a)*9,fy=handY+Math.sin(a)*9;c.beginPath();c.moveTo(handX+Math.cos(a)*4,handY+Math.sin(a)*4);c.lineTo(fx,fy);c.stroke();}
-        if(lift>.72){
-          const sparkleAlpha=Math.min(1,(lift-.72)*3);
-          c.globalAlpha=sparkleAlpha*.8;c.strokeStyle='#fde68a';c.lineWidth=2.5;
-          for(let j=0;j<3;j++){const a=phase*2+j*Math.PI*2/3,sx=handX+Math.cos(a)*18,sy=handY+Math.sin(a)*15;c.beginPath();c.moveTo(sx-4,sy);c.lineTo(sx+4,sy);c.moveTo(sx,sy-4);c.lineTo(sx,sy+4);c.stroke();}
-        }
-        c.restore();
+        // Small celebration sparkles only; the orange ball-arm itself is animated by drawSh().
+        const lift=Math.max(0,Math.min(1,(phase-.25)/.75))*Math.max(0,Math.min(1,(2.35-phase)/.75));
+        if(lift>.05){c.save();c.globalAlpha=lift*.85;c.strokeStyle='#fde68a';c.lineWidth=2.5;const sx=cx+w*.13,sy=cy-h*.02;for(let j=0;j<3;j++){const a=phase*2+j*Math.PI*2/3,x=sx+Math.cos(a)*16,y=sy+Math.sin(a)*13;c.beginPath();c.moveTo(x-4,y);c.lineTo(x+4,y);c.moveTo(x,y-4);c.lineTo(x,y+4);c.stroke();}c.restore();}
       }else if(id==='saiyan'){
         if(phase>.55&&phase<2.55){
           const power=Math.min(1,(phase-.55)/.55,(2.55-phase)/.45),palette=['#fff36a','#ffe100','#ff9f00'];
           // Draw the flames in character-local space and scale them to the large selection preview.
-          c.save();c.translate(cx,cy);c.scale(1.85,1.85);c.globalCompositeOperation='lighter';
+          c.save();c.translate(cx,cy);c.scale(scale,scale);c.globalCompositeOperation='lighter';
           for(let i=0;i<34;i++){
             const q=phase*5.2+(i%5)*.7+i*2.17,side=i%2===0?-1:1;
             const x=side*(13+(i%5)*2.1)+Math.sin(q)*3.4,y=-34+((i*17+Math.floor(phase*18))%66);
@@ -1132,11 +1115,19 @@ function gadget(p){
       }
     };
     function drawSh(p){
-      const ca=Math.cos(p.a), sa=Math.sin(p.a), u=p.rec>0?1-p.rec/.22:1; g.scale(1, 1+Math.sin(p.walk)*.05);
-      g.fillStyle='#243049'; g.beginPath(); g.moveTo(-9,-20); g.lineTo(1,-44); g.lineTo(10,-20); g.closePath(); g.fill(); g.lineWidth=3; g.strokeStyle='#000'; g.stroke();
-      circ(0,0,25,'#243049',1); g.beginPath(); g.ellipse(0,6,15,16,0,0,6.283); g.fillStyle='#fff'; g.fill();
-      for(const o of[-9,9]){ circ(o,-6,7,'#fff',1); circ(o+ca*2.5, -6+sa*2.5, 3, '#000'); }
-      for(const s of[-1,1]){ const q=Math.max(0,Math.min(1,s<0?u*2:u*2-1)), f=20+Math.sin(q*Math.PI)*135; circ(ca*f-sa*s*16, sa*f+ca*s*16, 13, '#ff8a1c', 1); }
+      const ca=Math.cos(p.a),sa=Math.sin(p.a),u=p.rec>0?1-p.rec/.22:1;
+      g.scale(1,1+Math.sin(p.walk)*.05);
+      g.fillStyle='#243049';g.beginPath();g.moveTo(-9,-20);g.lineTo(1,-44);g.lineTo(10,-20);g.closePath();g.fill();g.lineWidth=3;g.strokeStyle='#000';g.stroke();
+      circ(0,0,25,'#243049',1);g.beginPath();g.ellipse(0,6,15,16,0,0,6.283);g.fillStyle='#fff';g.fill();
+      for(const o of[-9,9]){circ(o,-6,7,'#fff',1);circ(o+ca*2.5,-6+sa*2.5,3,'#000');}
+      // Keep Shachi's original orange ball-arms; the showcase only lifts one ball.
+      for(const side of[-1,1]){
+        const q=Math.max(0,Math.min(1,side<0?u*2:u*2-1)),dist=20+Math.sin(q*Math.PI)*135;
+        const x=ca*dist-sa*side*16;
+        let y=sa*dist+ca*side*16;
+        if(side===1&&Number.isFinite(p.showcasePose))y-=38*Math.max(0,Math.min(1,p.showcasePose));
+        circ(x,y,13,'#ff8a1c',1);
+      }
     }
     function drawSa(p){
       const f = p.form||0, fm = FM[f]||{}, ca = Math.cos(p.a), sa = Math.sin(p.a), t = performance.now()/1000;
@@ -1788,6 +1779,8 @@ function gadget(p){
     // Bind authentication controls early so later lobby setup errors cannot leave them inert.
     el('onlineSignIn').addEventListener('click', () => { void auth('in'); });
     el('settingsSignIn').addEventListener('click',()=>{el('onlineEmail').value=el('settingsUsername').value;el('onlinePassword').value=el('settingsPassword').value;void auth('in');});el('settingsCreateAccount').addEventListener('click',()=>{el('onlineEmail').value=el('settingsUsername').value;el('onlinePassword').value=el('settingsPassword').value;void auth('up');});el('settingsPassword').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();el('onlineEmail').value=el('settingsUsername').value;el('onlinePassword').value=el('settingsPassword').value;void auth('in');}});el('settingsSignOut').addEventListener('click',async()=>{const {error}=await db.auth.signOut();if(error){el('settingsAccountStatus').textContent=error.message;return;}el('settingsAccountStatus').textContent='Signed out.';await updateAuthUI();});el('roomInviteAccept').addEventListener('click',()=>void respondRoomInvite(true));el('roomInviteDecline').addEventListener('click',()=>void respondRoomInvite(false));
+    el('friendRequestPopupAccept').addEventListener('click',()=>void respondFriendRequestPopup('accepted'));
+    el('friendRequestPopupDecline').addEventListener('click',()=>void respondFriendRequestPopup('declined'));
     el('onlineSignUp').addEventListener('click', () => { void auth('up'); });
     el('onlinePassword').addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); void auth('in'); } });
     window.__daBrawlAuthReady = true;
@@ -2171,6 +2164,43 @@ function gadget(p){
       if(friendsPresenceChannel){const old=friendsPresenceChannel;friendsPresenceChannel=null;try{await db.removeChannel(old);}catch(_){}}
     }
     let pendingRoomInvites=[],activeRoomInvite=null;
+    let activeFriendRequest=null,friendRequestPollBusy=false;
+    const shownFriendRequestIds=new Set();
+    async function pollIncomingFriendRequests(){
+      if(friendRequestPollBusy||activeFriendRequest)return;
+      friendRequestPollBusy=true;
+      try{
+        const {data:{user},error:authError}=await db.auth.getUser();
+        if(authError||!user)return;
+        const {data:rows,error}=await db.from('dabrawl_friend_requests')
+          .select('id,requester_id,addressee_id,status,created_at')
+          .eq('addressee_id',user.id).eq('status','pending')
+          .order('created_at',{ascending:true}).limit(10);
+        if(error)throw error;
+        const request=(rows||[]).find(row=>!shownFriendRequestIds.has(row.id));
+        if(!request)return;
+        const {data:profile}=await db.from('dabrawl_player_profiles').select('username').eq('user_id',request.requester_id).maybeSingle();
+        activeFriendRequest={...request,senderName:profile?.username||'A player'};
+        shownFriendRequestIds.add(request.id);
+        el('friendRequestPopupText').textContent=activeFriendRequest.senderName+' wants to be your friend.';
+        el('friendRequestPopup').style.display='flex';
+      }catch(err){console.debug('Incoming friend request polling unavailable:',err?.message||err);}
+      finally{friendRequestPollBusy=false;}
+    }
+    async function respondFriendRequestPopup(statusValue){
+      const request=activeFriendRequest;if(!request)return;
+      try{
+        const {data:{user},error:authError}=await db.auth.getUser();
+        if(authError||!user)throw new Error('Sign in again.');
+        const {error}=await db.from('dabrawl_friend_requests').update({status:statusValue})
+          .eq('id',request.id).eq('addressee_id',user.id).eq('status','pending');
+        if(error)throw error;
+        el('friendRequestPopup').style.display='none';activeFriendRequest=null;
+        friendsMsg(statusValue==='accepted'?'Friend request accepted.':'Friend request declined.');
+        if(document.getElementById('friendsScreen')?.classList.contains('on'))await loadFriendsScreen();
+        setTimeout(()=>void pollIncomingFriendRequests(),250);
+      }catch(err){friendsMsg('Could not respond to friend request: '+(err?.message||String(err)),true);}
+    }
     const shownRoomInviteIds=new Set(),queuedRoomInviteIds=new Set();
     let invitePollBusy=false;
     const screenIsGame=()=>!!document.getElementById('game')?.classList.contains('on');
@@ -2218,6 +2248,8 @@ function gadget(p){
     },500);
     setInterval(()=>void pollPendingRoomInvites(),2500);
     setTimeout(()=>void pollPendingRoomInvites(),1000);
+    setInterval(()=>void pollIncomingFriendRequests(),2500);
+    setTimeout(()=>void pollIncomingFriendRequests(),1200);
     async function startFriendsPresence(user){
       await stopFriendsPresence();
       friendsPresenceChannel=db.channel('dabrawl-friends-presence',{config:{presence:{key:user.id}}})
