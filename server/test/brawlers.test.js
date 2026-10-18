@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { BRAWLERS } from "../brawlers.js";
+import { BRAWLERS, getBrawlerStats } from "../brawlers.js";
 
 test("all browser brawlers have explicit server rules", () => {
   for (const id of ["kuku", "shachi", "saiyan"]) assert.ok(BRAWLERS[id], `Missing ${id}`);
@@ -20,8 +20,30 @@ test("Shachi has tank stats and a slam super", () => {
   assert.equal(BRAWLERS.shachi.superKind, "slam");
 });
 
-test("Saiyan uses short-range attacks and transformation super", () => {
+test("Saiyan uses short-range base attacks and transformation super", () => {
   assert.equal(BRAWLERS.saiyan.hp, 6500);
   assert.equal(BRAWLERS.saiyan.range, 65);
   assert.equal(BRAWLERS.saiyan.superKind, "transform");
+});
+
+test("Saiyan form stats preserve the browser's persistent form progression", () => {
+  const player = { brawler: "saiyan", form: 0 };
+  assert.equal(getBrawlerStats(player).damage, 400);
+  player.form = 1;
+  assert.equal(getBrawlerStats(player).hp, 7500);
+  assert.equal(getBrawlerStats(player).damage, 500);
+  player.form = 2;
+  assert.equal(getBrawlerStats(player).hp, 8500);
+  assert.equal(getBrawlerStats(player).range, 420);
+  assert.equal(getBrawlerStats(player).bulletSpeed, 650);
+  player.form = 3;
+  assert.equal(getBrawlerStats(player).damage, 2100);
+  assert.equal(getBrawlerStats(player).range, 440);
+  player.form = 4;
+  assert.equal(getBrawlerStats(player).hp, 10000);
+  assert.equal(getBrawlerStats(player).range, 140);
+  player.form = 5;
+  assert.equal(getBrawlerStats(player).hp, 10500);
+  assert.equal(getBrawlerStats(player).damage, 800);
+  assert.equal(getBrawlerStats({ brawler: "kuku", form: 5 }).hp, 7000);
 });
