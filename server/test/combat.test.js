@@ -32,13 +32,13 @@ test("projectile hit selection ignores owner, allies, dead players, and invulner
   assert.equal(findProjectileHit(projectile, players, 1000, 19)?.id, "target");
 });
 
-test("swept collision catches fast projectiles that cross a player between ticks", () => {
+test("swept collision catches fast projectiles and selects the first contact", () => {
   const projectile = { x: 100, y: 50, previousX: 0, previousY: 50, ownerId: "owner", team: 0 };
   const players = [
     { id: "target", team: 1, alive: true, x: 50, y: 66, invulnerableUntil: 0 },
     { id: "closer-to-path", team: 1, alive: true, x: 75, y: 52, invulnerableUntil: 0 }
   ];
-  assert.equal(findProjectileHit(projectile, players, 1000, 19)?.id, "closer-to-path");
+  assert.equal(findProjectileHit(projectile, players, 1000, 19)?.id, "target");
 });
 
 test("a projectile hits the first opponent along its path, not the closest perpendicular target", () => {
