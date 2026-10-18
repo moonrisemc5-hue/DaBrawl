@@ -16,7 +16,7 @@ const WORLD = { width: 800, height: 520, margin: 28 };
 import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "./brawlers.js";
 import { advanceProjectile, findProjectileHit, projectileStillInRange } from "./combat.js";
 import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
-import { clampPlayerPosition, PLAYER_RADIUS } from "./world.js";
+import { clampPlayerPosition, movementDelta, PLAYER_RADIUS } from "./world.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
@@ -143,8 +143,8 @@ function stepRoom(room, dt) {
       if (!p.connected || !p.alive) continue;
       if (t - p.lastSeen > INPUT_TIMEOUT_MS) p.input = { x: 0, y: 0 };
       const stats = getBrawlerStats(p);
-      const x = p.input.x, y = p.input.y, mag = Math.hypot(x,y) || 1;
-      const nextPosition = clampPlayerPosition(p.x + x / mag * stats.speed * dt, p.y + y / mag * stats.speed * dt, WORLD, PLAYER_RADIUS);
+      const { x: dx, y: dy } = movementDelta(p.input.x, p.input.y, stats.speed, dt);
+      const nextPosition = clampPlayerPosition(p.x + dx, p.y + dy, WORLD, PLAYER_RADIUS);
       p.x = nextPosition.x;
       p.y = nextPosition.y;
       if (p.transformUntil && t >= p.transformUntil) p.transformUntil = 0;
