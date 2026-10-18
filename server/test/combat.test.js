@@ -12,6 +12,14 @@ test("advances projectile position and traveled distance deterministically", () 
   assert.equal(projectile.previousY, 20);
 });
 
+test("projectiles stop exactly at their remaining range", () => {
+  const projectile = { x: 10, y: 20, angle: 0, speed: 600, traveled: 50, range: 65 };
+  advanceProjectile(projectile, 0.1);
+  assert.equal(projectile.x, 25);
+  assert.equal(projectile.traveled, 65);
+  assert.equal(projectileStillInRange(projectile, 800, 520), false);
+});
+
 test("projectile hit selection ignores owner, allies, dead players, and invulnerable players", () => {
   const projectile = { x: 100, y: 100, ownerId: "owner", team: 0 };
   const players = [
