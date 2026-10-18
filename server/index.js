@@ -71,6 +71,7 @@ function joinRoom(room, user, msg, socket) {
   return player;
 }
 function doFire(room, p, isSuper = false) {
+  if (room.phase !== "playing") return;
   const stats = BRAWLERS[p.brawler] || BRAWLERS.default;
   const t = now();
   if (!p.alive || p.transformUntil > t) return;
