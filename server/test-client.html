@@ -36,7 +36,7 @@
 <script>
 (() => {
  const $ = id => document.getElementById(id);
- let ws = null, state = null, seq = 0, ready = false, aim = 0, lastPing = 0;
+ let ws = null, state = null, seq = 0, ready = false, aim = 0, lastPing = 0, currentUserId = "";
  const held = new Set(), logs = [];
  const log = (message) => { logs.unshift(new Date().toLocaleTimeString() + "  " + message); logs.splice(40); $("log").textContent = logs.join("\n"); };
  const status = (message, kind="") => { $("status").textContent=message; $("dot").className="dot"+(kind?" "+kind:""); };
@@ -47,6 +47,8 @@
   if(ws) ws.close();
   const base=$("server").value.trim(), token=$("token").value.trim(), room=$("room").value.trim();
   if(!base || !token || !room){status("Enter server URL, token and room code","bad");return;}
+  currentUserId = jwtSubject(token);
+  if (!currentUserId) { status("Token does not contain a readable user id", "bad"); return; }
   let url;
   try { url=new URL(base); if(!["wss:","ws:"].includes(url.protocol)) throw Error("URL must use ws:// or wss://"); url.pathname=url.pathname==="/"?"/match":url.pathname; url.searchParams.set("room",room); }
   catch(e){status("Invalid WebSocket URL: "+e.message,"bad");return;}
@@ -95,17 +97,18 @@
   $("players").innerHTML=players.map(p=>'<div class="player"><strong>'+esc(p.name)+'</strong><br>'+esc(p.brawler)+' · Team '+p.team+'<br>HP: '+p.hp+'/'+p.maxHp+' · Meter: '+p.meter+'<br>Ready: '+p.ready+' · '+(p.connected?"online":"disconnected")+'<br>Position: '+Math.round(p.x)+', '+Math.round(p.y)+'<br>Gadget charges: '+p.gadgetCharges+' · cooldown: '+Math.round(p.gadgetCooldownMs)+' ms</div>').join("")||'<div class="player">No players in snapshot</div>';
   status("Connected · "+state.phase+" · tick "+state.tick,"ok");
  }
+ function jwtSubject(token){try{const part=token.split(".")[1];if(!part)return "";const base64=part.replace(/-/g,"+").replace(/_/g,"/");const payload=JSON.parse(atob(base64+"=".repeat((4-base64.length%4)%4)));return typeof payload.sub==="string"?payload.sub:"";}catch{return "";}}
  function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
  function inputTick(){
   if(!connected()||!state||state.phase!=="playing")return;
   let x=(held.has("d")||held.has("ArrowRight")?1:0)-(held.has("a")||held.has("ArrowLeft")?1:0);
   let y=(held.has("s")||held.has("ArrowDown")?1:0)-(held.has("w")||held.has("ArrowUp")?1:0);
-  const me=state.players?.find(p=>p.name===($("name").value.trim()||"Test Player"))||state.players?.[0];
+  const me=state.players?.find(p=>p.id===currentUserId);
   if(me){send({type:"input",seq:seq++,x,y,aim});}
  }
  $("connect").addEventListener("click",connect);$("disconnect").addEventListener("click",disconnect);$("ready").addEventListener("click",sendReady);
  $("fire").addEventListener("click",()=>action("fire"));$("super").addEventListener("click",()=>action("super"));$("transform").addEventListener("click",()=>action("transform"));$("gadget").addEventListener("click",()=>action("gadget"));$("ping").addEventListener("click",ping);
- $("arena").addEventListener("mousemove",ev=>{const r=ev.currentTarget.getBoundingClientRect();const x=(ev.clientX-r.left)/r.width*800,y=(ev.clientY-r.top)/r.height*520;const me=state?.players?.[0];if(me)aim=Math.atan2(y-me.y,x-me.x);});
+ $("arena").addEventListener("mousemove",ev=>{const r=ev.currentTarget.getBoundingClientRect();const x=(ev.clientX-r.left)/r.width*800,y=(ev.clientY-r.top)/r.height*520;const me=state?.players?.find(p=>p.id===currentUserId);if(me)aim=Math.atan2(y-me.y,x-me.x);});
  $("arena").addEventListener("click",()=>action("fire"));
  window.addEventListener("keydown",ev=>{if(["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName))return;const k=ev.key;if([" ","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(k))ev.preventDefault();held.add(k);if(ev.repeat)return;if(k===" ")action("fire");if(k.toLowerCase()==="e")action("super");if(k.toLowerCase()==="t")action("transform");if(k.toLowerCase()==="q")action("gadget");});
  window.addEventListener("keyup",ev=>held.delete(ev.key));window.addEventListener("blur",()=>held.clear());
