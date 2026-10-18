@@ -1409,7 +1409,20 @@ function gadget(p){
           fire(p,!!msg.super);
         }
         else if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.k.sy) sTap(p); else tryFire(p); }
-        else if(msg.action==='super'){ p.sc=1; p.tf=0; sup(p); }
+        else if(msg.action==='super'){
+          // Remote bot supers must not depend on this browser's local round phase.
+          // The host can be a fraction of a tick ahead, otherwise the non-host silently
+          // drops the bot's super when its local G.ph is still counting/ending.
+          p.sc=1; p.tf=0; p.chg=0; p.holdT=0;
+          if(p.k?.sy){
+            if(p.form<5 && !p.lp) xform(p);
+            else if(p.form===5 && !p.lp) superUltraKame(p);
+            else p.sc=0;
+          }else{
+            fire(p,1);
+            p.sc=0;
+          }
+        }
         else if(msg.action==='gadget'){ p.gcd=0; p.dash=0; gadget(p); }
       },
       applyMatchResult(payload){
@@ -1837,7 +1850,16 @@ function gadget(p){
       matchChannel.on('broadcast',{event:'match-ended'},({payload})=>{ if(!payload || activeMatchId!==matchId) return; window.DaBrawlGame?.applyMatchResult?.(payload); });
       matchChannel.on('broadcast',{event:'match-control'},async({payload})=>{
         if(!payload || activeMatchId!==matchId || payload.hostId!==activeMatchHostId) return;
-        if(payload.action==='leave'){ await leaveMatch(); show('menu'); isTestMode=false; return; }
+        if(payload.action==='leave'){
+          // Reset only this signed-in player's ready flag so the same party can queue again.
+          if(currentRoom && activeMatchLocalId){
+            try{ await db.from('game_room_players').update({is_ready:false}).eq('room_id',currentRoom.id).eq('user_id',activeMatchLocalId); }catch(e){}
+          }
+          roomStartRequestedFor=null;
+          await leaveMatch(); show('menu'); isTestMode=false;
+          if(currentRoom) void refreshRoom();
+          return;
+        }
         if(payload.action==='rematch' && payload.matchId && Array.isArray(payload.roster)){
           const next={...payload}; await leaveMatch();
           await startOnlineMatch(next.roster,next.matchId,next.mode,activeMatchLocalId,next.hostId,next.startAt);
@@ -1870,8 +1892,16 @@ function gadget(p){
     }
     async function hostLeaveMatch(){
       if(!isNetworkHost || !matchChannel) return;
-      const ch=matchChannel; await ch.send({type:'broadcast',event:'match-control',payload:{action:'leave',hostId:activeMatchHostId}});
+      const ch=matchChannel;
+      await ch.send({type:'broadcast',event:'match-control',payload:{action:'leave',hostId:activeMatchHostId}});
+      // Clear the host's own ready flag as well; both friends can ready up again
+      // without leaving/recreating the room.
+      if(currentRoom && activeMatchLocalId){
+        try{ await db.from('game_room_players').update({is_ready:false}).eq('room_id',currentRoom.id).eq('user_id',activeMatchLocalId); }catch(e){}
+      }
+      roomStartRequestedFor=null;
       await leaveMatch(); show('menu'); isTestMode=false;
+      if(currentRoom) void refreshRoom();
     }
     function sendMatchAction(action,angle,extra={}){
       if(!matchChannel || !activeMatchId) return;
@@ -1898,6 +1928,7 @@ function gadget(p){
     }
     async function leaveMatch(){
       clearInterval(stateTimer); stateTimer=null; clearInterval(queueTimer); queueTimer=null;
+      roomStartRequestedFor=null;
       activeMatchId=null; activePlayerId=clientId; seenAt.clear();
       if(matchChannel){const old=matchChannel;matchChannel=null;await db.removeChannel(old);}
       if(window.DaBrawlGame) window.DaBrawlGame.endNetworkGame();
