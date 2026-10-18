@@ -115,3 +115,15 @@ export function canStartMatch(phase, players) {
   const roster = [...players];
   return roster.length >= 2 && roster.every(player => player && player.connected === true && player.ready === true);
 }
+
+/** Mark a player disconnected once, preserving the original reconnect-grace start time. */
+export function markPlayerDisconnected(player, atTime) {
+  if (!player || typeof player !== "object" || !Number.isFinite(atTime)) return false;
+  if (player.connected === false && Number.isFinite(player.disconnectedAt) && player.disconnectedAt > 0) return false;
+  player.connected = false;
+  player.input = { x: 0, y: 0 };
+  player.socket = null;
+  player.lastSeen = atTime;
+  player.disconnectedAt = atTime;
+  return true;
+}

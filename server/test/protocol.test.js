@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, resolveRoomOwner, canStartMatch, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer } from "../protocol.js";
+import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, resolveRoomOwner, canStartMatch, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer, markPlayerDisconnected } from "../protocol.js";
 
 test("sanitizes names and limits their length", () => {
   assert.equal(cleanText("  Ivor<script>\n  "), "Ivorscript");
@@ -161,4 +161,19 @@ test("allocates the first genuinely free player slot, including gaps after clean
   assert.equal(nextAvailableSlot([{ slot: 0 }, { slot: 1 }], 2), -1);
   assert.equal(nextAvailableSlot([], 0), -1);
   assert.throws(() => nextAvailableSlot(null, 6), /Invalid slot allocation/);
+});
+
+
+test("disconnect transition stops movement and does not extend reconnect grace twice", () => {
+  const player = { connected: true, input: { x: 1, y: -1 }, socket: { id: "socket" }, lastSeen: 10, disconnectedAt: 0 };
+  assert.equal(markPlayerDisconnected(player, 100), true);
+  assert.equal(player.connected, false);
+  assert.deepEqual(player.input, { x: 0, y: 0 });
+  assert.equal(player.socket, null);
+  assert.equal(player.lastSeen, 100);
+  assert.equal(player.disconnectedAt, 100);
+  assert.equal(markPlayerDisconnected(player, 900), false);
+  assert.equal(player.disconnectedAt, 100);
+  assert.equal(markPlayerDisconnected(null, 200), false);
+  assert.equal(markPlayerDisconnected({ connected: true }, NaN), false);
 });

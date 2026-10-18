@@ -2,7 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer, WebSocket } from "ws";
-import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer, resolveRoomOwner, canStartMatch, nextAvailableSlot } from "./protocol.js";
+import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer, markPlayerDisconnected, resolveRoomOwner, canStartMatch, nextAvailableSlot } from "./protocol.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -431,8 +431,8 @@ wss.on("connection", (ws,_req,meta) => {
       ws.send(JSON.stringify({type:"error",message:String(err.message||"Invalid message").slice(0,120)}));
     }
   });
-  ws.on("close",()=>{ if (player.socket !== ws) return; cancelKameCharge(player); player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); player.disconnectedAt=player.lastSeen; room.updatedAt=now(); cancelCountdown(room, "player-disconnected"); event(room,"player-disconnected",{playerId:player.id}); });
-  ws.on("error",()=>{ if (player.socket !== ws) return; cancelKameCharge(player); player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); player.disconnectedAt=player.lastSeen; room.updatedAt=now(); cancelCountdown(room, "connection-error"); event(room,"player-disconnected",{playerId:player.id,reason:"connection-error"}); });
+  ws.on("close",()=>{ if (player.socket !== ws) return; const disconnectedAt=now(); cancelKameCharge(player); markPlayerDisconnected(player,disconnectedAt); room.updatedAt=disconnectedAt; cancelCountdown(room, "player-disconnected"); event(room,"player-disconnected",{playerId:player.id}); });
+  ws.on("error",()=>{ if (player.socket !== ws) return; const disconnectedAt=now(); cancelKameCharge(player); markPlayerDisconnected(player,disconnectedAt); room.updatedAt=disconnectedAt; cancelCountdown(room, "connection-error"); event(room,"player-disconnected",{playerId:player.id,reason:"connection-error"}); });
   emit(room,"player-joined",{playerId:player.id}); sendState(room);
 });
 let lastTickAt=now();
