@@ -20,13 +20,13 @@ with check (
   and exists (
     select 1 from public.dabrawl_friend_requests f
     where f.status='accepted'
-      and ((f.requester_id=auth.uid() and f.addressee_id=recipient_id)
-        or (f.addressee_id=auth.uid() and f.requester_id=recipient_id))
+      and ((f.requester_id=auth.uid() and f.addressee_id=dabrawl_room_invites.recipient_id)
+        or (f.addressee_id=auth.uid() and f.requester_id=dabrawl_room_invites.recipient_id))
   )
   and exists (
     select 1 from public.game_rooms r
     join public.game_room_players p on p.room_id=r.id
-    where r.room_code=upper(room_code) and r.host_id=auth.uid() and p.user_id=auth.uid()
+    where r.room_code=upper(dabrawl_room_invites.room_code) and r.host_id=auth.uid() and p.user_id=auth.uid()
   )
 );
 drop policy if exists "Recipients can respond to room invites" on public.dabrawl_room_invites;
