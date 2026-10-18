@@ -29,7 +29,17 @@ function nearestClearPosition(x, y, world, radius, fallback) {
     candidates.sort((a, b) => Math.hypot(a.x - desired.x, a.y - desired.y) - Math.hypot(b.x - desired.x, b.y - desired.y));
     if (candidates.length) return candidates[0];
   }
-  return fallback;
+  // A crowded player can be pressed against a wall with no nearby free point.
+  // Search the full arena before ever falling back to a position that may overlap terrain.
+  const candidates = [];
+  const minX = world.margin + radius, minY = world.margin + radius;
+  const maxX = world.width - world.margin - radius, maxY = world.height - world.margin - radius;
+  for (let py = minY; py <= maxY; py += 8) for (let px = minX; px <= maxX; px += 8) {
+    const point = { x: px, y: py };
+    if (positionClearOfObstacles(point, world, radius)) candidates.push(point);
+  }
+  candidates.sort((a, b) => Math.hypot(a.x - desired.x, a.y - desired.y) - Math.hypot(b.x - desired.x, b.y - desired.y));
+  return candidates[0] ?? fallback;
 }
 
 export function resolvePlayerCollisions(players, world, radius = PLAYER_RADIUS) {
