@@ -137,6 +137,7 @@ function stepRoom(room, dt) {
       room.winner = [...scores].sort((a,b)=>b[1]-a[1])[0]?.[0] ?? null; event(room, "match-ended", { winner: room.winner, reason:"timer" });
     }
   }
+  if (!isCombatPhase(room.phase)) room.projectiles = [];
   const keep = [];
   for (const b of room.projectiles) {
     const dx = Math.cos(b.angle) * b.speed * dt, dy = Math.sin(b.angle) * b.speed * dt;
