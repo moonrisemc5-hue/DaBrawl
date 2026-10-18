@@ -610,11 +610,10 @@ function gadget(p){
         if(p.netRemote){
           const target=p.netTarget;
           if(target){
-            // Interpolate toward the last authoritative snapshot without velocity extrapolation.
-            // Extrapolating across network jitter caused overshoot and visible teleporting.
-            const age=Math.min(0.12,Math.max(0,(Date.now()-(p.netTargetAt||Date.now()))/1000));
-            const tx=target.x+(p.netVx||0)*age, ty=target.y+(p.netVy||0)*age;
-            // Track the latest authoritative position more aggressively while keeping interpolation smooth.
+            // Follow the newest snapshot directly. Extrapolating by a guessed velocity made
+            // remote players overshoot whenever Supabase packets arrived late or out of order.
+            const tx=target.x, ty=target.y;
+            // Track the latest authoritative position smoothly without adding network-jitter overshoot.
             const blend=1-Math.exp(-Math.min(dt,0.05)*68);
             p.x += (tx-p.x)*blend;
             p.y += (ty-p.y)*blend;
@@ -1857,7 +1856,7 @@ function gadget(p){
             if(players.length) void matchChannel.send({type:'broadcast',event:'match-state',payload:{sentAt:Date.now(),players}});
             // Do not replace a temporarily silent player with a bot: browsers throttle background tabs.
             // The player's next state packet will resynchronize them when their tab becomes active again.
-          },100);
+          },50);
         },650);
       });
     }
