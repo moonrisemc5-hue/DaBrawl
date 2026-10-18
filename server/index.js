@@ -18,6 +18,7 @@ import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "./brawlers.js";
 import { advanceProjectile, findProjectileHit, projectileStillInRange } from "./combat.js";
 import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
 import { clampPlayerPosition, movementDelta, PLAYER_RADIUS } from "./world.js";
+import { selectWinnerByHealth } from "./match-results.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
@@ -171,8 +172,9 @@ function stepRoom(room, dt) {
     } else if (survivingTeams.size === 1) {
       room.phase = "ended"; room.winner = survivors[0].team; event(room, "match-ended", { winner: room.winner, reason: "elimination" });
     } else if (t >= room.endsAt) {
-      room.phase = "ended"; const scores = new Map(); for (const p of survivors) scores.set(p.team,(scores.get(p.team)||0)+p.hp);
-      room.winner = [...scores].sort((a,b)=>b[1]-a[1])[0]?.[0] ?? null; event(room, "match-ended", { winner: room.winner, reason:"timer" });
+      room.phase = "ended";
+      room.winner = selectWinnerByHealth(survivors);
+      event(room, "match-ended", { winner: room.winner, reason: room.winner === null ? "draw" : "timer" });
     }
   }
   if (!isCombatPhase(room.phase)) room.projectiles = [];
