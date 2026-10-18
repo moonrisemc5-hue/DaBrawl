@@ -19,7 +19,7 @@ import { advanceProjectile, findProjectileContact, findProjectileObstacleHit, pr
 import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
 import { movementDelta, movePlayerWithObstacles, resolvePlayerCollisions, PLAYER_RADIUS } from "./world.js";
 import { selectWinnerByHealth } from "./match-results.js";
-import { createArena, removeArenaWall, traceKameBeam } from "./maps.js";
+import { createArena, removeArenaWall, traceKameBeam, traceMasteredBeam } from "./maps.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
@@ -102,15 +102,14 @@ function doFire(room, p, isSuper = false) {
   const t = now();
   if (!p.alive || p.transformUntil > t) return;
   // A max-form Saiyan has no next transformation; reject before consuming super meter.
-  if (isSuper && stats.superKind === "transform" && getNextSaiyanForm(p) === null) return;
+  if (isSuper && stats.superKind === "transform" && getNextSaiyanForm(p) === null && !(p.form >= 5)) return;
   if (isSuper) {
     if (p.meter < 100 || t - p.lastSuper < 1200) return;
     p.meter = 0; p.lastSuper = t;
   } else if (t - p.lastFire < stats.cooldown) return;
   else p.lastFire = t;
-  if (isSuper && stats.superKind === "transform") {
+  if (isSuper && stats.superKind === "transform" && getNextSaiyanForm(p) !== null) {
     const nextForm = getNextSaiyanForm(p);
-    if (nextForm === null) return;
     const nextStats = BRAWLERS.saiyan.forms[nextForm];
     const healthDelta = nextStats.hp - p.maxHp;
     p.maxHp = nextStats.hp;
@@ -118,6 +117,12 @@ function doFire(room, p, isSuper = false) {
     p.form = nextForm;
     p.transformUntil = t + 1800;
     event(room, "transform", { playerId:p.id, form:p.form });
+    sendState(room);
+    return;
+  }
+  if (isSuper && stats.superKind === "transform" && p.form >= 5) {
+    p.pendingMuiBeam = { at: t + 1200, x: p.x, y: p.y, aim: p.aim };
+    event(room, "mui-charging", { playerId: p.id, durationMs: 1200 });
     sendState(room);
     return;
   }
@@ -192,6 +197,31 @@ function stepRoom(room, dt) {
       p.x = nextPosition.x;
       p.y = nextPosition.y;
       if (p.transformUntil && t >= p.transformUntil) p.transformUntil = 0;
+    }
+    for (const p of room.players.values()) {
+      if (!p.pendingMuiBeam || t < p.pendingMuiBeam.at) continue;
+      const beam = p.pendingMuiBeam;
+      p.pendingMuiBeam = null;
+      if (!p.alive) continue;
+      const traced = traceMasteredBeam(room.world, beam.x, beam.y, beam.aim);
+      const dx = Math.cos(beam.aim), dy = Math.sin(beam.aim);
+      let hits = 0;
+      for (const target of room.players.values()) {
+        if (!target.alive || target.id === p.id || target.team === p.team ||
+            (Number.isFinite(target.invulnerableUntil) && target.invulnerableUntil > t)) continue;
+        const rx = target.x - beam.x, ry = target.y - beam.y;
+        const along = rx * dx + ry * dy, perpendicular = Math.abs(-rx * dy + ry * dx);
+        if (along <= 0 || along >= traced.length || perpendicular > 50 + PLAYER_RADIUS) continue;
+        target.hp = Math.max(0, target.hp - 7000);
+        target.meter = clamp(target.meter + 12, 0, 100);
+        hits++;
+        event(room, "hit", { attackerId: p.id, targetId: target.id, damage: 7000, hp: target.hp, mui: true });
+        if (target.hp <= 0) {
+          target.alive = false; target.input = { x: 0, y: 0 };
+          event(room, "knockout", { playerId: target.id, by: p.id });
+        }
+      }
+      event(room, "mui-beam-fired", { playerId: p.id, x: beam.x, y: beam.y, aim: beam.aim, length: traced.length, width: 100, durationMs: 800, hits, destroyedWalls: traced.destroyedWalls });
     }
     const movers = [...room.players.values()].filter(p => p.connected && p.alive);
     const separated = resolvePlayerCollisions(movers, room.world, PLAYER_RADIUS);

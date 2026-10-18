@@ -49,3 +49,17 @@ export function traceKameBeam(arena, x, y, angle, charge) {
   }
   return { length: maxLength, destroyedWalls: [...arena.destroyedWalls] };
 }
+
+/** Trace the full-width Mastered Ultra Instinct beam and break every interior wall it crosses. */
+export function traceMasteredBeam(arena, x, y, angle) {
+  const dx = Math.cos(angle), dy = Math.sin(angle);
+  const maxLength = Math.hypot(arena.width, arena.height);
+  const destroyed = [];
+  for (let length = 0; length < maxLength; length += 8) {
+    const col = Math.floor((x + dx * length) / arena.tileSize);
+    const row = Math.floor((y + dy * length) / arena.tileSize);
+    const tile = arena.tiles[row]?.[col] ?? "#";
+    if (tile === "#" && removeArenaWall(arena, row, col)) destroyed.push({ row, col });
+  }
+  return { length: maxLength, destroyedWalls: destroyed };
+}

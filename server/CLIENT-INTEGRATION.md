@@ -30,7 +30,7 @@ The new service instead sends `state` snapshots shaped as `{ state: { mode, phas
 | Projectiles and hits | `applyRemoteAction` action names such as `damage`, `wall-break`, `transform`, `hit-feedback` | Server `event` names such as `attack-fired`, `super-fired`, `hit`, `knockout`, `transform`, `gadget`; map each intentionally |
 | Lifecycle | channel events `match-ended`, `match-control` | Server phases `waiting`, `countdown`, `playing`, `ended`; provide client-side UI translation |
 | Bot simulation | host browser includes bots in `getNetworkStates()` | Server has no bot AI yet; do not assume parity |
-| Terrain | browser can broadcast `wall-break` | server currently has no authoritative map/terrain model |
+| Terrain | browser can broadcast `wall-break` | server uses tile-based walls/water for movement and projectile collision; wall-break events must be mapped into browser terrain updates |
 
 ## Safe integration sequence
 
