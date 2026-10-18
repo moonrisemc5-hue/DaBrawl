@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { BRAWLERS, getBrawlerStats } from "../brawlers.js";
+import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "../brawlers.js";
 
 test("all browser brawlers have explicit server rules", () => {
   for (const id of ["kuku", "shachi", "saiyan"]) assert.ok(BRAWLERS[id], `Missing ${id}`);
@@ -46,4 +46,23 @@ test("Saiyan form stats preserve the browser's persistent form progression", () 
   assert.equal(getBrawlerStats(player).hp, 10500);
   assert.equal(getBrawlerStats(player).damage, 800);
   assert.equal(getBrawlerStats({ brawler: "kuku", form: 5 }).hp, 7000);
+});
+
+test("Saiyan form progression is sequential and stops at the final form", () => {
+  const player = { brawler: "saiyan", form: 0 };
+  assert.equal(getNextSaiyanForm(player), 1);
+  player.form = 1;
+  assert.equal(getNextSaiyanForm(player), 2);
+  player.form = 4;
+  assert.equal(getNextSaiyanForm(player), 5);
+  player.form = 5;
+  assert.equal(getNextSaiyanForm(player), null);
+  player.form = 99;
+  assert.equal(getNextSaiyanForm(player), null);
+});
+
+test("non-Saiyan players cannot request Saiyan form progression", () => {
+  assert.equal(getNextSaiyanForm({ brawler: "kuku", form: 0 }), null);
+  assert.equal(getNextSaiyanForm({ brawler: "shachi", form: 0 }), null);
+  assert.equal(getNextSaiyanForm(null), null);
 });
