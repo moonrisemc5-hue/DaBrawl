@@ -17,3 +17,5 @@ export function parseClientMessage(raw) {
   if (!message || typeof message !== "object" || Array.isArray(message) || typeof message.type !== "string") throw new Error("Invalid message");
   return message;
 }
+
+export const isCombatPhase = phase => phase === "playing";
