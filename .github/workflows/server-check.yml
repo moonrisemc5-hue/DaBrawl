@@ -25,4 +25,5 @@ jobs:
       - run: npm run check
       - run: npm test
       - name: Build production container image
-        run: docker build --tag dabrawl-server-check .
+        working-directory: .
+        run: docker build -f server/Dockerfile --tag dabrawl-server-check .
