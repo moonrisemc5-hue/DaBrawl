@@ -23,9 +23,6 @@ const auth = SUPABASE_URL && SUPABASE_KEY
 const rooms = new Map();
 let nextProjectileId = 1;
 
-const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-const finite = (n, fallback = 0) => Number.isFinite(Number(n)) ? Number(n) : fallback;
-const cleanText = (s, max = 28) => String(s ?? "").replace(/[<>\u0000-\u001f]/g, "").trim().slice(0, max) || "Player";
 const now = () => Date.now();
 
 function makeRoom(code, mode = "knockout") {
@@ -181,7 +178,6 @@ wss.on("connection", (ws,_req,meta) => {
     try {
       const m=parseClientMessage(raw.toString());
       if (m.type==="join") {
-        if (room.phase!=="waiting" && room.players.size<MAX_PLAYERS) throw new Error("Match already started");
         player.name=cleanText(m.name || player.name);
         if (room.phase==="waiting" && BRAWLERS[m.brawler]) {
           player.brawler=m.brawler;
