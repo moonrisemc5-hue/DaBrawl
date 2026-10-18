@@ -62,6 +62,12 @@ export function assignTeams(playerCount, mode) {
 }
 
 export const canConfigureRoom = (actorId, ownerId, phase) => phase === "waiting" && Boolean(actorId) && actorId === ownerId;
+export function resolveRoomOwner(ownerId, players) {
+  if (!Array.isArray(players)) throw new TypeError("Players must be an array");
+  if (ownerId && players.some(player => player?.id === ownerId)) return ownerId;
+  return [...players].filter(player => player && typeof player.id === "string")
+    .sort((a, b) => (Number.isFinite(a.slot) ? a.slot : Infinity) - (Number.isFinite(b.slot) ? b.slot : Infinity))[0]?.id ?? null;
+}
 
 export const PROTOCOL_VIOLATION_LIMIT = 8;
 export const shouldCloseForProtocolViolations = count => Number.isSafeInteger(count) && count >= PROTOCOL_VIOLATION_LIMIT;

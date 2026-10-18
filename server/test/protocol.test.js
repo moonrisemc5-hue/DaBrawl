@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer } from "../protocol.js";
+import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, resolveRoomOwner, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer } from "../protocol.js";
 
 test("sanitizes names and limits their length", () => {
   assert.equal(cleanText("  Ivor<script>\n  "), "Ivorscript");
@@ -105,4 +105,12 @@ test("forfeits a disconnected player only after the in-match reconnect grace win
   assert.equal(shouldForfeitDisconnectedPlayer(true, 5_000, 50_000, grace), false);
   assert.equal(shouldForfeitDisconnectedPlayer(false, NaN, 50_000, grace), false);
   assert.equal(shouldForfeitDisconnectedPlayer(false, 5_000, 50_000, -1), false);
+});
+
+test("retains the room owner or promotes the earliest remaining player", () => {
+  const players = [{ id: "second", slot: 1 }, { id: "first", slot: 0 }];
+  assert.equal(resolveRoomOwner("second", players), "second");
+  assert.equal(resolveRoomOwner("departed", players), "first");
+  assert.equal(resolveRoomOwner("departed", []), null);
+  assert.throws(() => resolveRoomOwner("departed", null), /array/);
 });

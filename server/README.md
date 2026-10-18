@@ -1,6 +1,6 @@
 # DaBrawl persistent match server (deployment foundation)
 
-This is a separate Node.js/WebSocket service intended for a persistent host (for example, a container service). It is deliberately separate from GitHub Pages and from the existing Supabase Edge Function prototype. It validates Supabase access tokens and owns room state, movement, basic projectile simulation, health, transformations, super-meter, knockouts, readiness, and match clocks in server memory. It limits rooms and per-socket message rates, validates input payloads, gives disconnected players a 10-second in-match reconnect grace period before forfeiting, and does not echo the access token as the negotiated WebSocket subprotocol.
+This is a separate Node.js/WebSocket service intended for a persistent host (for example, a container service). It is deliberately separate from GitHub Pages and from the existing Supabase Edge Function prototype. It validates Supabase access tokens and owns room state, movement, basic projectile simulation, health, transformations, super-meter, knockouts, readiness, and match clocks in server memory. It limits rooms and per-socket message rates, validates input payloads, gives disconnected players a 10-second in-match reconnect grace period before forfeiting, transfers room ownership to the earliest remaining player if the former owner expires, and does not echo the access token as the negotiated WebSocket subprotocol.
 
 ## Important status
 
