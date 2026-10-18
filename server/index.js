@@ -133,10 +133,6 @@ function stepRoom(room, dt) {
   room.projectiles = keep;
   if (room.phase === "ended") room.projectiles = [];
 }
-function validAxes(x,y) {
-  x=finite(x); y=finite(y); if (Math.abs(x)>1 || Math.abs(y)>1) throw new Error("Invalid movement axes");
-  const mag=Math.hypot(x,y); return mag>1 ? {x:x/mag,y:y/mag} : {x,y};
-}
 function cleanupRoom(room) {
   for (const [id,p] of room.players) {
     if (p.connected || now()-p.lastSeen < ROOM_TTL_MS) continue;
@@ -173,12 +169,21 @@ wss.on("connection", (ws,_req,meta) => {
   let player;
   try { player=joinRoom(room,meta.user,{name:meta.user.user_metadata?.username || meta.user.email?.split("@")[0] || "Player"},ws); }
   catch(err) { ws.close(1008,String(err.message||"Cannot join room").slice(0,120)); return; }
+  let messageWindowStart=now(), messageCount=0;
   ws.on("message", raw => {
+    const receivedAt=now();
+    if (receivedAt-messageWindowStart>=1000) { messageWindowStart=receivedAt; messageCount=0; }
+    if (++messageCount>120) { ws.close(1008,"Message rate limit exceeded"); return; }
     try {
       const m=parseClientMessage(raw.toString());
       if (m.type==="join") {
         if (room.phase!=="waiting" && room.players.size<MAX_PLAYERS) throw new Error("Match already started");
-        player.name=cleanText(m.name || player.name); if (BRAWLERS[m.brawler]) player.brawler=m.brawler;
+        player.name=cleanText(m.name || player.name);
+        if (room.phase==="waiting" && BRAWLERS[m.brawler]) {
+          player.brawler=m.brawler;
+          player.maxHp=BRAWLERS[player.brawler].hp;
+          player.hp=player.maxHp;
+        }
         if (room.phase==="waiting") room.mode=validMode(m.mode);
         if (m.ready===true) startMatch(room);
         emit(room,"player-joined",{playerId:player.id}); sendState(room);
