@@ -66,6 +66,7 @@ test("validates client message schemas before game logic sees them", () => {
   assert.throws(() => parseClientMessage('{"type":"action","action":"teleport"}'), /Unsupported action/);
   assert.throws(() => parseClientMessage('{"type":"admin"}'), /Unsupported message type/);
   assert.throws(() => parseClientMessage('{"type":"join","name":"' + "x".repeat(81) + '"}'), /Invalid name/);
+  assert.throws(() => parseClientMessage('{"type":"join","mode":"made-up-mode"}'), /Invalid mode/);
 });
 
 

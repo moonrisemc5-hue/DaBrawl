@@ -28,6 +28,7 @@ export function parseClientMessage(raw) {
       optionalString("name", 80);
       optionalString("brawler", 32);
       optionalString("mode", 32);
+      if (message.mode !== undefined && !["knockout", "duel", "showdown"].includes(message.mode)) throw new Error("Invalid mode");
       if (message.ready !== undefined && typeof message.ready !== "boolean") throw new Error("Invalid ready flag");
       break;
     case "ready":
