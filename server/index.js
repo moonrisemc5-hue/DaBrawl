@@ -41,7 +41,7 @@ function emit(room, type, data = {}) {
 }
 function snapshot(room) {
   return { mode: room.mode, phase: room.phase, startedAt: room.startedAt, endsAt: room.endsAt,
-    winner: room.winner, tick: room.tick, players: [...room.players.values()].map(p => ({
+    winner: room.winner, ownerId: room.ownerId, tick: room.tick, players: [...room.players.values()].map(p => ({
       id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,
       hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,
       transforming:p.transformUntil>now(),connected:p.connected,ready:p.ready
