@@ -919,9 +919,15 @@ function gadget(p){
         requestAnimationFrame(() => {
           const preview = card.querySelector('canvas');
           if(preview){
-            try { rb(preview, id, 1.8, 10); } catch(err) { console.error('Brawler preview failed:', id, err); }
-            // Keep the card readable even if a browser cannot render the canvas preview.
-            if(!preview.getContext('2d')) card.style.background = 'linear-gradient(135deg,#1c2541,#334155)';
+            let previewOK = false;
+            try { rb(preview, id, 1.8, 10); previewOK = true; } catch(err) { console.error('Brawler preview failed:', id, err); }
+            // Keep every brawler visibly selectable if canvas rendering fails in a browser.
+            const pctx = preview.getContext && preview.getContext('2d');
+            if(!previewOK && pctx) {
+              try { pctx.clearRect(0,0,preview.width,preview.height); pctx.fillStyle = '#18233d'; pctx.fillRect(0,0,preview.width,preview.height); pctx.fillStyle = bInfo.rarityCol || '#ffd21f'; pctx.beginPath(); pctx.arc(55,48,20,0,Math.PI*2); pctx.fill(); pctx.fillRect(37,67,36,43); pctx.fillRect(28,75,12,30); pctx.fillRect(70,75,12,30); pctx.fillRect(39,108,12,22); pctx.fillRect(59,108,12,22); pctx.strokeStyle = '#fff'; pctx.lineWidth = 2; pctx.strokeRect(2,2,106,136); } catch(fallbackErr) { console.warn('Brawler fallback preview failed:', fallbackErr); }
+            }
+            if(!pctx) { card.style.background = 'linear-gradient(135deg,#1c2541,#334155)'; }
+            card.style.pointerEvents = 'auto';
           }
         });
       }
