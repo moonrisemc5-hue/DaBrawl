@@ -1754,7 +1754,7 @@ function gadget(p){
       syncRoomActions();if(user)void loadLobbyFriends(user);
     }
     function syncRoomActions(){const inRoom=!!currentRoom;if(el('createRoomBtn'))el('createRoomBtn').style.display=inRoom?'none':'inline-block';if(el('roomCodeRow'))el('roomCodeRow').style.display=inRoom?'none':'flex';}
-    async function loadLobbyFriends(user){const host=el('lobbyFriendsList');if(!host||!user)return;try{const {data:rows,error}=await db.from('dabrawl_friend_requests').select('requester_id,addressee_id,status').or('requester_id.eq.'+user.id+',addressee_id.eq.'+user.id).eq('status','accepted');if(error)throw error;const ids=[...new Set((rows||[]).map(r=>r.requester_id===user.id?r.addressee_id:r.requester_id))];if(!ids.length){host.innerHTML='<div style="color:#94a3b8;text-align:center">No friends yet. Use Manage Friends to add some.</div>';return;}const {data:profiles,error:pe}=await db.from('dabrawl_player_profiles').select('user_id,username').in('user_id',ids);if(pe)throw pe;const names=new Map((profiles||[]).map(p=>[p.user_id,p.username]));host.innerHTML='<div style="color:#fde047;font-weight:bold;text-align:center">YOUR FRIENDS · INVITE TO ROOM</div>'+rows.map(r=>{const id=r.requester_id===user.id?r.addressee_id:r.requester_id;return '<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid #334155;border-radius:9px;background:#0b1224"><span style="flex:1">'+friendsEscape(names.get(id)||'Player')+'</span><button class="btn y" data-room-invite="'+id+'" style="font-size:13px;padding:5px 10px" '+(currentRoom?'':'disabled title="Create a room first"')+ ' title="Invite to room">+</button></div>';}).join('');host.querySelectorAll('[data-room-invite]').forEach(b=>b.onclick=()=>void sendRoomInvite(b.dataset.roomInvite));}catch(err){host.textContent='Could not load friends: '+(err?.message||String(err));}}
+    async function loadLobbyFriends(user){const host=el('lobbyFriendsList');if(!host||!user)return;try{const {data:rows,error}=await db.from('dabrawl_friend_requests').select('requester_id,addressee_id,status').or('requester_id.eq.'+user.id+',addressee_id.eq.'+user.id).eq('status','accepted');if(error)throw error;const ids=[...new Set((rows||[]).map(r=>r.requester_id===user.id?r.addressee_id:r.requester_id))];if(!ids.length){host.innerHTML='<div style="color:#94a3b8;text-align:center">No friends yet. Use Manage Friends to add some.</div>';return;}const {data:profiles,error:pe}=await db.from('dabrawl_player_profiles').select('user_id,username').in('user_id',ids);if(pe)throw pe;const names=new Map((profiles||[]).map(p=>[p.user_id,p.username]));host.innerHTML='<div style="color:#fde047;font-weight:bold;text-align:center">YOUR FRIENDS · INVITE TO LOBBY</div>'+rows.map(r=>{const id=r.requester_id===user.id?r.addressee_id:r.requester_id;return '<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid #334155;border-radius:9px;background:#0b1224"><span style="flex:1">'+friendsEscape(names.get(id)||'Player')+'</span><button class="btn y" data-room-invite="'+id+'" style="font-size:13px;padding:5px 10px" title="Create a lobby and invite friend">INVITE +</button></div>';}).join('');host.querySelectorAll('[data-room-invite]').forEach(b=>b.onclick=()=>void sendRoomInvite(b.dataset.roomInvite));}catch(err){host.textContent='Could not load friends: '+(err?.message||String(err));}}
     let roomInviteCooldownUntil=0,roomInviteCooldownTimer=null;
     function setRoomInviteButtonsCooldown(active){
       document.querySelectorAll('[data-room-invite]').forEach(btn=>{
@@ -1779,15 +1779,21 @@ function gadget(p){
     }
     async function sendRoomInvite(recipientId){
       if(Date.now()<roomInviteCooldownUntil){status('Please wait '+Math.ceil((roomInviteCooldownUntil-Date.now())/1000)+' seconds before sending another invite.',true);return;}
-      if(!currentRoom){status('Create a room first, then invite a friend.',true);return;}
       if(!recipientId){status('Choose a friend to invite.',true);return;}
-      startRoomInviteCooldown();
-      const {data:{user}}=await db.auth.getUser();
+      const {data:{user},error:authError}=await db.auth.getUser();
+      if(authError){status('Could not check your login: '+authError.message,true);return;}
       if(!user){status('Sign in first.',true);return;}
       if(recipientId===user.id){status('Choose a different friend to invite.',true);return;}
+      // Pressing INVITE should make the inviter the host automatically when they do not have a lobby yet.
+      if(!currentRoom){
+        await createRoom();
+        if(!currentRoom){status('Could not create your lobby, so the invitation was not sent. Check the room error above and try again.',true);return;}
+      }
+      if(currentRoom.host_id!==user.id){status('Only the lobby host can invite friends. Leave this lobby or ask its host to invite them.',true);return;}
+      startRoomInviteCooldown();
       const {error}=await db.from('dabrawl_room_invites').insert({sender_id:user.id,recipient_id:recipientId,room_code:currentRoom.room_code,status:'pending'});
-      if(error){status('Could not send room invite: '+error.message,true);return;}
-      status('Room invitation sent. You can send another in 5 seconds.');
+      if(error){status('Your lobby is ready, but the invitation could not be sent: '+error.message,true);return;}
+      status('Lobby invitation sent! You are the host. Your friend can accept the popup to join.');
     }
     // Bind authentication controls early so later lobby setup errors cannot leave them inert.
     el('onlineSignIn').addEventListener('click', () => { void auth('in'); });
