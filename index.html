@@ -133,6 +133,24 @@
     <button class="btn" id="onlineBack">BACK</button>
   </div>
 
+  <div class="scr" id="settingsScreen">
+    <h2>SETTINGS</h2>
+    <div style="width:min(92vw,620px);display:flex;flex-direction:column;gap:12px;text-align:left">
+      <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
+        <h3 style="margin:0 0 10px;color:var(--y);font-size:24px">CONTROLS</h3>
+        <div id="keybindRows" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+        <p id="keybindHint" style="font:13px Arial,sans-serif;color:#cbd5e1;margin:10px 0 0">Choose a control, then press the key you want to use.</p>
+        <button class="btn" id="resetKeybinds" style="font-size:18px;margin-top:10px">RESET DEFAULTS</button>
+      </section>
+      <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
+        <h3 style="margin:0 0 6px;color:var(--y);font-size:24px">ACCOUNT</h3>
+        <p style="font:14px Arial,sans-serif;color:#cbd5e1;margin:0 0 10px">Sign in, create an account, manage your room, or sign out from the account screen.</p>
+        <button class="btn purple" id="settingsAccount">ACCOUNT / MULTIPLAYER</button>
+      </section>
+    </div>
+    <button class="btn" id="settingsBack">BACK</button>
+  </div>
+
   <div class="scr" id="brs">
     <h2>BRAWLERS</h2>
     <div class="row" id="grid"></div>
@@ -406,11 +424,37 @@
       G.ph='count'; G.t=3.2; G.endAt=Date.now()+3200;
     }
     const keys = {}; let mx = 0, my = 0, mdown = false;
+    const DEFAULT_BINDS = {up:'w',down:'s',left:'a',right:'d',super:' ',gadget:'e',autoAim:'f'};
+    let keyBinds = {...DEFAULT_BINDS};
+    try { const saved = JSON.parse(localStorage.getItem('dabrawl_keybinds')||'{}'); for(const k of Object.keys(DEFAULT_BINDS)) if(typeof saved[k]==='string'&&saved[k]) keyBinds[k]=saved[k].toLowerCase(); } catch(_){}
+    const bindLabels = {up:'Move up',down:'Move down',left:'Move left',right:'Move right',super:'Use Super',gadget:'Use Gadget',autoAim:'Auto-aim / shoot'};
+    let waitingForBind = null;
+    function keyName(k){return k===' '?'SPACE':k.startsWith('arrow')?('ARROW '+k.slice(5).toUpperCase()):k.length===1?k.toUpperCase():k.toUpperCase();}
+    function saveKeyBinds(){try{localStorage.setItem('dabrawl_keybinds',JSON.stringify(keyBinds));}catch(_){} renderKeybinds();}
+    function renderKeybinds(){
+      const host=$('keybindRows'); if(!host)return; host.innerHTML='';
+      Object.keys(DEFAULT_BINDS).forEach(action=>{
+        const b=document.createElement('button'); b.className='btn'; b.style.cssText='font-size:16px;padding:9px 7px;display:flex;justify-content:space-between;gap:8px;align-items:center';
+        b.innerHTML='<span>'+bindLabels[action]+'</span><strong style="color:var(--y)">'+keyName(keyBinds[action])+'</strong>';
+        b.onclick=()=>{waitingForBind=action;$('keybindHint').textContent='Press a key for '+bindLabels[action]+' (Esc cancels).';renderKeybinds();}; 
+        if(waitingForBind===action){b.style.outline='3px solid #ffd21f';b.querySelector('strong').textContent='PRESS KEY…';}
+        host.appendChild(b);
+      });
+    }
     addEventListener('keydown', e => {
+      if(scr==='settingsScreen'&&waitingForBind){
+        e.preventDefault(); e.stopPropagation();
+        if(e.key==='Escape'){waitingForBind=null;$('keybindHint').textContent='Choose a control, then press the key you want to use.';renderKeybinds();return;}
+        const next=e.key.toLowerCase();
+        if(['tab','shift','control','alt','meta'].includes(next))return;
+        const conflict=Object.keys(keyBinds).find(k=>k!==waitingForBind&&keyBinds[k]===next);
+        if(conflict){$('keybindHint').textContent='That key is already assigned to '+bindLabels[conflict]+'. Choose another key.';return;}
+        keyBinds[waitingForBind]=next;waitingForBind=null;$('keybindHint').textContent='Controls saved on this device.';saveKeyBinds();return;
+      }
       keys[e.key.toLowerCase()] = 1; if(scr != 'game') return;
-      if(e.key == ' '){ e.preventDefault(); sup(me); }
-      if(e.key.toLowerCase() == 'e') { e.preventDefault(); gadget(me); }
-      if(e.key.toLowerCase() == 'f'){ e.preventDefault(); autoAimAndShoot(me); }
+      if(e.key.toLowerCase() === keyBinds.super){ e.preventDefault(); sup(me); }
+      if(e.key.toLowerCase() === keyBinds.gadget) { e.preventDefault(); gadget(me); }
+      if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); autoAimAndShoot(me); }
     });
     addEventListener('keyup', e => keys[e.key.toLowerCase()] = 0);
     cv.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; });
@@ -467,7 +511,7 @@
     };
      $('bra').onclick = () => show('brs');
     $('featuredBrawler').onclick = () => show('brs');
-    $('settingsBtn').onclick = () => { beep(450,.08); show('onlineLobby'); };
+    $('settingsBtn').onclick = () => { beep(450,.08); waitingForBind=null; renderKeybinds(); show('settingsScreen'); };
     $('nextBtn').onclick = async () => {
       beep(450,.08);
       const {data:{user}} = await db.auth.getUser();
@@ -480,6 +524,9 @@
       if(!user){ show('onlineLobby'); status('SIGN IN TO ACCESS MULTIPLAYER'); return; }
       show('onlineLobby');
     };
+    $('settingsBack').onclick = () => { waitingForBind=null; show('menu'); };
+    $('settingsAccount').onclick = () => { waitingForBind=null; show('onlineLobby'); updateAuthUI(); };
+    $('resetKeybinds').onclick = () => { keyBinds={...DEFAULT_BINDS};waitingForBind=null;$('keybindHint').textContent='Default controls restored.';saveKeyBinds(); };
     $('bk1').onclick = () => show('menu');
     $('modeBtn').onclick = () => {
       if(window.DaBrawlNet?.isInParty?.()){ window.DaBrawlNet.changeRoomMode?.(); return; }
@@ -707,7 +754,7 @@ function gadget(p){
           if(p.tf>0){ tfx(p,dt); continue; }
           if(p.lp){ air(p,dt); continue; }
           if(p.human){
-            let ix = (keys.d||keys.arrowright?1:0) - (keys.a||keys.arrowleft?1:0), iy = (keys.s||keys.arrowdown?1:0) - (keys.w||keys.arrowup?1:0);
+            let ix = (keys[keyBinds.right]||keys.arrowright?1:0) - (keys[keyBinds.left]||keys.arrowleft?1:0), iy = (keys[keyBinds.down]||keys.arrowdown?1:0) - (keys[keyBinds.up]||keys.arrowup?1:0);
             if(ts.m.active){ ix = (ts.m.x-ts.m.ox)/60; iy = (ts.m.y-ts.m.ox)/60; }
             const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
             if(p.muiCharging<=0 && !isBeamShooting){
