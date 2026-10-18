@@ -12,13 +12,7 @@ const ROOM_TTL_MS = 120_000;
 const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
 const WORLD = { width: 800, height: 520, margin: 28 };
-// Core values aligned with BR in index.html. Terrain and full form logic remain to be ported.
-const BRAWLERS = {
-  kuku:   { hp: 7000, speed: 135, damage: 312.5, range: 230, cooldown: 1600, spread: 0.68, pellets: 8, bulletSpeed: 550, superDamage: 333.3, superRange: 340, superKind: "projectile" },
-  shachi: { hp: 8000, speed: 145, damage: 1000, range: 160, cooldown: 1200, spread: 0.20, pellets: 2, bulletSpeed: 480, superDamage: 2500, superRange: 120, superKind: "slam" },
-  saiyan: { hp: 6500, speed: 150, damage: 400, range: 65, cooldown: 1200, spread: 0, pellets: 1, bulletSpeed: 600, superDamage: 0, superRange: 0, superKind: "transform" },
-  default: { hp: 7000, speed: 135, damage: 312.5, range: 230, cooldown: 1600, spread: 0.68, pellets: 8, bulletSpeed: 550, superDamage: 333.3, superRange: 340, superKind: "projectile" },
-};
+const { BRAWLERS } = await import("./brawlers.js");
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
