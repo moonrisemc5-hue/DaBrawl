@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { decideBotAction } from "../bot-ai.js";
 import { movePlayerWithObstacles, PLAYER_RADIUS } from "../world.js";
-const world={width:800,height:520};
+const world={width:800,height:520,margin:0,obstacles:[]};
 const bot={id:"bot",slot:1,brawler:"kuku",team:0,x:100,y:100,hp:7000,alive:true,connected:true,meter:0,lastFire:0,gadgetReadyAt:0,aim:0};
 const enemy={id:"enemy",team:1,x:300,y:100,hp:7000,alive:true,connected:true};
 test("bot aims at the nearest living opponent and approaches from long range",()=>{
