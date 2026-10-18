@@ -133,6 +133,29 @@
     <button class="btn" id="onlineBack">BACK</button>
   </div>
 
+  <div class="scr" id="modePicker">
+    <h2>CHOOSE A GAME MODE</h2>
+    <p style="font:15px Arial,sans-serif;color:#cbd5e1;margin:0">Pick a mode to see its rules and arena preview.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;width:min(94vw,850px)">
+      <button class="mode-card" data-mode="knockout" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer">
+        <div style="height:100px;border:2px solid #000;border-radius:9px;overflow:hidden;background:linear-gradient(90deg,#315b49 0 22%,#9bc46b 22% 28%,#315b49 28% 72%,#9bc46b 72% 78%,#315b49 78%);position:relative">
+          <div style="position:absolute;left:15%;top:16%;width:20px;height:20px;background:#d946ef;border:2px solid #111;border-radius:5px;box-shadow:80px 35px 0 #f87171,130px -2px 0 #3b82f6"></div><div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 22px,#152b24 22px 25px)"></div>
+        </div><h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">KNOCKOUT · 3v3</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">Team elimination. Stay alive and wipe out the opposing team.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#86efac">TEAM MODE · 3 PLAYERS PER TEAM</div>
+      </button>
+      <button class="mode-card" data-mode="showdown" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer">
+        <div style="height:100px;border:2px solid #000;border-radius:9px;overflow:hidden;background:linear-gradient(135deg,#b0a56b,#6b8c4c 45%,#c4ad70 46% 54%,#6b8c4c 55%);position:relative">
+          <div style="position:absolute;left:10%;top:18%;width:19px;height:19px;background:#ef4444;border:2px solid #111;border-radius:5px;box-shadow:75px 48px 0 #3b82f6,155px 10px 0 #facc15,210px 58px 0 #c084fc"></div><div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent 0 30px,#314b32 30px 36px)"></div>
+        </div><h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">SOLO SHOWDOWN</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">Every brawler for themselves. Be the last one standing.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#fca5a5">SOLO MODE · FREE FOR ALL</div>
+      </button>
+      <button class="mode-card" data-mode="duel" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer">
+        <div style="height:100px;border:2px solid #000;border-radius:9px;overflow:hidden;background:linear-gradient(90deg,#314f3d 0 32%,#b6a66c 32% 68%,#314f3d 68%);position:relative">
+          <div style="position:absolute;left:23%;top:32%;width:23px;height:23px;background:#3b82f6;border:2px solid #111;border-radius:5px;box-shadow:100px 0 0 #ef4444"></div><div style="position:absolute;left:48%;top:0;height:100%;width:8px;background:#456044"></div>
+        </div><h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">1v1 DUEL</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">A direct one-on-one fight against an opponent.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#93c5fd">DUEL MODE · 1v1</div>
+      </button>
+    </div>
+    <button class="btn" id="modePickerBack">BACK</button>
+  </div>
+
   <div class="scr" id="settingsScreen">
     <h2>SETTINGS</h2>
     <div style="width:min(92vw,620px);display:flex;flex-direction:column;gap:12px;text-align:left">
@@ -528,13 +551,19 @@
     $('settingsAccount').onclick = () => { waitingForBind=null; show('onlineLobby'); updateAuthUI(); };
     $('resetKeybinds').onclick = () => { keyBinds={...DEFAULT_BINDS};waitingForBind=null;$('keybindHint').textContent='Default controls restored.';saveKeyBinds(); };
     $('bk1').onclick = () => show('menu');
+    function applyGameMode(mode){
+      if(!['knockout','showdown','duel'].includes(mode))return;
+      gameMode=mode;
+      $('modeTxt').textContent=mode==='knockout'?'KNOCKOUT 3v3':mode==='showdown'?'SOLO SHOWDOWN':'1v1 DUEL';
+      $('modeBtn').title=mode==='knockout'?'Knockout: 3v3':mode==='showdown'?'Solo Showdown: every player for themselves':'1v1 Duel: you versus one bot';
+      document.querySelectorAll('.mode-card').forEach(card=>{const active=card.dataset.mode===mode;card.style.borderColor=active?'#ffd21f':'#64748b';card.style.boxShadow=active?'0 0 0 2px #ffd21f':'none';});
+    }
     $('modeBtn').onclick = () => {
       if(window.DaBrawlNet?.isInParty?.()){ window.DaBrawlNet.changeRoomMode?.(); return; }
-      gameMode = gameMode==='knockout' ? 'showdown' : gameMode==='showdown' ? 'duel' : 'knockout';
-      $('modeTxt').textContent = gameMode==='knockout' ? 'KNOCKOUT 3v3' : gameMode==='showdown' ? 'SOLO SHOWDOWN' : '1v1 DUEL';
-      $('modeBtn').title = gameMode==='knockout' ? 'Knockout: 3v3' : gameMode==='showdown' ? 'Solo Showdown: every player for themselves' : '1v1 Duel: you versus one bot';
-      beep(400,.1);
+      applyGameMode(gameMode);show('modePicker');beep(400,.1);
     };
+    document.querySelectorAll('.mode-card').forEach(card=>card.onclick=()=>{applyGameMode(card.dataset.mode);beep(500,.08);show('menu');});
+    $('modePickerBack').onclick=()=>show('menu');
     $('bk2').onclick = () => { clearInterval(mmI); clearTimeout(mmTimeout); mmI=null; mmTimeout=null; if(window.DaBrawlNet) window.DaBrawlNet.cancelMatchmaking(); show('menu'); };
     function autoAimAndShoot(p){
       if(p.muiCharging > 0 || KM.some(k => k.o === p)) return;
