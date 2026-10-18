@@ -1,5 +1,4 @@
-name: DaBrawl server checks
-
+name: DaBrawl server checks (legacy workflow)
 on:
   push:
     paths:
