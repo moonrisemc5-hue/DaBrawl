@@ -8,11 +8,35 @@ export function clampPlayerPosition(x, y, world, radius = PLAYER_RADIUS) {
   return { x: Math.max(minX, Math.min(maxX, x)), y: Math.max(minY, Math.min(maxY, y)) };
 }
 
+function positionClearOfObstacles(position, world, radius) {
+  return !(world?.obstacles ?? []).some(obstacle => intersectsObstacle(position.x, position.y, radius, obstacle));
+}
+
+function nearestClearPosition(x, y, world, radius, fallback) {
+  const desired = clampPlayerPosition(x, y, world, radius);
+  if (positionClearOfObstacles(desired, world, radius)) return desired;
+  // Search locally in small deterministic rings so separation nudges never push a
+  // player through a wall. Eight-unit spacing is finer than the 48-unit map tiles.
+  for (let distance = 8; distance <= 96; distance += 8) {
+    const candidates = [];
+    for (let dx = -distance; dx <= distance; dx += 8) {
+      for (let dy = -distance; dy <= distance; dy += 8) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== distance) continue;
+        const point = clampPlayerPosition(desired.x + dx, desired.y + dy, world, radius);
+        if (positionClearOfObstacles(point, world, radius)) candidates.push(point);
+      }
+    }
+    candidates.sort((a, b) => Math.hypot(a.x - desired.x, a.y - desired.y) - Math.hypot(b.x - desired.x, b.y - desired.y));
+    if (candidates.length) return candidates[0];
+  }
+  return fallback;
+}
+
 export function resolvePlayerCollisions(players, world, radius = PLAYER_RADIUS) {
   if (!Array.isArray(players) || !Number.isFinite(radius) || radius < 0) throw new TypeError("Invalid player collision inputs");
   const positions = players.map(player => {
     if (!player || !Number.isFinite(player.x) || !Number.isFinite(player.y)) throw new TypeError("Invalid player position");
-    return clampPlayerPosition(player.x, player.y, world, radius);
+    return nearestClearPosition(player.x, player.y, world, radius, clampPlayerPosition(player.x, player.y, world, radius));
   });
   const diameter = radius * 2;
   for (let pass = 0; pass < 24; pass++) {
@@ -52,7 +76,7 @@ export function resolvePlayerCollisions(players, world, radius = PLAYER_RADIUS) 
     const placed = [];
     for (let i = 0; i < positions.length; i++) {
       const desired = positions[i];
-      const candidates = cells.filter(cell => placed.every(other => Math.hypot(cell.x - other.x, cell.y - other.y) >= diameter - 1e-7));
+      const candidates = cells.filter(cell => positionClearOfObstacles(cell, world, radius) && placed.every(other => Math.hypot(cell.x - other.x, cell.y - other.y) >= diameter - 1e-7));
       candidates.sort((a, b) => Math.hypot(a.x - desired.x, a.y - desired.y) - Math.hypot(b.x - desired.x, b.y - desired.y));
       if (!candidates.length) break;
       placed.push(candidates[0]);

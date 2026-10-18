@@ -85,3 +85,14 @@ test("slides along obstacle faces and validates obstacle geometry", async () => 
   assert.equal(slid.y, 150);
   assert.throws(() => movePlayerWithObstacles(100, 100, 1, 1, { ...world, obstacles: [{ x: 0, y: 0, width: -1, height: 10 }] }), /Invalid world obstacle/);
 });
+
+test("player separation cannot nudge players into solid map obstacles", () => {
+  const obstacleWorld = { width: 800, height: 520, margin: 0, obstacles: [{ x: 300, y: 180, width: 48, height: 48 }] };
+  const resolved = resolvePlayerCollisions([{ x: 285, y: 200 }, { x: 285, y: 200 }], obstacleWorld);
+  for (const p of resolved) {
+    const nearestX = Math.max(300, Math.min(p.x, 348));
+    const nearestY = Math.max(180, Math.min(p.y, 228));
+    assert.ok(Math.hypot(p.x - nearestX, p.y - nearestY) >= PLAYER_RADIUS - 1e-7);
+  }
+  assert.ok(Math.hypot(resolved[0].x-resolved[1].x,resolved[0].y-resolved[1].y) >= PLAYER_RADIUS*2-1e-7);
+});
