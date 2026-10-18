@@ -8,7 +8,7 @@ This service is **not yet connected to live DaBrawl matches**. The server now in
 
 ## Host
 
-Deploy this directory as a Node 20+ container. Build from the repository root with `server/Dockerfile` or set the build context to `server/`. Configure `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the DaBrawl Supabase project. Start command: `npm start`; health endpoint: `/health`; WebSocket path: `/match?room=ROOM_CODE`. Do not add a service-role key.
+Deploy this directory as a Node 20+ container. Set the Dockerfile path to `server/Dockerfile` and the build context to the repository root (equivalent to `docker build -f server/Dockerfile .`). Configure `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the DaBrawl Supabase project. Start command: `npm start`; health endpoint: `/health`; WebSocket path: `/match?room=ROOM_CODE`. Do not add a service-role key.
 
 ## Local checks
 
