@@ -101,12 +101,8 @@
       <button class="plus" id="nextBtn" aria-label="Create or join a room" title="Create lobby / enter room code" style="margin-bottom:0">+</button>
     </div>
     <button class="plus" id="friendsBtn" aria-label="Friends: add or remove friends" title="Friends" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);z-index:320;font-size:28px">👥</button>
-    <div class="menu-bottom-controls" style="position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:10px;z-index:300">
-      <div style="display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap">
-        <button class="mode-sel" id="modeBtn">🎮 <span id="modeTxt">KNOCKOUT 3v3</span> ▾</button>
-        <button class="btn y" id="play">PLAY</button>
-      </div>
-    </div>
+    <div class="menu-bottom-controls" style="position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:center;z-index:300"><button class="mode-sel" id="modeBtn">🎮 <span id="modeTxt">KNOCKOUT 3v3</span> ▾</button></div>
+    <button class="btn y" id="play" style="position:absolute;right:18px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:300">PLAY</button>
      
   </div>
 
@@ -2347,6 +2343,7 @@ function gadget(p){
     el('readyRoomBtn').addEventListener('click',toggleRoomReady);
     el('refreshRoomBtn').addEventListener('click',refreshRoom);
     el('leaveRoomLobbyBtn').addEventListener('click',()=>void leaveParty());
+    el('onlineSignOut').addEventListener('click',async()=>{stopPrototypeServer('Disconnected because you signed out');if(roomChannel)await db.removeChannel(roomChannel);roomChannel=null;currentRoom=null;syncRoomActions();await db.auth.signOut();await updateAuthUI();status('Signed out.');});
     db.auth.onAuthStateChange(()=>{setTimeout(updateAuthUI,0);});
   </script>
 
