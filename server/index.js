@@ -2,7 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer, WebSocket } from "ws";
-import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer, resolveRoomOwner, canStartMatch } from "./protocol.js";
+import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer, resolveRoomOwner, canStartMatch, nextAvailableSlot } from "./protocol.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -35,11 +35,6 @@ function makeRoom(code, mode = "knockout") {
   return { code, mode: normalizedMode, world: createArena(normalizedMode),
     phase: "waiting", createdAt: now(), updatedAt: now(), emptySince: 0, startedAt: 0, endsAt: 0, tick: 0,
     players: new Map(), projectiles: [], beams: [], events: [], winner: null };
-}
-function nextAvailableSlot(room) {
-  const occupied = new Set([...room.players.values()].map(player => player.slot));
-  for (let slot = 0; slot < MAX_PLAYERS; slot++) if (!occupied.has(slot)) return slot;
-  return -1;
 }
 function makePlayer(user, msg, slot) {
   const brawler = BRAWLERS[msg.brawler] ? msg.brawler : "default";
@@ -94,7 +89,7 @@ function joinRoom(room, user, msg, socket) {
   if (!player) {
     if (room.players.size >= MAX_PLAYERS) throw new Error("Room is full");
     if (room.phase !== "waiting") throw new Error("Match already started");
-    const slot = nextAvailableSlot(room);
+    const slot = nextAvailableSlot(room.players.values(), MAX_PLAYERS);
     if (slot < 0) throw new Error("Room is full");
     player = makePlayer(user, msg, slot);
     room.players.set(user.id, player);
@@ -415,7 +410,7 @@ wss.on("connection", (ws,_req,meta) => {
         } else if (m.action==="add-bot") {
           if (!canConfigureRoom(player.id,room.ownerId,room.phase)) throw new Error("Only the room owner can add bots before the match starts");
           if (room.players.size>=MAX_PLAYERS) throw new Error("Room is full");
-          const slot=nextAvailableSlot(room);
+          const slot=nextAvailableSlot(room.players.values(), MAX_PLAYERS);
           if (slot < 0) throw new Error("Room is full");
           const id=`bot:${room.code}:${slot}`;
           const choices=["kuku","shachi","saiyan"]; const brawler=choices[slot%choices.length];

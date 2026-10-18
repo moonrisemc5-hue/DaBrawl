@@ -97,6 +97,18 @@ export const shouldForfeitDisconnectedPlayer = (connected, disconnectedAt, curre
   graceMs >= 0 &&
   currentTime - disconnectedAt >= graceMs;
 
+export function nextAvailableSlot(players, maxPlayers = 6) {
+  if (!players || typeof players[Symbol.iterator] !== "function" || !Number.isSafeInteger(maxPlayers) || maxPlayers < 0) {
+    throw new TypeError("Invalid slot allocation inputs");
+  }
+  const occupied = new Set();
+  for (const player of players) {
+    if (Number.isSafeInteger(player?.slot) && player.slot >= 0 && player.slot < maxPlayers) occupied.add(player.slot);
+  }
+  for (let slot = 0; slot < maxPlayers; slot++) if (!occupied.has(slot)) return slot;
+  return -1;
+}
+
 export function canStartMatch(phase, players) {
   if (phase !== "waiting" || !players || typeof players[Symbol.iterator] !== "function") return false;
   const roster = [...players];

@@ -151,3 +151,13 @@ test("starts a match only when two or more connected players are ready in the wa
   assert.equal(canStartMatch("playing", [owner, bot]), false);
   assert.equal(canStartMatch("waiting", [owner, bot]), true);
 });
+
+
+test("allocates the first genuinely free player slot, including gaps after cleanup", async () => {
+  const { nextAvailableSlot } = await import("../protocol.js");
+  assert.equal(nextAvailableSlot([{ slot: 0 }, { slot: 1 }, { slot: 3 }], 6), 2);
+  assert.equal(nextAvailableSlot([{ slot: 1 }, { slot: 2 }], 4), 0);
+  assert.equal(nextAvailableSlot([{ slot: 0 }, { slot: 1 }], 2), -1);
+  assert.equal(nextAvailableSlot([], 0), -1);
+  assert.throws(() => nextAvailableSlot(null, 6), /Invalid slot allocation/);
+});
