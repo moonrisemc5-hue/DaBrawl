@@ -12,10 +12,12 @@ const ROOM_TTL_MS = 120_000;
 const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
 const WORLD = { width: 800, height: 520, margin: 28 };
+// Core values aligned with BR in index.html. Terrain and full form logic remain to be ported.
 const BRAWLERS = {
-  kuku: { hp: 3000, speed: 205, damage: 260, range: 230, cooldown: 380, spread: 0.68, pellets: 8, superDamage: 650, superRange: 340 },
-  saiyan: { hp: 3600, speed: 220, damage: 240, range: 300, cooldown: 420, spread: 0.12, pellets: 1, superDamage: 700, superRange: 400 },
-  default: { hp: 3200, speed: 210, damage: 220, range: 280, cooldown: 400, spread: 0.18, pellets: 1, superDamage: 600, superRange: 360 },
+  kuku:   { hp: 7000, speed: 135, damage: 312.5, range: 230, cooldown: 1600, spread: 0.68, pellets: 8, bulletSpeed: 550, superDamage: 333.3, superRange: 340, superKind: "projectile" },
+  shachi: { hp: 8000, speed: 145, damage: 1000, range: 160, cooldown: 1200, spread: 0.20, pellets: 2, bulletSpeed: 480, superDamage: 2500, superRange: 120, superKind: "slam" },
+  saiyan: { hp: 6500, speed: 150, damage: 400, range: 65, cooldown: 1200, spread: 0, pellets: 1, bulletSpeed: 600, superDamage: 0, superRange: 0, superKind: "transform" },
+  default: { hp: 7000, speed: 135, damage: 312.5, range: 230, cooldown: 1600, spread: 0.68, pellets: 8, bulletSpeed: 550, superDamage: 333.3, superRange: 340, superKind: "projectile" },
 };
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -80,13 +82,34 @@ function doFire(room, p, isSuper = false) {
     p.meter = 0; p.lastSuper = t;
   } else if (t - p.lastFire < stats.cooldown) return;
   else p.lastFire = t;
+  if (isSuper && stats.superKind === "transform") {
+    p.form = clamp(p.form + 1, 1, 5);
+    p.transformUntil = t + 1800;
+    event(room, "transform", { playerId:p.id, form:p.form });
+    sendState(room);
+    return;
+  }
+  if (isSuper && stats.superKind === "slam") {
+    let hits = 0;
+    for (const target of room.players.values()) {
+      if (!target.alive || target.team === p.team || target.id === p.id) continue;
+      if (Math.hypot(target.x-p.x,target.y-p.y) > stats.superRange) continue;
+      target.hp = Math.max(0, target.hp-stats.superDamage);
+      target.meter = clamp(target.meter+12,0,100);
+      hits++;
+      event(room,"hit",{attackerId:p.id,targetId:target.id,damage:stats.superDamage,hp:target.hp,super:true});
+      if (target.hp<=0) { target.alive=false; target.input={x:0,y:0}; event(room,"knockout",{playerId:target.id,by:p.id}); }
+    }
+    event(room,"super-slam",{playerId:p.id,hits});
+    return;
+  }
   const count = isSuper ? 1 : stats.pellets;
   for (let i = 0; i < count; i++) {
     const spread = isSuper ? 0 : stats.spread;
     const angle = p.aim + (count === 1 ? 0 : (i / (count - 1) - .5) * spread) + (Math.random() - .5) * .035;
     room.projectiles.push({ id: nextProjectileId++, ownerId: p.id, team: p.team,
       x: p.x + Math.cos(angle) * 18, y: p.y + Math.sin(angle) * 18, angle,
-      speed: isSuper ? 560 : 470, damage: isSuper ? stats.superDamage : stats.damage,
+      speed: isSuper ? Math.max(560,stats.bulletSpeed) : stats.bulletSpeed, damage: isSuper ? stats.superDamage : stats.damage,
       range: isSuper ? stats.superRange : stats.range, traveled: 0, super: isSuper });
   }
   p.meter = clamp(p.meter + (isSuper ? 0 : 8), 0, 100);
