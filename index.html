@@ -1,0 +1,2346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>DaBrawl</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg: #0b132b; --y: #ffd21f; --tx: #fff; color-scheme: dark; box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--tx); font-family: 'Lilita One', Impact, sans-serif; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+    #c { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; touch-action: none; }
+    .scr { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: radial-gradient(circle at 50% 25%, #1c2541, var(--bg) 80%); text-align: center; padding: 12px; overflow: auto; z-index: 200; pointer-events: none; isolation: isolate; }
+    .scr.on { display: flex; pointer-events: auto; z-index: 20; }
+    .scr:not(.on) { visibility: hidden; pointer-events: none !important; }
+    button, input { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .scr.on button, .scr.on input, .scr.on .b-card { pointer-events: auto !important; }
+    .scr.on > * { position: relative; }
+    .scr.on > [style*='position:absolute'] { position: absolute !important; }
+    h1 { font-size: min(16vw, 96px); margin: 0; color: var(--y); -webkit-text-stroke: 3px #000; text-shadow: 0 6px 0 #000; transform: rotate(-3deg); }
+    h2 { margin: 0; font-size: 34px; text-shadow: 3px 3px 0 #000; }
+    .btn { font: inherit; font-size: 26px; color: #fff; background: linear-gradient(#4895ef, #4361ee); border: 4px solid #000; border-radius: 14px; padding: 6px 30px; text-shadow: 2px 2px 0 #000; box-shadow: 0 6px 0 #000; cursor: pointer; pointer-events: auto; z-index: 300; }
+    .btn.y { background: linear-gradient(#ffe45c, #ffa800); font-size: 44px; padding: 8px 54px; }
+    .btn.r { background: linear-gradient(#f72585, #7209b7); font-size: 30px; padding: 6px 36px; }
+    .btn.purple { background: linear-gradient(#a259ff, #6d28d9); }
+    .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #000; }
+    .pill { background: #0008; border: 3px solid #000; border-radius: 30px; padding: 4px 20px; font-size: 26px; color: var(--y); pointer-events: auto; z-index: 300; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; pointer-events: auto; }
+    .b-card { width: 110px; height: 140px; background: #000; border: 4px solid #fff; border-radius: 12px; position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: center; cursor: pointer; box-shadow: 0 6px 0 #000; overflow: hidden; pointer-events: auto; z-index: 300; }
+    .b-card canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none !important; }
+    .b-card > * { pointer-events: none; }
+    .b-card .rank-badge { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; align-items: center; gap: 4px; background: #800000; border: 2px solid #000; border-radius: 6px; padding: 1px 6px; font-size: 12px; color: #fff; box-shadow: 0 2px 0 #000; }
+    .b-card .b-name { position: absolute; bottom: 22px; right: 6px; z-index: 10; font-size: 14px; color: #fff; text-shadow: 2px 2px 0 #000; -webkit-text-stroke: 1px #000; }
+    .b-card .power-bar { position: absolute; bottom: 0; inset-x: 0; height: 18px; background: #333; border-top: 2px solid #000; z-index: 10; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; }
+    .b-card .power-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(#d946ef, #8b5cf6); }
+    #bra { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); z-index: 300; pointer-events: auto; }
+    .mid { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 16px; pointer-events: none; z-index: 220; }
+    .mid > * { pointer-events: auto; }
+    .plus { width: 62px; height: 62px; border-radius: 50%; font: inherit; font-size: 42px; line-height: 1; color: #fff; background: #0b132b; border: 4px solid #000; box-shadow: 0 5px 0 #000; cursor: pointer; pointer-events: auto; z-index: 300; }
+    .plus.room-menu-slot { width: clamp(130px,19vw,220px); height: min(290px,42vh); min-height:220px; border-radius:18px; padding:8px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:5px; background:linear-gradient(180deg,#1c2b4b88,#10172bcc); border:2px solid #52627d; box-shadow:none; font-size:14px; line-height:1.15; white-space:normal; }
+    .room-menu-slot .room-face { width:100%;height:265px;max-height:39vh;object-fit:contain;border:0;border-radius:0;display:block;background:transparent;box-shadow:none;flex-shrink:1; }
+    .room-menu-slot .room-name { color:#fff;font-size:18px;font-weight:800;text-shadow:0 2px 4px #000;max-width:100%;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;white-space:nowrap;text-align:center; }
+    .room-menu-slot .room-brawler { color:#fde68a;font-size:12px;letter-spacing:.5px; }
+    .room-menu-slot .room-ready { color:#fca5a5;font-size:13px; }
+    .room-menu-slot.ready { border-color:#22c55e; box-shadow:inset 0 -4px #22c55e; }
+    .room-menu-slot .room-kick { position:absolute;top:6px;right:6px;background:#7f1d1d;color:#fff;border:1px solid #fca5a5;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:900;z-index:4;cursor:pointer;user-select:none; }
+    #roomMenuBar { display:none; position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:301; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; width:min(92vw,640px); }
+    #roomMenuBar button { font-size:16px; padding:7px 14px; }
+    #roomMenuBar { display:none; position:absolute; top:12%; left:50%; transform:translateX(-50%); z-index:301; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; width:min(92vw,640px); }
+    #roomMenuBar button { font-size:16px; padding:7px 14px; }
+    #pv { width: min(300px, 46vh); height: min(300px, 46vh); pointer-events: none; }
+    #dpv { pointer-events: none; }
+    #bn { font-size: 30px; color: var(--y); text-shadow: 2px 2px 0 #000; }
+    small { opacity: .8; font-size: 15px; max-width: 420px; z-index: 300; }
+    #hud { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+    #hud.on { display: block; z-index: 500; }
+    #hud > * { pointer-events: auto; }
+    .hb { position: fixed; border: 4px solid #000; border-radius: 50%; font: inherit; color: #fff; text-shadow: 2px 2px 0 #000; cursor: pointer; box-shadow: 0 5px 0 #000; z-index: 60; pointer-events: auto; }
+    #sup { right: calc(28px + env(safe-area-inset-right,0px)); bottom: calc(130px + env(safe-area-inset-bottom,0px)); width: 82px; height: 82px; font-size: 18px; background: #444; }
+    #gad { right: calc(130px + env(safe-area-inset-right,0px)); bottom: calc(30px + env(safe-area-inset-bottom,0px)); width: 62px; height: 62px; font-size: 20px; background: #2a9d3c; }
+    #leaveBtn { position: fixed; left: 16px; top: calc(12px + env(safe-area-inset-top,0px)); z-index: 399; display: none; pointer-events: auto; }
+    .mode-sel { background: linear-gradient(#2b2d42, #141629); border: 3px solid #000; border-radius: 24px; padding: 8px 24px; font-size: 20px; color: var(--y); cursor: pointer; box-shadow: 0 4px 0 #000; display: flex; align-items: center; gap: 10px; pointer-events: auto; z-index: 300; }
+    .bar-wrap { width: min(80vw, 360px); height: 26px; background: #000; border: 3px solid #000; border-radius: 14px; overflow: hidden; position: relative; box-shadow: 0 4px 0 #000; }
+    .bar-fill { height: 100%; width: 0%; background: linear-gradient(#ff9a00, #ffe45c); transition: width .1s linear; }
+    .det-layout { display: flex; width: 100%; max-width: 960px; justify-content: space-between; align-items: center; padding: 10px; gap: 20px; }
+    .det-left { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; max-width: 320px; text-align: left; }
+    .det-title { background: #ffe45c; color: #000; padding: 4px 16px; border: 3px solid #000; border-radius: 8px; font-size: 28px; box-shadow: 0 4px 0 #000; }
+    .det-class { font-size: 18px; color: #fff; text-shadow: 2px 2px 0 #000; }
+    .det-rarity { font-size: 16px; color: #00c0ff; text-transform: uppercase; }
+    .det-lore { background: #1c2541; border: 3px solid #000; border-radius: 12px; padding: 12px; font-size: 14px; line-height: 1.3; box-shadow: 0 4px 0 #000; }
+    .det-right { background: #1c2541; border: 4px solid #000; border-radius: 18px; padding: 16px; width: 300px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 6px 0 #000; }
+    .stat-box { background: #0b132b; border: 2px solid #000; border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; }
+    .stat-box .icon-p { width: 28px; height: 28px; border-radius: 6px; background: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .level-slots { display: flex; gap: 6px; justify-content: flex-end; }
+    .lvl-slot { width: 32px; height: 32px; border-radius: 50%; background: #334155; border: 2px solid #000; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #aaa; box-shadow: 0 2px 0 #000; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <button class="btn r" id="leaveBtn">LEAVE</button>
+  <div id="hud">
+    <button class="hb" id="sup" type="button">SUPER</button>
+    <button class="hb" id="gad" type="button" aria-label="Gadget ready">⚡</button>
+  </div>
+  <div class="scr on" id="menu" style="padding:0">
+    <div class="pill" style="position:absolute;top:12px;left:12px;z-index:300">🏆 <span id="tro">0</span></div>
+    <div style="position:absolute;top:10px;right:14px;display:flex;align-items:center;gap:8px;z-index:300">
+      <canvas id="logoCv" width="44" height="44"></canvas>
+      <div style="font-size:30px;color:var(--y);-webkit-text-stroke:1px #000">DaBrawl</div>
+      <button class="btn" id="settingsBtn" aria-label="Settings and account" title="Settings / Account" style="width:44px;height:44px;padding:4px;font-size:23px">⚙</button>
+    </div>
+    <button class="btn purple" id="bra" aria-label="Brawlers" title="Brawlers" style="width:76px;height:76px;padding:8px;border-radius:16px;font-size:38px">⚔</button>
+    <div id="roomMenuBar"><button class="btn purple" id="roomMenuCode">ROOM CODE</button><button class="btn" id="roomLeaveBtn">LEAVE PARTY</button><button class="btn y" id="roomMenuStart" style="display:none">START MATCH</button></div>
+    <div class="mid">
+      <button class="plus" id="prevBtn" aria-label="Add a friend by code" title="Friends / room code" style="margin-bottom:0">+</button>
+      <div id="featuredBrawler" style="pointer-events:auto;cursor:pointer" title="Choose brawler">
+        <div id="bn">KUKU</div>
+        <canvas id="pv" width="300" height="300"></canvas>
+      </div>
+      <button class="plus" id="nextBtn" aria-label="Friends" title="Friends" style="margin-bottom:0;font-size:30px">♟</button>
+    </div>
+    <div style="position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:flex-end;gap:10px;z-index:300">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="mode-sel" id="modeBtn">🎮 <span id="modeTxt">KNOCKOUT 3v3</span> ▾</button>
+        <button class="btn y" id="play">PLAY</button>
+      </div>
+    </div>
+     
+  </div>
+
+  <div class="scr" id="onlineLobby" style="z-index:500;background:radial-gradient(circle at 50% 20%,#26365d,#080d1d 82%);">
+    <h2>FRIENDS &amp; ROOM CODES</h2>
+    <div id="onlineStatus" style="max-width:560px;font:16px Arial,sans-serif;color:#cbd5e1">Sign in to create a room code or join a friend.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:min(92vw,520px)">
+      <input id="onlineEmail" type="text" autocomplete="username" maxlength="20" placeholder="Username (3–20 letters, numbers or _)" style="box-sizing:border-box;width:100%;padding:12px;border:3px solid #000;border-radius:10px;font:18px Arial,sans-serif">
+      <input id="onlinePassword" type="password" autocomplete="current-password" minlength="6" placeholder="Password (at least 6 characters)" style="box-sizing:border-box;width:100%;padding:12px;border:3px solid #000;border-radius:10px;font:18px Arial,sans-serif">
+      <button class="btn" id="onlineSignIn">SIGN IN</button><button class="btn purple" id="onlineSignUp">CREATE ACCOUNT</button>
+    </div>
+    <div id="roomControls" style="display:none;flex-direction:column;align-items:center;gap:10px;width:min(92vw,520px)">
+      <div id="onlineUser" style="font:16px Arial,sans-serif;color:#93c5fd;overflow-wrap:anywhere"></div>
+      <div style="width:100%;padding:10px;border:1px solid #475569;border-radius:10px;background:#0b1224;box-sizing:border-box">
+        <div style="font:700 14px Arial,sans-serif;color:#a7f3d0;margin-bottom:5px">EXPERIMENTAL SERVER CONNECTION</div>
+        <div style="font:13px Arial,sans-serif;color:#cbd5e1;margin-bottom:8px">Checks live server ticks and latency only. Your matches still use the existing multiplayer system.</div>
+        <button class="btn" id="prototypeServerBtn">CONNECT TO TEST SERVER</button>
+        <div id="prototypeServerStatus" style="font:13px Arial,sans-serif;color:#cbd5e1;margin-top:7px">Not connected</div>
+      </div>
+      <button class="btn y" id="createRoomBtn" style="font-size:28px;padding:8px 22px">CREATE ROOM</button>
+      <div style="display:flex;gap:8px;width:100%;justify-content:center"><input id="roomCodeInput" maxlength="8" placeholder="ROOM CODE" style="min-width:0;width:180px;padding:10px;border:3px solid #000;border-radius:10px;font:22px Arial,sans-serif;text-transform:uppercase"><button class="btn" id="joinRoomBtn">JOIN</button></div>
+      <div id="activeRoom" style="font:20px Arial,sans-serif;color:#fde047"></div>
+      <div id="roomPlayers" style="font:16px Arial,sans-serif;color:#fff"></div>
+      <button class="btn" id="readyRoomBtn" style="display:none">READY</button><button class="btn y" id="startRoomBtn" style="display:none">START MATCH</button><button class="btn" id="leaveRoomLobbyBtn" style="display:none;border:2px solid #ef4444;color:#fecaca">LEAVE ROOM</button>
+      <button class="btn" id="refreshRoomBtn">REFRESH LOBBY</button><button class="btn purple" id="onlineSignOut">SIGN OUT</button>
+    </div>
+    <button class="btn" id="onlineBack">BACK</button>
+  </div>
+
+  <div class="scr" id="friendsScreen" style="z-index:510;background:radial-gradient(circle at 50% 15%,#26365d,#080d1d 84%);">
+    <h2>FRIENDS</h2>
+    <p style="font:14px Arial,sans-serif;color:#cbd5e1;margin:0">Add friends by username, accept requests, and see who is online.</p>
+    <div style="width:min(94vw,650px);max-height:58vh;overflow:auto;display:flex;flex-direction:column;gap:12px">
+      <section style="padding:13px;background:#111c35;border:2px solid #334155;border-radius:14px">
+        <h3 style="margin:0 0 8px;color:var(--y);font-size:23px">ADD A FRIEND</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="friendUsername" maxlength="20" placeholder="Exact username" style="flex:1;min-width:160px;padding:11px;border:2px solid #000;border-radius:9px;font:16px Arial,sans-serif"><button class="btn y" id="sendFriendRequest" style="font-size:17px">SEND REQUEST</button></div>
+      </section>
+      <section style="padding:13px;background:#111c35;border:2px solid #334155;border-radius:14px">
+        <h3 style="margin:0 0 8px;color:var(--y);font-size:23px">FRIEND REQUESTS</h3><div id="friendRequests" style="font:14px Arial,sans-serif">Sign in to view requests.</div>
+      </section>
+      <section style="padding:13px;background:#111c35;border:2px solid #334155;border-radius:14px">
+        <h3 style="margin:0 0 8px;color:var(--y);font-size:23px">YOUR FRIENDS</h3><div id="friendList" style="font:14px Arial,sans-serif">Sign in to view friends.</div>
+      </section>
+      <div id="friendsStatus" style="font:14px Arial,sans-serif;color:#cbd5e1"></div>
+    </div>
+    <button class="btn" id="friendsRefresh">REFRESH</button><button class="btn" id="friendsBack">BACK</button>
+  </div>
+
+  <div class="scr" id="modePicker">
+    <h2>CHOOSE A GAME MODE</h2>
+    <p style="font:15px Arial,sans-serif;color:#cbd5e1;margin:0">Pick a mode to see its rules and arena preview.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;width:min(94vw,850px)">
+      <button class="mode-card" data-mode="knockout" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer">
+        <div style="height:100px;border:2px solid #000;border-radius:9px;overflow:hidden;background:linear-gradient(90deg,#315b49 0 22%,#9bc46b 22% 28%,#315b49 28% 72%,#9bc46b 72% 78%,#315b49 78%);position:relative">
+          <div style="position:absolute;left:15%;top:16%;width:20px;height:20px;background:#d946ef;border:2px solid #111;border-radius:5px;box-shadow:80px 35px 0 #f87171,130px -2px 0 #3b82f6"></div><div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 22px,#152b24 22px 25px)"></div>
+        </div><h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">KNOCKOUT · 3v3</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">Team elimination. Stay alive and wipe out the opposing team.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#86efac">TEAM MODE · 3 PLAYERS PER TEAM</div>
+      </button>
+      <button class="mode-card" data-mode="showdown" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer">
+        <div style="height:100px;border:2px solid #000;border-radius:9px;overflow:hidden;background:linear-gradient(135deg,#b0a56b,#6b8c4c 45%,#c4ad70 46% 54%,#6b8c4c 55%);position:relative">
+          <div style="position:absolute;left:10%;top:18%;width:19px;height:19px;background:#ef4444;border:2px solid #111;border-radius:5px;box-shadow:75px 48px 0 #3b82f6,155px 10px 0 #facc15,210px 58px 0 #c084fc"></div><div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent 0 30px,#314b32 30px 36px)"></div>
+        </div><h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">SOLO SHOWDOWN</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">Every brawler for themselves. Be the last one standing.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#fca5a5">SOLO MODE · FREE FOR ALL</div>
+      </button>
+      <button class="mode-card" data-mode="duel" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer">
+        <div style="height:100px;border:2px solid #000;border-radius:9px;overflow:hidden;background:linear-gradient(90deg,#314f3d 0 32%,#b6a66c 32% 68%,#314f3d 68%);position:relative">
+          <div style="position:absolute;left:23%;top:32%;width:23px;height:23px;background:#3b82f6;border:2px solid #111;border-radius:5px;box-shadow:100px 0 0 #ef4444"></div><div style="position:absolute;left:48%;top:0;height:100%;width:8px;background:#456044"></div>
+        </div><h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">1v1 DUEL</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">A direct one-on-one fight against an opponent.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#93c5fd">DUEL MODE · 1v1</div>
+      </button>
+    </div>
+    <button class="btn" id="modePickerBack">BACK</button>
+  </div>
+
+  <div class="scr" id="settingsScreen">
+    <h2>SETTINGS</h2>
+    <div style="width:min(92vw,620px);display:flex;flex-direction:column;gap:12px;text-align:left">
+      <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
+        <h3 style="margin:0 0 10px;color:var(--y);font-size:24px">CONTROLS</h3>
+        <div id="keybindRows" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+        <p id="keybindHint" style="font:13px Arial,sans-serif;color:#cbd5e1;margin:10px 0 0">Choose a control, then press the key you want to use.</p>
+        <button class="btn" id="resetKeybinds" style="font-size:18px;margin-top:10px">RESET DEFAULTS</button>
+      </section>
+      <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
+        <h3 style="margin:0 0 6px;color:var(--y);font-size:24px">ACCOUNT</h3>
+        <p style="font:14px Arial,sans-serif;color:#cbd5e1;margin:0 0 10px">Sign in, create an account, manage your room, or sign out from the account screen.</p>
+        <button class="btn purple" id="settingsAccount">ACCOUNT / MULTIPLAYER</button>
+      </section>
+    </div>
+    <button class="btn" id="settingsBack">BACK</button>
+  </div>
+
+  <div class="scr" id="brs">
+    <h2>BRAWLERS</h2>
+    <div class="row" id="grid"></div>
+    <button class="btn" id="bk1">BACK</button>
+  </div>
+  <div class="scr" id="det">
+    <div class="det-layout">
+      <div class="det-left">
+        <div id="dBadgeRank" style="display:flex;align-items:center;gap:8px">
+          <div id="dRankIcon" style="background:#800000;border:2px solid #000;border-radius:8px;padding:2px 10px;font-size:16px;color:#fff">RANK 1</div>
+          <div style="font-size:18px;color:var(--y)">🏆 <span id="dTro">0</span></div>
+        </div>
+        <div class="det-title" id="dTitle">KUKU</div>
+        <div class="det-class" id="dClass">DAMAGE DEALER</div>
+        <div class="det-rarity" id="dRarity">COMMON</div>
+        <div class="det-lore" id="dLore">Kuku fires 8 rapid buckshot pellets that deal heavy area damage up close!</div>
+      </div>
+      <canvas id="dpv" width="280" height="280" style="width:min(280px,36vh);height:min(280px,36vh)"></canvas>
+      <div class="det-right">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:22px;color:var(--y)">POWER 1</div>
+          <div class="level-slots">
+            <div class="lvl-slot">7🔒</div><div class="lvl-slot">8🔒</div><div class="lvl-slot">9🔒</div><div class="lvl-slot">10🔒</div><div class="lvl-slot">11🔒</div>
+          </div>
+        </div>
+        <div class="stat-box"><div class="icon-p">❤️</div><div><small style="color:#aaa">HEALTH</small><div id="dHp" style="font-size:20px">7000</div></div></div>
+        <div class="stat-box"><div class="icon-p" style="background:#ef4444">⚔️</div><div><small style="color:#aaa">ATTACK</small><div id="dAtk" style="font-size:20px">2500</div></div></div>
+        <div class="stat-box"><div class="icon-p" style="background:#3b82f6">⭐</div><div><small style="color:#aaa">SUPER</small><div id="dSup" style="font-size:20px">SUPER BUCKSHOT</div></div></div>
+        <button class="btn" id="dUpgrade" style="background:linear-gradient(#22c55e,#16a34a);font-size:22px;padding:6px;margin-top:4px">UPGRADE</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="bk3">BACK</button>
+      <button class="btn" id="dTry" style="background:linear-gradient(#3a0ca3,#4cc9f0);font-size:30px;padding:6px 36px">TRY</button>
+      <button class="btn y" id="dsel" style="font-size:30px;padding:6px 44px">SELECT</button>
+    </div>
+  </div>
+  <div class="scr" id="mm">
+    <canvas id="mmLogo" width="120" height="120"></canvas>
+    <h2 id="mmTxt" style="font-size:38px;color:var(--y)">WAITING FOR PLAYERS: 10s</h2>
+    <small id="mmHint">Waiting up to 10 seconds before filling empty slots with bots…</small>
+    <button class="btn" id="bk2" style="margin-top:20px">CANCEL</button>
+  </div>
+  <div class="scr" id="loading">
+    <canvas id="ldLogo" width="100" height="100"></canvas>
+    <h1 style="font-size:52px;margin-bottom:10px">GET READY!</h1>
+    <div class="bar-wrap"><div class="bar-fill" id="ldFill"></div></div>
+    <h2 id="ldPct" style="font-size:28px;color:var(--y)">0%</h2>
+    <small id="tipTxt">Tip: Supers break through cover and deal heavy area damage!</small>
+  </div>
+  <div class="scr" id="res">
+    <h1 id="rt">VICTORY</h1>
+    <div class="pill" id="rd">+8 🏆</div>
+    <button class="btn y" id="again">PLAY AGAIN</button>
+    <button class="btn" id="home">HOME</button>
+  </div>
+<script>
+    const $ = i => document.getElementById(i), cv = $('c'); let g = cv.getContext('2d');
+    let W, H, DPR, z = 1, scr = 'menu', isTestMode = false, gameMode = 'knockout', networkMode = false, isNetworkHost = false;
+    let lastMatchWasOnline=false, lastQueueMode='knockout';
+    let networkResultApplied=false;
+    function rs(){ DPR = devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; }
+    addEventListener('resize', rs); rs();
+    function drawHilalLogo(c, sz = 100){
+      if(!c) return; const ctx = c.getContext('2d'); if(!ctx) return;
+      ctx.clearRect(0,0,c.width,c.height); const r = sz / 2; ctx.save(); ctx.translate(r, r);
+      ctx.beginPath(); ctx.arc(0,0,r-4,0,Math.PI*2); ctx.fillStyle='#ffd21f'; ctx.fill(); ctx.lineWidth=4; ctx.strokeStyle='#000'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0,0,r-10,0,Math.PI*2); ctx.fillStyle='#0b132b'; ctx.fill();
+      ctx.beginPath(); ctx.arc(-r*0.08, -r*0.05, r*0.52, 0, Math.PI*2); ctx.fillStyle='#ffd21f'; ctx.fill();
+      ctx.beginPath(); ctx.arc(r*0.12, -r*0.12, r*0.44, 0, Math.PI*2); ctx.fillStyle='#0b132b'; ctx.fill();
+      ctx.restore();
+    }
+    function initLogos(){ drawHilalLogo($('logoCv'), 44); drawHilalLogo($('mmLogo'), 120); drawHilalLogo($('ldLogo'), 100); }
+    function show(s){
+      if(s !== 'game' && s !== 'loading' && s !== 'res' && networkMode){ networkMode = false; if(window.DaBrawlNet) window.DaBrawlNet.leaveMatch(); }
+      scr = s; document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id == s));
+      $('leaveBtn').style.display = (s == 'game' && isTestMode) ? 'block' : 'none';
+      $('hud').classList.toggle('on', s == 'game');
+      cv.style.pointerEvents = (s == 'game') ? 'auto' : 'none';
+      if(s == 'menu'){ updateMenuUI(); startMenuMusic(); } else { stopMenuMusic(); }
+      if(s == 'brs'){ requestAnimationFrame(() => { grid(); }); }
+    }
+    let tr = 0; try { tr = +localStorage.getItem('dabrawl_tr') || 0; } catch(e){}
+    let bTrophies = {kuku:0, shachi:0, saiyan:0};
+    try { const savedBT = localStorage.getItem('dabrawl_bt'); if(savedBT) bTrophies = Object.assign(bTrophies, JSON.parse(savedBT)); } catch(e){}
+    let trophyAccountKey = 'guest';
+    function loadTrophiesForAccount(key){
+      trophyAccountKey=key||'guest';
+      try{
+        const saved=localStorage.getItem('dabrawl_profile_'+trophyAccountKey);
+        if(saved){const profile=JSON.parse(saved);tr=Math.max(0,Number(profile.tr)||0);bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},profile.bt||{});}
+        else if(trophyAccountKey!=='guest'){tr=0;bTrophies={kuku:0,shachi:0,saiyan:0};}
+        else{tr=+(localStorage.getItem('dabrawl_tr')||0);try{const legacy=localStorage.getItem('dabrawl_bt');if(legacy)bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},JSON.parse(legacy));}catch(_){}}
+      }catch(_){}
+      $('tro').textContent=tr;
+      try{localStorage.setItem('dabrawl_tr',tr);localStorage.setItem('dabrawl_bt',JSON.stringify(bTrophies));}catch(_){}
+    }
+    const saveTrophies = () => { try { localStorage.setItem('dabrawl_tr',tr);localStorage.setItem('dabrawl_bt',JSON.stringify(bTrophies));localStorage.setItem('dabrawl_profile_'+trophyAccountKey,JSON.stringify({tr,bt:bTrophies})); } catch(e){} $('tro').textContent=tr; };
+    saveTrophies();
+    function getRank(trophies){ return trophies >= 1000 ? 35 : Math.min(35, Math.floor(trophies / 29) + 1); }
+    function getRankBadgeColor(rank){
+      if(rank>=35) return {bg:'#2e1065', border:'#a855f7'};
+      if(rank>=30) return {bg:'#7f1d1d', border:'#ef4444'};
+      if(rank>=25) return {bg:'#064e3b', border:'#10b981'};
+      if(rank>=20) return {bg:'#581c87', border:'#c084fc'};
+      if(rank>=15) return {bg:'#0e7490', border:'#22d3ee'};
+      if(rank>=10) return {bg:'#78350f', border:'#f59e0b'};
+      if(rank>=5)  return {bg:'#334155', border:'#94a3b8'};
+      return {bg:'#450a0a', border:'#dc2626'};
+    }
+    let AC, menuGain, musicInterval;
+    function initAudio(){ if(!AC) AC = new(window.AudioContext || window.webkitAudioContext)(); }
+    function startMenuMusic(){
+      initAudio(); if(!AC || menuGain) return;
+      menuGain = AC.createGain(); menuGain.gain.value = 0.08; menuGain.connect(AC.destination);
+      const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 349.23]; let step = 0;
+      musicInterval = setInterval(() => {
+        if(scr !== 'menu') return;
+        const now = AC.currentTime, osc = AC.createOscillator(), g = AC.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(notes[step % notes.length], now);
+        g.gain.setValueAtTime(0.06, now); g.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+        osc.connect(g); g.connect(menuGain); osc.start(now); osc.stop(now + 1.8); step++;
+      }, 1200);
+    }
+    function stopMenuMusic(){ if(musicInterval){ clearInterval(musicInterval); musicInterval = null; } if(menuGain){ menuGain.disconnect(); menuGain = null; } }
+    addEventListener('pointerdown', () => initAudio(), {once:true});
+    function playGunSound(isSuper=false){
+      initAudio(); if(!AC) return;
+      const now = AC.currentTime, dur = isSuper ? 0.35 : 0.22, bufferSize = AC.sampleRate * dur, buffer = AC.createBuffer(1, bufferSize, AC.sampleRate), data = buffer.getChannelData(0);
+      for(let i=0; i<bufferSize; i++) data[i] = (Math.random()*2 - 1) * Math.exp(-i / (AC.sampleRate * (isSuper?0.08:0.04)));
+      const noise = AC.createBufferSource(); noise.buffer = buffer;
+      const filter = AC.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.setValueAtTime(isSuper?950:1200, now); filter.frequency.exponentialRampToValueAtTime(80, now + dur);
+      const gain = AC.createGain(); gain.gain.setValueAtTime(isSuper?0.3:0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + dur);
+      noise.connect(filter); filter.connect(gain); gain.connect(AC.destination); noise.start();
+    }
+    function playFistSound(){
+      initAudio(); if(!AC) return;
+      const now = AC.currentTime, osc = AC.createOscillator(), gain = AC.createGain();
+      osc.type = 'sine'; osc.frequency.setValueAtTime(160, now); osc.frequency.exponentialRampToValueAtTime(30, now + 0.12);
+      gain.gain.setValueAtTime(0.25, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+      osc.connect(gain); gain.connect(AC.destination); osc.start(); osc.stop(now + 0.12);
+    }
+    function playInstantTransmissionSound(){
+      initAudio(); if(!AC) return;
+      const now=AC.currentTime;
+      // Sharp airy snap followed by a quick, glassy descending shimmer.
+      const dur=.28, size=Math.floor(AC.sampleRate*dur), buffer=AC.createBuffer(1,size,AC.sampleRate), data=buffer.getChannelData(0);
+      for(let i=0;i<size;i++){ const t=i/AC.sampleRate; data[i]=(Math.random()*2-1)*Math.exp(-t/.045); }
+      const noise=AC.createBufferSource(); noise.buffer=buffer;
+      const filter=AC.createBiquadFilter(); filter.type='bandpass'; filter.frequency.setValueAtTime(4200,now); filter.frequency.exponentialRampToValueAtTime(1200,now+.16); filter.Q.value=1.8;
+      const ng=AC.createGain(); ng.gain.setValueAtTime(.0001,now); ng.gain.exponentialRampToValueAtTime(.32,now+.012); ng.gain.exponentialRampToValueAtTime(.0001,now+dur);
+      noise.connect(filter); filter.connect(ng); ng.connect(AC.destination); noise.start(now); noise.stop(now+dur);
+      const osc=AC.createOscillator(), og=AC.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(1250,now); osc.frequency.exponentialRampToValueAtTime(360,now+.16); osc.frequency.exponentialRampToValueAtTime(110,now+.27);
+      og.gain.setValueAtTime(.0001,now); og.gain.exponentialRampToValueAtTime(.22,now+.015); og.gain.exponentialRampToValueAtTime(.0001,now+.28);
+      osc.connect(og); og.connect(AC.destination); osc.start(now); osc.stop(now+.29);
+    }
+    function playTransformSound(type){
+      initAudio(); if(!AC) return;
+      const now = AC.currentTime, osc = AC.createOscillator(), gain = AC.createGain();
+      if(type == 'galaxy'){ osc.type = 'triangle'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(900, now + 0.8); osc.frequency.linearRampToValueAtTime(400, now + 1.5); }
+      else { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, now); osc.frequency.exponentialRampToValueAtTime(600, now + 1.2); }
+      gain.gain.setValueAtTime(0.35, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
+      osc.connect(gain); gain.connect(AC.destination); osc.start(); osc.stop(now + 1.5);
+    }
+    function playKameSound(){
+      initAudio(); if(!AC) return;
+      const now = AC.currentTime, osc = AC.createOscillator(), gain = AC.createGain();
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.linearRampToValueAtTime(450, now + 0.4);
+      gain.gain.setValueAtTime(0.25, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      osc.connect(gain); gain.connect(AC.destination); osc.start(); osc.stop(now + 0.5);
+    }
+    function beep(f,d,v=.1,ty='square',sl=0){ try { initAudio(); const o=AC.createOscillator(), gn=AC.createGain(); o.type=ty; o.frequency.setValueAtTime(f,AC.currentTime); o.frequency.exponentialRampToValueAtTime(Math.max(30,f+sl),AC.currentTime+d); gn.gain.setValueAtTime(v,AC.currentTime); gn.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d); o.connect(gn); gn.connect(AC.destination); o.start(); o.stop(AC.currentTime+d); } catch(e){} }
+    const T=48; let MW=28, MH=16;
+    const Q=["..............","..#...bb......","..#...bb..~~..","......bb..~~..","..bb......#...","..bb..##..#...","......##......","...~~.....#..."];
+    let M, gasDist=0;
+    function build(){
+      gasDist = 0;
+      if(gameMode == 'showdown'){
+        MW=44; MH=28;
+        M = Array.from({length:MH}, (_,j) => Array.from({length:MW}, (_,i) => {
+          if(i==0||j==0||i==MW-1||j==MH-1) return '#';
+          // Scatter larger wall clusters with no isolated one-tile choke gaps.
+          if(((i>=7&&i<=10)&&(j>=5&&j<=8)) || ((i>=32&&i<=36)&&(j>=18&&j<=21))) return '#';
+          if(((i>=15&&i<=18)&&(j>=4&&j<=8)) || ((i>=25&&i<=28)&&(j>=19&&j<=23))) return '#';
+          if(i>19&&i<25&&j>10&&j<17) return 'b';
+          return '.';
+        }));
+      } else {
+        MW=28; MH=16; const h = Q.map(r=>r+[...r].reverse().join('')); M = [...h,...[...h].reverse()].map(r=>[...r]);
+      }
+    }
+    const tile = (x,y) => { const i=Math.floor(x/T), j=Math.floor(y/T); return i<0||j<0||i>=MW||j>=MH ? '#' : M[j][i]; };
+    const solid = (x,y) => { const t = tile(x,y); return t=='#' || t=='~'; };
+    const hitW = (x,y,r) => solid(x-r,y-r) || solid(x+r,y-r) || solid(x-r,y+r) || solid(x+r,y+r);
+    const BR = {
+      kuku: {nm:'KUKU', rarity:'COMMON', rarityCol:'#00c0ff', hp:7000, spd:135, pel:8, dmg:312.5, spr:.68, rng:230, bs:550, rel:1.6, sd:333.3, sp:12, ss:.72, sr:340, w:140, z:2.5, cm:0.6, cls:'DAMAGE DEALER', atkNm:'2500 DMG', supNm:'WALL BREAKER', info:'Kuku fires 8 rapid buckshot pellets!'},
+      shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:8000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2500, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
+      saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'FIGHTER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'}
+    };
+    const FM = [
+      {},
+      {fn:'SUPER SAIYAN', hp:7500, dmg:500, kd:800, kmax:3200, hair:'#ffe14d', aura:'#ffd21f', eye:'#2fb4ff'},
+      {fn:'SUPER SAIYAN RED', hp:8500, dmg:1500, mode:1, rng:420, bs:650, w:230, hair:'#ff3a3a', aura:'#ff4040', eye:'#a00', kd:1600, kmax:2600},
+      {fn:'SUPER SAIYAN BLUE', hp:9500, dmg:2100, mode:1, rng:440, bs:700, w:230, hair:'#2fb4ff', aura:'#3bb6ff', eye:'#036', kd:2200, kmax:3200},
+      {fn:'ULTRA INSTINCT', hp:10000, dmg:700, kd:1200, kmax:5200, mode:0, rng:140, bs:750, w:70, hair:'#1a1a1a', aura:'#80a0ff', eye:'#9fb0ff', gdur:3, gcd:13, isUI:true},
+      {fn:'MASTERED ULTRA INSTINCT', hp:10500, dmg:800, kd:1400, kmax:5700, mode:0, rng:180, bs:800, w:70, hair:'#f4f6ff', aura:'#ffffff', eye:'#dde4ff', gdur:5, gcd:15, isMUI:true}
+    ];
+    let K = BR.kuku;
+    const NM = ["Pip","Rex","Mochi","Zed","Bolt","Nova","Juno","Taco","Blaze","Jax","Vex","Zane"];
+    let P=[], B=[], F=[], MT=[], KM=[], me, G, cam={x:0,y:0}, shake=0, wf=0, touch=false;
+    let selB='kuku'; try { selB = localStorage.getItem('dabrawl_b') || 'kuku'; if(!BR[selB]) selB='kuku'; } catch(e){}
+    const brawlerKeys = Object.keys(BR);
+    function cycleBrawler(dir){
+      const idx = brawlerKeys.indexOf(selB);
+      selB = brawlerKeys[(idx + dir + brawlerKeys.length) % brawlerKeys.length];
+      try { localStorage.setItem('dabrawl_b', selB); } catch(e){}
+      window.DaBrawlNet?.updateBrawler?.(selB);
+      updateMenuUI(); beep(450,.1);
+    }
+    // The + buttons add a friend / open room-code multiplayer; they must never cycle the selected brawler.
+    $('prevBtn').onclick = e => { e.preventDefault(); e.stopPropagation(); show('onlineLobby'); };
+    $('nextBtn').onclick = e => { e.preventDefault(); e.stopPropagation(); show('onlineLobby'); };
+    function mk(t,i,human,name,b='kuku',isDummy=false){
+      let xPos, yPos;
+      if(isDummy){ xPos = (MW*T)/2 + (i===0?-60:60); yPos = (MH*T)/2 + (i===0?-40:40); }
+      else if(gameMode == 'showdown'){
+        let valid = false, attempts = 0;
+        while(!valid && attempts < 500){
+          attempts++;
+          const angle = (i / 10) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+          xPos = (MW * T) / 2 + Math.cos(angle) * (MW * 0.42) * T;
+          yPos = (MH * T) / 2 + Math.sin(angle) * (MH * 0.42) * T;
+          if(tile(xPos, yPos) == '.') valid = true;
+        }
+        if(!valid){ xPos = 2.5 * T; yPos = 2.5 * T; }
+      } else { xPos = (t?26.5:1.5)*T; yPos = ([5,7,10][i%3]+.5)*T; }
+      const maxH = BR[b].hp;
+      return {b, k:BR[b], lp:null, h:0, form:0, burst:0, holdT:0, chg:0, dodge:0, dodgeFx:0, tf:0, kcd:0, bt:0, kmt:0, hw:0, alt:0, t, human, name, x:xPos, y:yPos, hp:isDummy?99999:maxH, mh:isDummy?99999:maxH, am:3, sc:0, a:t?Math.PI:0, alive:true, dt:0, fl:0, dash:0, dd:0, gcd:0, cd:0, nh:9, mx:0, my:0, walk:0, rec:0, sw:0, sd:1, isDummy, autoAimTimer:0, wasOnCd:false, gasTimer:0, muiCharging:0, kaioken:0, ss2:0, ss2Cooldown:0, afterimages:[]};
+    }
+    function startLoadingScreen(test=false){
+      show('loading'); let pct = 0;
+      $('tipTxt').textContent = "Tip: SS Red shoots Ki Blasts just like SS Blue, but with scaled damage!";
+      const ldInt = setInterval(() => {
+        pct += Math.floor(Math.random()*15) + 10;
+        if(pct >= 100){ pct = 100; clearInterval(ldInt); setTimeout(() => startGame(test), 300); }
+        $('ldFill').style.width = pct + '%'; $('ldPct').textContent = pct + '%';
+      }, 120);
+    }
+    function startGame(test=false){
+      isTestMode = test; const n = [...NM].sort(() => Math.random()-.5);
+      P = []; me = mk(0,0,1,'You',selB); P.push(me); build();
+      if(test){
+        P.push(mk(1,0,0,'Dummy Kuku','kuku',true)); P.push(mk(1,1,0,'Dummy Shachi','shachi',true));
+        G = {ph:'play',t:0,w:[0,0],r:1,res:''};
+      } else if(gameMode === 'duel'){
+        // Offline fallback for 1v1: exactly one opponent, never a full 3v3 roster.
+        P.push(mk(1,0,0,n.pop()||'Duel Bot',['kuku','shachi','saiyan'][Math.random()*3|0]));
+        G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
+      } else if(gameMode == 'showdown'){
+        for(let i=1; i<10; i++) P.push(mk(i, i, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
+        G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
+      } else {
+        for(let t=0;t<2;t++)for(let i=0;i<3;i++){ if(!t&&!i) continue; P.push(mk(t,i,0,n.pop(),['kuku','shachi','saiyan'][Math.random()*3|0])); }
+        G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
+      }
+      B=[]; F=[]; MT=[]; KM=[]; show('game');
+    }
+    function resetRound(){
+      const savedSc = me ? me.sc : 0; build(); B=[]; F=[]; MT=[]; KM=[];
+      P.forEach(p => Object.assign(p, mk(p.t,0,p.human,p.name,p.b,p.isDummy), {sc:p.human?savedSc:0}));
+      G.ph='count'; G.t=3.2; G.endAt=Date.now()+3200;
+    }
+    const keys = {}; let mx = 0, my = 0, mdown = false;
+    const DEFAULT_BINDS = {up:'w',down:'s',left:'a',right:'d',super:' ',gadget:'e',autoAim:'f'};
+    let keyBinds = {...DEFAULT_BINDS};
+    try { const saved = JSON.parse(localStorage.getItem('dabrawl_keybinds')||'{}'); for(const k of Object.keys(DEFAULT_BINDS)) if(typeof saved[k]==='string'&&saved[k]) keyBinds[k]=saved[k].toLowerCase(); } catch(_){}
+    const bindLabels = {up:'Move up',down:'Move down',left:'Move left',right:'Move right',super:'Use Super',gadget:'Use Gadget',autoAim:'Auto-aim / shoot'};
+    let waitingForBind = null;
+    function keyName(k){return k===' '?'SPACE':k.startsWith('arrow')?('ARROW '+k.slice(5).toUpperCase()):k.length===1?k.toUpperCase():k.toUpperCase();}
+    function saveKeyBinds(){try{localStorage.setItem('dabrawl_keybinds',JSON.stringify(keyBinds));}catch(_){} renderKeybinds();}
+    function renderKeybinds(){
+      const host=$('keybindRows'); if(!host)return; host.innerHTML='';
+      Object.keys(DEFAULT_BINDS).forEach(action=>{
+        const b=document.createElement('button'); b.className='btn'; b.style.cssText='font-size:16px;padding:9px 7px;display:flex;justify-content:space-between;gap:8px;align-items:center';
+        b.innerHTML='<span>'+bindLabels[action]+'</span><strong style="color:var(--y)">'+keyName(keyBinds[action])+'</strong>';
+        b.onclick=()=>{waitingForBind=action;$('keybindHint').textContent='Press a key for '+bindLabels[action]+' (Esc cancels).';renderKeybinds();}; 
+        if(waitingForBind===action){b.style.outline='3px solid #ffd21f';b.querySelector('strong').textContent='PRESS KEY…';}
+        host.appendChild(b);
+      });
+    }
+    addEventListener('keydown', e => {
+      if(scr==='settingsScreen'&&waitingForBind){
+        e.preventDefault(); e.stopPropagation();
+        if(e.key==='Escape'){waitingForBind=null;$('keybindHint').textContent='Choose a control, then press the key you want to use.';renderKeybinds();return;}
+        const next=e.key.toLowerCase();
+        if(['tab','shift','control','alt','meta'].includes(next))return;
+        const conflict=Object.keys(keyBinds).find(k=>k!==waitingForBind&&keyBinds[k]===next);
+        if(conflict){$('keybindHint').textContent='That key is already assigned to '+bindLabels[conflict]+'. Choose another key.';return;}
+        keyBinds[waitingForBind]=next;waitingForBind=null;$('keybindHint').textContent='Controls saved on this device.';saveKeyBinds();return;
+      }
+      keys[e.key.toLowerCase()] = 1; if(scr != 'game') return;
+      if(e.key.toLowerCase() === keyBinds.super){ e.preventDefault(); sup(me); }
+      if(e.key.toLowerCase() === keyBinds.gadget) { e.preventDefault(); gadget(me); }
+      if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); autoAimAndShoot(me); }
+    });
+    addEventListener('keyup', e => keys[e.key.toLowerCase()] = 0);
+    cv.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; });
+    cv.addEventListener('mousedown', e => { touch = false; if(e.button===2){ e.preventDefault(); if(me.tf <= 0) sup(me); } else if(e.button===0){ mdown = true; tryFire(me); } });
+    cv.addEventListener('mouseup', e => { if(e.button===0) mdown = false; });
+    cv.addEventListener('contextmenu', e => e.preventDefault());
+    const ts = {m:{id:null,ox:0,oy:0,x:0,y:0,active:false}, a:{id:null,ox:0,oy:0,x:0,y:0,active:false}, s:{id:null,ox:0,oy:0,x:0,y:0,active:false}};
+    function getTouchPos(t){ const rect = cv.getBoundingClientRect(); return { x: (t.clientX - rect.left) * (W / rect.width), y: (t.clientY - rect.top) * (H / rect.height) }; }
+    cv.addEventListener('touchstart', e => {
+      e.preventDefault(); touch = true;
+      for(const t of e.changedTouches){
+        const pos = getTouchPos(t), side = pos.x < W/2 ? 'm' : 'a';
+        if(!ts[side].active) ts[side] = {id: t.identifier, ox: pos.x, oy: pos.y, x: pos.x, y: pos.y, active: true};
+      }
+    },{passive:false});
+    cv.addEventListener('touchmove', e => {
+      e.preventDefault();
+      for(const t of e.changedTouches){
+        const pos = getTouchPos(t);
+        for(const k in ts){ if(ts[k].active && ts[k].id == t.identifier){ ts[k].x = pos.x; ts[k].y = pos.y; } }
+      }
+    },{passive:false});
+    cv.addEventListener('touchend', e => {
+      for(const t of e.changedTouches){
+        for(const k in ts){
+          if(ts[k].active && ts[k].id == t.identifier){
+            if(scr == 'game'){
+              if(Math.hypot(ts[k].x - ts[k].ox, ts[k].y - ts[k].ox) > 12) me.a = Math.atan2(ts[k].y - ts[k].ox, ts[k].x - ts[k].ox);
+              else autoAimAndShoot(me);
+              if(k == 'a') tryFire(me); if(k == 's' && me.tf <= 0) sup(me);
+            }
+            ts[k].active = false;
+          }
+        }
+      }
+    });
+    $('sup').setAttribute('aria-label', 'Super ability');
+    $('gad').setAttribute('aria-label', 'Gadget ability');
+    $('sup').onpointerdown = e => { e.stopPropagation(); if(me.sc>=1 && me.tf<=0){ autoAimAndShoot(me); sup(me); } };
+    $('gad').onpointerdown = e => { e.stopPropagation(); gadget(me); };
+    $('leaveBtn').onclick = () => { show('menu'); isTestMode = false; };
+    $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ if(isNetworkHost) void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
+    $('home').onclick = () => { beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
+    $('play').onclick = async () => {
+      if(window.DaBrawlNet?.isInParty()){window.DaBrawlNet.toggleReady?.();return;}
+      beep(500,.1);
+      if(gameMode==='duel'){startLoadingScreen(false);return;}
+      // Playing without an account should launch an offline bot match, not fail in matchmaking.
+      try{
+        const {data:{user}} = await db.auth.getUser();
+        if(!user){ startLoadingScreen(false); return; }
+      }catch(_){ startLoadingScreen(false); return; }
+      matchmake();
+    };
+     $('bra').onclick = () => show('brs');
+    $('featuredBrawler').onclick = () => show('brs');
+    $('settingsBtn').onclick = () => { beep(450,.08); waitingForBind=null; renderKeybinds(); show('settingsScreen'); };
+    $('nextBtn').onclick = async () => {
+      beep(450,.08);
+      const {data:{user}} = await db.auth.getUser();
+      if(!user){ show('onlineLobby'); status('SIGN IN TO ACCESS MULTIPLAYER'); return; }
+      show('onlineLobby'); status('Friends are the next multiplayer upgrade. You are signed in; room creation and joining are available here.');
+    };
+    $('prevBtn').onclick = async () => {
+      beep(450,.08);
+      const {data:{user}} = await db.auth.getUser();
+      if(!user){ show('onlineLobby'); status('SIGN IN TO ACCESS MULTIPLAYER'); return; }
+      show('onlineLobby');
+    };
+    $('settingsBack').onclick = () => { waitingForBind=null; show('menu'); };
+    $('settingsAccount').onclick = () => { waitingForBind=null; show('onlineLobby'); updateAuthUI(); };
+    $('resetKeybinds').onclick = () => { keyBinds={...DEFAULT_BINDS};waitingForBind=null;$('keybindHint').textContent='Default controls restored.';saveKeyBinds(); };
+    $('bk1').onclick = () => show('menu');
+    function applyGameMode(mode){
+      if(!['knockout','showdown','duel'].includes(mode))return;
+      gameMode=mode;
+      $('modeTxt').textContent=mode==='knockout'?'KNOCKOUT 3v3':mode==='showdown'?'SOLO SHOWDOWN':'1v1 DUEL';
+      $('modeBtn').title=mode==='knockout'?'Knockout: 3v3':mode==='showdown'?'Solo Showdown: every player for themselves':'1v1 Duel: you versus one bot';
+      document.querySelectorAll('.mode-card').forEach(card=>{const active=card.dataset.mode===mode;card.style.borderColor=active?'#ffd21f':'#64748b';card.style.boxShadow=active?'0 0 0 2px #ffd21f':'none';});
+    }
+    $('modeBtn').onclick = () => {
+      if(window.DaBrawlNet?.isInParty?.()){ window.DaBrawlNet.changeRoomMode?.(); return; }
+      applyGameMode(gameMode);show('modePicker');beep(400,.1);
+    };
+    document.querySelectorAll('.mode-card').forEach(card=>card.onclick=()=>{applyGameMode(card.dataset.mode);beep(500,.08);show('menu');});
+    $('modePickerBack').onclick=()=>show('menu');
+    $('bk2').onclick = () => { clearInterval(mmI); clearTimeout(mmTimeout); mmI=null; mmTimeout=null; if(window.DaBrawlNet) window.DaBrawlNet.cancelMatchmaking(); show('menu'); };
+    function autoAimAndShoot(p){
+      if(p.muiCharging > 0 || KM.some(k => k.o === p)) return;
+      let b = 600, a = null;
+      for(const e of P){
+        if(e===p || !e.alive || (gameMode!=='showdown' && e.t==p.t) || !sees(p.t,e)) continue;
+        const d = Math.hypot(e.x - p.x, e.y - p.y); if(d < b){ b = d; a = Math.atan2(e.y - p.y, e.x - p.x); }
+      }
+      if(a !== null){ p.a = a; p.autoAimTimer = 0.4; }
+      if(p.k.sy) sTap(p); else tryFire(p);
+    }
+    const sees = (tm,p) => gameMode=='showdown' || p.t==tm || tile(p.x,p.y)!='b' || P.some(a => a.alive && a.t==tm && Math.hypot(a.x-p.x, a.y-p.y)<2.5*T);
+    function puff(x,y,n,c,s=1){ for(let i=0;i<n;i++){ const a=Math.random()*6.28, v=40+Math.random()*90*s; F.push({k:'p',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.5,m:.5,c,s:8+Math.random()*8}); } }
+    function star(x,y,n){ for(let i=0;i<n;i++){ const a=Math.random()*6.28, v=80+Math.random()*140; F.push({k:'s',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-60,l:.9,m:.9}); } }
+    function tryFire(p){ if(G.ph!='play'||!p.alive||p.am<1||p.cd>0||p.lp||p.k.sy||p.tf>0) return; if(networkMode && p===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('fire',p.a); fire(p,0); p.cd=.38; }
+    function sup(p){
+      if(G.ph!='play'||!p.alive||p.sc<1||p.tf>0) return;
+      if(networkMode && window.DaBrawlNet){
+        if(p===me) window.DaBrawlNet.sendAction('super',p.a);
+        else if(isNetworkHost && p.isBot) window.DaBrawlNet.sendAction('super',p.a,{playerId:p.netId});
+      }
+      p.chg=0; p.holdT=0;
+      if(p.k.sy){ if(p.form<5&&!(p.tf>0)&&!p.lp) xform(p); else if(p.form==5&&!(p.tf>0)) superUltraKame(p); return; }
+      fire(p,1); p.sc=0;
+    }
+    function superUltraKame(p){
+      p.chg=0; p.sc=0; p.muiCharging=1.2; shake=20;
+      for(let i=0;i<30;i++) setTimeout(()=>puff(p.x,p.y,3,'#ffffff',2), i*50);
+      setTimeout(()=>{ p.muiCharging=0; KM.push({o:p,a:p.a,x:p.x,y:p.y,len:MW*T,w:100,d:7000,t:.8,m:.8,tk:0,col:'#ffffff',destroys:true}); shake=35; playKameSound(); }, 1200);
+    }
+    function fire(p,s){
+      if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet) window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,super:false});
+      K=p.k; if(s&&K.lg){ leap(p,0); return; }
+      const n = s?K.sp:K.pel, sp = s?K.ss:K.spr;
+      for(let i=0;i<n;i++){
+        const a = p.a + (i/(n-1)-.5)*sp + (Math.random()-.5)*.04;
+        let bCol = '#ffe14d';
+        if(p.form === 2) bCol = '#ff3a3a';
+        else if(p.form === 3) bCol = '#38bdf8';
+        else if(p.form >= 4) bCol = '#ffffff';
+        B.push({x:p.x+Math.cos(p.a)*22, y:p.y+Math.sin(p.a)*22, vx:Math.cos(a)*K.bs*(.92+Math.random()*.16), vy:Math.sin(a)*K.bs*(.92+Math.random()*.16), r:s?K.sr:K.rng, d:(s?K.sd:K.dmg)+((p.kaioken>0)?200:0)+((p.ss2>0)?(s?200:100):0), t:p.t, o:p, s, z:s?0:K.z, isFist:p.b=='shachi', col:bCol});
+      }
+      if(!s) p.am--; p.rec = K.lg?.22:.14; puff(p.x+Math.cos(p.a)*30, p.y+Math.sin(p.a)*30, s?10:5, '#ffe9a0', .5);
+      if(p===me||s) shake = Math.max(shake, s?12:3);
+      if(p.b=='kuku') playGunSound(s); else if(p.b=='shachi') playFistSound(); else beep(s?90:140, s?.35:.18, s?.25:.15, 'sawtooth', -60);
+    }
+function gadget(p){
+      if(G.ph!='play'||!p.alive||p.gcd>0||p.dash>0||p.lp||p.tf>0||p.muiCharging>0) return;
+      if(networkMode && p===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('gadget',p.a);
+      p.chg=0; p.holdT=0;
+      if(p.k.sy){
+        // Super Saiyan Red: instant red Kamehameha shot, no charge-up.
+        if(p.form===2){
+          const c=Math.cos(p.a), sn=Math.sin(p.a);
+          KM.push({o:p,a:p.a,x:p.x,y:p.y,len:MW*T,w:36,d:2000,t:.85,m:.85,tk:0,col:'#ff2020',destroys:false,instantRed:true,ignoreWalls:true});
+          p.gcd=7; shake=Math.max(shake,12); playKameSound();
+          for(let i=0;i<18;i++) puff(p.x+c*24+(Math.random()-.5)*12,p.y+sn*24+(Math.random()-.5)*12,1,'#ff3030',1.1);
+          return;
+        }
+        // Super Saiyan Blue: Kaioken burst — short transformation, red fire-edge and +200 damage.
+        if(p.form===3){
+          p.kaioken=6; p.gcd=14; p.tf=.65; p.tfn=3; p.chg=0; shake=Math.max(shake,16);
+          playTransformSound('normal');
+          for(let i=0;i<34;i++){ const a=Math.random()*Math.PI*2, v=100+Math.random()*260; F.push({k:'p',x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.55,m:.55,c:i%2?'#ff2020':'#ff8a8a',s:6+Math.random()*8}); }
+          return;
+        }
+        // Super Saiyan (gold) gadget: ascend to SS2 for 20 seconds.
+        if(p.form===1){
+          if(p.ss2Cooldown>0) return;
+          p.ss2=10; p.ss2Cooldown=0; p.hp=Math.min(p.mh+500,p.hp+500); p.mh+=500;
+          p.gcd=10; p.tf=.8; p.tfn=1; p.sc=0; p.chg=0; shake=Math.max(shake,18);
+          playTransformSound('normal');
+          for(let i=0;i<24;i++){ const a=Math.random()*Math.PI*2, v=100+Math.random()*220; F.push({k:'p',x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.45,m:.45,c:i%3?'#fff36a':'#9be7ff',s:4+Math.random()*5}); }
+          return;
+        }
+        if(p.form>=4){ p.dodge = p.form==5?5:3; p.gcd = p.form==5?15:13; playInstantTransmissionSound(); return; }
+        else if(tele(p)) p.gcd=10;
+        return;
+      }
+      if(p.k.lg){ if(asteroid(p)) p.gcd=10; return; }
+      p.gcd=10; p.dash=.22; p.dd=(p.mx||p.my)?Math.atan2(p.my,p.mx):p.a; puff(p.x,p.y,8,'#fff'); beep(300,.2,.1,'triangle',400);
+    }
+    function mv(p,dx,dy){ const r=15; if(!hitW(p.x+dx,p.y,r)) p.x+=dx; if(!hitW(p.x,p.y+dy,r)) p.y+=dy; }
+    function step(p,ix,iy,dt){
+      K=p.k; const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
+      if(p.muiCharging>0 || isBeamShooting || isMaxCharging){ p.mx=p.my=0; return; }
+      const l = Math.hypot(ix,iy); p.mx = l?ix/l:0; p.my = l?iy/l:0;
+      if(p.dash>0){ p.dash-=dt; mv(p, Math.cos(p.dd)*780*dt, Math.sin(p.dd)*780*dt); if(Math.random()<.6) puff(p.x,p.y,1,'#fff',.3); }
+      else if(l>.05){ const m = Math.min(1,l); mv(p, p.mx*m*K.spd*dt, p.my*m*K.spd*dt); p.walk+=dt*12; }
+    }
+    function dmg(t,b){
+      // Only the target's browser changes their health. The attacker's browser sends a hit request.
+      if(networkMode && t.netRemote){
+        // The host's bots must be able to damage the other human too.
+        // Only the victim's client applies the actual health change.
+        const canRequestHit = b?.o===me || (isNetworkHost && b?.o?.isBot);
+        if(canRequestHit && t.netId && window.DaBrawlNet){
+          const damage=Math.max(0,Number(b.d)||0);
+          window.DaBrawlNet.sendAction('damage',0,{targetId:t.netId,damage,vx:Number(b.vx)||0,vy:Number(b.vy)||0});
+          // Give the attacker immediate hit confirmation; health remains authoritative on the victim.
+          t.fl=.12;
+          F.push({k:'t',x:t.x,y:t.y-30,vx:0,vy:-60,l:.7,m:.7,tx:String(Math.round(damage)),c:'#ffe45c'});
+          puff(t.x,t.y,8,'#ffe45c',.8); beep(260,.06,.05,'square',-80);
+          window.DaBrawlNet.sendAction('hit-feedback',0,{targetId:t.netId,damage});
+          // Charge Super on the attacker's owning simulation as soon as a real hit
+          // is confirmed locally. Remote human targets return above before the normal
+          // damage path, which previously meant Kuku never gained Super against friends.
+          if(b?.o && (b.o===me || (isNetworkHost && b.o.isBot)) && !b.s){
+            b.o.sc=Math.min(1,(b.o.sc||0)+damage*.0004*(b.o.k?.cm||0.5));
+          }
+        }
+        return;
+      }
+      if(t.tf>0) return;
+      if(t.dodge>0){
+        t.dodgeFx=0.25; if(!t.afterimages) t.afterimages=[];
+        t.afterimages.push({x:t.x, y:t.y, a:t.a, form:t.form, t:0.5, maxT:0.5});
+        const ang = Math.random()*6.283; mv(t, Math.cos(ang)*24, Math.sin(ang)*24);
+        for(let i=0;i<12;i++) F.push({k:'line', x:t.x+(Math.random()-.5)*50, y:t.y+(Math.random()-.5)*70, c:'#000000', l:.3, m:.3});
+        F.push({k:'p', x:t.x, y:t.y, vx:0, vy:0, l:.3, m:.3, c:'#ffffff', s:20});
+        playInstantTransmissionSound(); return;
+      }
+      if(!t.isDummy) t.hp-=b.d;
+      t.nh=0; t.fl=.1; if(!b.s && b.o && b.o!==t) b.o.sc = Math.min(1, b.o.sc + b.d*.0004*(b.o.k.cm||0.5));
+      F.push({k:'t', x:t.x+(Math.random()-.5)*20, y:t.y-30, vx:0, vy:-60, l:.7, m:.7, tx:Math.round(b.d)});
+      if(b.s){ const l=Math.hypot(b.vx,b.vy); mv(t, b.vx/l*13, b.vy/l*13); }
+      beep(220,.08,.08,'square',-100); if(!t.isDummy && t.hp<=0) die(t);
+    }
+    function die(t){ t.alive=false; t.hp=0; t.dt=0; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); shake=10; }
+    function ai(b,dt){
+      if(b.isDummy){
+        let tg=null, bd=1e9;
+        for(const e of P){ if(e===b||!e.alive) continue; const d=Math.hypot(e.x-b.x, e.y-b.y); if(d<bd){ bd=d; tg=e; } }
+        if(tg){ b.a = Math.atan2(tg.y-b.y, tg.x-b.x); if(b.cd<=0 && bd<b.k.rng+25){ if(b.am>=1){ b.am--; fire(b,0); b.cd=.6; } } }
+        return;
+      }
+      const px = b.x/T, py = b.y/T, safeMargin = 2.0;
+      if(px < gasDist + safeMargin || px > MW - gasDist - safeMargin || py < gasDist + safeMargin || py > MH - gasDist - safeMargin){
+        const safeAngle = Math.atan2((MH*T)/2 - b.y, (MW*T)/2 - b.x); step(b, Math.cos(safeAngle), Math.sin(safeAngle), dt); b.a = safeAngle; return;
+      }
+      K=b.k; if(K.sy){ syAI(b,dt); return; }
+      let tg=null, bd=1e9;
+      for(const e of P){ if(e===b||!e.alive||(gameMode!=='showdown'&&e.t==b.t)) continue; const d=Math.hypot(e.x-b.x, e.y-b.y); if(d<bd){ bd=d; tg=e; } }
+      if(!tg){ step(b,0,0,dt); return; }
+      const a = Math.atan2(tg.y-b.y, tg.x-b.x); b.sw-=dt; if(b.sw<=0){ b.sw=.7+Math.random()*1.4; b.sd=Math.random()<.5?-1:1; }
+      const low = b.hp<b.mh*.3, want = low?270:K.w, f = bd>want+40?1:bd<want-40?-1:0;
+      step(b, Math.cos(a)*f + Math.cos(a+1.57)*b.sd*.7, Math.sin(a)*f + Math.sin(a+1.57)*b.sd*.7, dt); b.a = a + (Math.random()-.5)*.06;
+      if(b.cd<=0){ if(b.sc>=1 && bd<K.sr-40){ sup(b); b.cd=.8; } else if(b.am>=1 && bd<K.rng-15){ tryFire(b); b.cd=.45+Math.random()*.5; } }
+      if(b.gcd<=0 && bd>190 && bd<330 && Math.random()<dt*.5){ b.mx=Math.cos(a); b.my=Math.sin(a); b.dd=a; gadget(b); }
+    }
+    function upd(dt){
+      shake = Math.max(0, shake - dt*30);
+      if(G.ph=='play' && !isTestMode){ gasDist += (Math.max(MW, MH) / 960) * dt; }
+      for(const p of P){
+        p.fl-=dt; p.rec-=dt; p.cd-=dt; p.gcd-=dt; p.kcd-=dt; p.bt-=dt; p.kaioken=Math.max(0,(p.kaioken||0)-dt); if(p.ss2>0){ p.ss2=Math.max(0,p.ss2-dt); if(p.ss2===0){ p.ss2Cooldown=15; p.gcd=Math.max(p.gcd,15); } } if(p.ss2Cooldown>0) p.ss2Cooldown=Math.max(0,p.ss2Cooldown-dt);
+        p.dodgeFx = Math.max(0, p.dodgeFx-dt); p.autoAimTimer = Math.max(0, (p.autoAimTimer||0)-dt);
+        if(p.muiCharging>0) p.muiCharging-=dt;
+        if(!p.alive) p.dt+=dt;
+        if(p.afterimages){
+          for(let ai=p.afterimages.length-1; ai>=0; ai--){
+            p.afterimages[ai].t -= dt; if(p.afterimages[ai].t <= 0) p.afterimages.splice(ai, 1);
+          }
+        }
+        // Smooth remote movement toward the latest snapshot and skip local simulation.
+        if(p.netRemote){
+          const target=p.netTarget;
+          if(target){
+            // Lightly predict only a short distance between snapshots, then ease toward
+            // the target. The old near-direct follow made 20 Hz network updates visibly stutter;
+            // unrestricted velocity prediction caused overshoot, so prediction is tightly capped.
+            const age=Math.max(0,Math.min(0.045,(Date.now()-(p.netTargetAt||Date.now()))/1000));
+            const maxLead=42;
+            const vx=Math.max(-maxLead,Math.min(maxLead,(p.netVx||0)*age));
+            const vy=Math.max(-maxLead,Math.min(maxLead,(p.netVy||0)*age));
+            const tx=target.x+vx, ty=target.y+vy;
+            const blend=1-Math.exp(-Math.min(dt,0.05)*48);
+            const errX=tx-p.x, errY=ty-p.y;
+            // Snap only after a genuine discontinuity (respawn/teleport), not normal packet jitter.
+            if(Math.hypot(errX,errY)>190){p.x=target.x;p.y=target.y;}
+            else {p.x += errX*blend;p.y += errY*blend;}
+            if(Number.isFinite(target.a)){
+              const delta=Math.atan2(Math.sin(target.a-p.a),Math.cos(target.a-p.a));
+              p.a += delta*blend;
+            }
+          }
+          continue;
+        }
+        if(p.alive && G.ph=='play'){
+          const px = p.x/T, py = p.y/T;
+          if(px < gasDist || px > MW - gasDist || py < gasDist || py > MH - gasDist){
+            p.gasTimer = (p.gasTimer || 0) + dt;
+            if(p.gasTimer >= 1.0){ p.gasTimer = 0; dmg(p, {d: p.mh * 0.25, o: null, s: 0, vx: 0, vy: 0}); puff(p.x, p.y, 10, '#22c55e', 1.2); }
+          } else { p.gasTimer = 0; }
+        }
+      }
+      for(let i=F.length-1;i>=0;i--){ const f=F[i]; f.l-=dt; f.x+=f.vx*dt; f.y+=f.vy*dt; if(f.k=='s') f.vy+=300*dt; if(f.l<=0) F.splice(i,1); }
+      for(let i=MT.length-1;i>=0;i--){ const m=MT[i]; m.t-=dt; if(m.t<=0){ MT.splice(i,1); impact(m); } }
+      wf = Math.max(0, wf);
+      for(let i=KM.length-1;i>=0;i--){ const k=KM[i]; k.t-=dt; k.x=k.o.x; k.y=k.o.y; k.tk-=dt; if(k.tk<=0){ k.tk=.1; beamHit(k); } if(k.t<=0) KM.splice(i,1); }
+      if(G.ph=='count'){ G.t=Math.max(0,((G.endAt||Date.now())-Date.now())/1000); if(G.t<=0) G.ph='play'; }
+      else if(G.ph=='end'){ G.t-=dt; if(G.t<=0){ if(G.w[0]>=2||G.w[1]>=2||gameMode=='showdown') finish(); else { G.r++; resetRound(); } } }
+      if(G.ph=='play'){
+        for(const p of P){
+          if(!p.alive) continue;
+          // Remote players still need local-only visual animation updates (transform auras, particles).
+          if(p.netRemote){
+            if(p.tf>0) tfx(p,dt);
+            else if(p.k?.sy && p.burst>0) burstU(p,dt); // Remote Saiyans must animate their released ki-blast burst too.
+            continue;
+          }
+          K=p.k; p.am = Math.min(3, p.am + dt/K.rel); p.nh+=dt;
+          if(p.nh>3 && p.hp<p.mh && !p.isDummy){
+            p.hc = (p.hc||0) + dt;
+            if(p.hc>=.7){ p.hc=0; const h=Math.min(p.mh-p.hp, p.mh*.2); p.hp+=h; F.push({k:'t',x:p.x,y:p.y-30,vx:0,vy:-50,l:.7,m:.7,tx:'+'+Math.round(h),c:'#5f5'}); puff(p.x,p.y,6,'#7f7',.6); beep(700,.12,.06,'triangle',200); }
+          } else if(p.nh<=3) p.hc=0;
+          if(p.dodge>0){ p.dodge-=dt; F.push({k:'p',x:p.x+(Math.random()-.5)*10,y:p.y,vx:0,vy:0,l:.3,m:.3,c:'#cfd8ff',s:14}); }
+          if(p.tf>0){ tfx(p,dt); continue; }
+          if(p.lp){ air(p,dt); continue; }
+          if(p.human){
+            let ix = (keys[keyBinds.right]||keys.arrowright?1:0) - (keys[keyBinds.left]||keys.arrowleft?1:0), iy = (keys[keyBinds.down]||keys.arrowdown?1:0) - (keys[keyBinds.up]||keys.arrowup?1:0);
+            if(ts.m.active){ ix = (ts.m.x-ts.m.ox)/60; iy = (ts.m.y-ts.m.ox)/60; }
+            const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
+            if(p.muiCharging<=0 && !isBeamShooting){
+              if(touch){ if(ts.a.active){ const s=ts.a; if(Math.hypot(s.x-s.ox,s.y-s.ox)>12) p.a=Math.atan2(ts.y-ts.ox,s.x-s.ox); } else if(p.autoAimTimer<=0) autoAimAndShoot(p); }
+              else { if(p.rec<=0 && p.autoAimTimer<=0) p.a = Math.atan2(my/z+cam.y-p.y, mx/z+cam.x-p.x); }
+              step(p,ix,iy,dt);
+            } else step(p,0,0,dt);
+            if(mdown&&!touch) tryFire(p); if(p.k.sy) syU(p,dt);
+          } else ai(p,dt);
+        }
+        for(let i=B.length-1;i>=0;i--){
+          const b=B[i]; let dead=false; const sp=Math.hypot(b.vx,b.vy);
+          for(let s=0;s<3&&!dead;s++){
+            const k=dt/3; b.x+=b.vx*k; b.y+=b.vy*k; b.r-=sp*k;
+            const ti=Math.floor(b.x/T), tj=Math.floor(b.y/T);
+            if(b.r<=0){ dead=true; puff(b.x,b.y,1,'#ffe9a0',.3); }
+            else if(b.bn>0 && tile(b.x,b.y)=='#'){ b.x-=b.vx*k; b.y-=b.vy*k; if(tile(b.x+b.vx*k,b.y)=='#') b.vx=-b.vx; else b.vy=-b.vy; b.bn--; }
+            else if(tile(b.x,b.y)=='#'){ dead=true; if(b.s && ti>0 && tj>0 && ti<MW-1 && tj<MH-1){ M[tj][ti]='.'; if(networkMode && b.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
+            else if(networkMode && b.o?.netRemote){ /* remote owner's browser resolves hits */ }
+          else for(const e of P){ if(e!==b.o && e.alive && !e.lp && !(e.tf>0) && (gameMode=='showdown'||e.t!=b.t) && Math.hypot(e.x-b.x,e.y-b.y)<20+(b.z>9?b.z-9:0)){ dmg(e,b); dead=true; break; } }
+          }
+          if(dead) B.splice(i,1);
+        }
+        if(!isTestMode){
+          if(gameMode == 'showdown' || gameMode == 'duel'){
+            const aliveCount = P.filter(p=>p.alive).length;
+            if(aliveCount<=1 || !me.alive){
+              const win = me.alive && aliveCount==1;
+              if(gameMode==='duel'){
+                const winnerTeam=win?me.t:(me.t===0?1:0);
+                if(winnerTeam===0 || winnerTeam===1) G.w[winnerTeam]++;
+                G.res = win?'ROUND WON!':'ROUND LOST!';
+              } else G.res = win?'VICTORY!':'DEFEAT';
+              G.ph='end'; G.t=2.6; beep(win?600:200,.5,.15,'triangle',win?300:-100);
+            }
+          } else {
+            const a0 = P.filter(p=>p.alive&&p.t==0).length, a1 = P.filter(p=>p.alive&&p.t==1).length;
+            if(!a0||!a1){
+              let w=-1; if(!a1&&a0) w=0; else if(!a0&&a1) w=1; else if(a0&&a1){ const h0=P.filter(p=>p.t==0).reduce((s,p)=>s+p.hp,0), h1=P.filter(p=>p.t==1).reduce((s,p)=>s+p.hp,0); w = h0>h1?0:h1>h0?1:-1; }
+              if(w>=0) G.w[w]++; G.res = w<0?'DRAW':w===me.t?'ROUND WON!':'ROUND LOST'; G.ph='end'; G.t=2.6; beep(w==0?600:200,.5,.15,'triangle',w==0?300:-100);
+            }
+          }
+        }
+      }
+    }
+    let mmI, mmTimeout;
+    function matchmake(){
+      if(window.DaBrawlNet){ window.DaBrawlNet.beginMatchmaking(gameMode); return; }
+      show('mm'); let remaining=10; clearInterval(mmI); clearTimeout(mmTimeout);
+      const target = gameMode==='duel' ? 2 : gameMode==='showdown' ? 10 : 6;
+      $('mmTxt').textContent = 'PLAYERS JOINED: 1/'+target+' · '+remaining+'s';
+      $('mmHint').textContent = 'Waiting up to 10 seconds for players to join…';
+      mmI = setInterval(() => {
+        remaining--;
+        if(remaining>0){ $('mmTxt').textContent = 'PLAYERS JOINED: 1/'+target+' · '+remaining+'s'; return; }
+        clearInterval(mmI); mmI=null;
+        $('mmTxt').textContent = 'BOTS JOINING!';
+        $('mmHint').textContent = 'No match found. Filling the empty slots with bots…';
+        mmTimeout = setTimeout(() => startLoadingScreen(false), 900);
+      }, 1000);
+    }
+    function finish(){
+      if(scr==='res') return;
+      lastMatchWasOnline=!!networkMode; lastQueueMode=gameMode;
+      const win = gameMode==='showdown' ? me.alive : G.w[me.t]>=2, d = win ? 8 : -4;
+      // Online clients wait for the host's final result before changing trophies.
+      if(!networkMode || isNetworkHost){
+        tr = Math.max(0, tr + d); bTrophies[selB] = Math.max(0, (bTrophies[selB]||0) + d); saveTrophies();
+      }
+      $('rt').textContent = win ? 'VICTORY!' : 'DEFEAT'; $('rt').style.color = win ? '#ffd21f' : '#ff5a5a'; $('rd').textContent = (d>0?'+':'')+d+' 🏆';
+      if(networkMode){
+        $('again').style.display=isNetworkHost?'':'none'; $('home').style.display=isNetworkHost?'':'none';
+        $('mmHint').textContent='';
+        if(isNetworkHost && window.DaBrawlNet) void window.DaBrawlNet.announceMatchEnd(win);
+        if(!isNetworkHost){$('rt').textContent='MATCH OVER';$('rd').textContent='Waiting for the host…';$('home').style.display='none';}
+      } else { $('again').style.display=''; $('home').style.display=''; }
+      show('res');
+    }
+    function updateMenuUI(){ try { $('bn').textContent = BR[selB].nm; setTimeout(() => rb($('pv'), selB, 2.6, 8), 20); } catch(e){} }
+    function rb(c,id,sc,dy){
+      try {
+        if(!c) return; const ctx = c.getContext('2d'); if(!ctx) return;
+        ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,c.width,c.height); ctx.setTransform(sc,0,0,sc,c.width/2,c.height/2+dy);
+        const oldG = g; g = ctx; drawP({x:0,y:0,t:0,b:id,a:0.5,walk:0,rec:0,fl:0,alive:true,dt:0,hp:1000,mh:1000,k:BR[id]}); g = oldG;
+      } catch(e){}
+    }
+    function grid(){
+      const gr = $('grid'); gr.innerHTML = '';
+      for(const id in BR){
+        const bInfo = BR[id], bT = bTrophies[id]||0, bR = getRank(bT), bStyle = getRankBadgeColor(bR);
+        const card = document.createElement('div'); card.className = 'b-card'; card.style.borderColor = bInfo.rarityCol;
+        card.innerHTML = '<div class="rank-badge" style="background:'+bStyle.bg+';border-color:'+bStyle.border+'"><span>🎖️ '+bR+'</span> <span>🏆 '+bT+'</span></div><canvas width="110" height="140"></canvas><div class="b-name">'+bInfo.nm+'</div><div class="power-bar"><div class="power-bar-fill" style="width:20%"></div><span style="position:relative;z-index:2">18/90</span></div>';
+        card.onclick = () => det(id);
+        card.setAttribute('role','button'); card.setAttribute('tabindex','0');
+        card.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); det(id); } });
+        gr.appendChild(card);
+        requestAnimationFrame(() => {
+          const preview = card.querySelector('canvas');
+          if(preview){
+            try { rb(preview, id, 1.8, 10); } catch(err) { console.error('Brawler preview failed:', id, err); }
+            // Keep the card readable even if a browser cannot render the canvas preview.
+            if(!preview.getContext('2d')) card.style.background = 'linear-gradient(135deg,#1c2541,#334155)';
+          }
+        });
+      }
+    }
+    function det(id){
+      show('det'); const bInfo = BR[id], bT = bTrophies[id]||0, bR = getRank(bT), bStyle = getRankBadgeColor(bR);
+      $('dTitle').textContent = bInfo.nm; $('dClass').textContent = bInfo.cls; $('dRarity').textContent = bInfo.rarity; $('dRarity').style.color = bInfo.rarityCol;
+      $('dLore').textContent = bInfo.info; $('dHp').textContent = bInfo.hp; $('dAtk').textContent = bInfo.atkNm; $('dSup').textContent = bInfo.supNm; $('dTro').textContent = bT;
+      $('dRankIcon').textContent = 'RANK ' + bR; $('dRankIcon').style.background = bStyle.bg; $('dRankIcon').style.borderColor = bStyle.border;
+      startShowcaseAnimation(id);
+      $('dsel').textContent = id == selB ? 'SELECTED' : 'SELECT';
+      $('dsel').onclick = () => { selB = id; try { localStorage.setItem('dabrawl_b', id); } catch(e){} window.DaBrawlNet?.updateBrawler?.(id); show('menu'); };
+      $('dTry').onclick = () => { selB = id; try { localStorage.setItem('dabrawl_b', id); } catch(e){} window.DaBrawlNet?.updateBrawler?.(id); startLoadingScreen(true); };
+    }
+    // Animated brawler showcase: small, self-contained effects on the detail preview.
+    // It never touches match state, controls, trophies, or network simulation.
+    let showcaseFrame = 0, showcaseToken = 0;
+    function startShowcaseAnimation(id){
+      const token = ++showcaseToken, canvas = $('dpv');
+      if(showcaseFrame) cancelAnimationFrame(showcaseFrame);
+      const ctx = canvas.getContext('2d');
+      const started = performance.now();
+      function frame(now){
+        if(token !== showcaseToken || !$('det').classList.contains('on')) return;
+        const t = (now-started)/1000;
+        rb(canvas,id,3.2,10);
+        ctx.setTransform(1,0,0,1,0,0);
+        const w=canvas.width,h=canvas.height,cx=w/2,cy=h/2+8;
+        ctx.save();
+        // A gentle stage glow keeps the character readable while the effects animate.
+        const pulse=.5+.5*Math.sin(t*3.2);
+        if(id==='kuku'){
+          // Egg pops open, then a chick bounces out and briefly flaps its wings.
+          const phase=t%3.2, ex=cx+42, ey=cy+45;
+          ctx.globalAlpha=.95;
+          ctx.fillStyle='#f8fafc';ctx.strokeStyle='#713f12';ctx.lineWidth=3;
+          if(phase<1.05){
+            ctx.beginPath();ctx.ellipse(ex,ey,13,18,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+            if(phase>.68){ctx.beginPath();ctx.moveTo(ex-12,ey-3);ctx.lineTo(ex-2,ey+2);ctx.lineTo(ex+4,ey-9);ctx.moveTo(ex+4,ey-9);ctx.lineTo(ex+12,ey-1);ctx.stroke();}
+          } else {
+            const bounce=Math.abs(Math.sin((phase-1.05)*4.4))*13;
+            const x=ex+Math.sin(t*2)*5,y=ey-16-bounce;
+            ctx.fillStyle='#ffd21f';ctx.strokeStyle='#713f12';ctx.lineWidth=2.5;
+            ctx.beginPath();ctx.ellipse(x,y,12,10,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+            ctx.beginPath();ctx.ellipse(x-10,y+2,7,4,Math.sin(t*15)*.7,0,Math.PI*2);ctx.fill();ctx.stroke();
+            ctx.fillStyle='#111827';ctx.beginPath();ctx.arc(x+4,y-2,1.8,0,Math.PI*2);ctx.fill();
+            ctx.fillStyle='#f97316';ctx.beginPath();ctx.moveTo(x+10,y);ctx.lineTo(x+18,y+3);ctx.lineTo(x+10,y+5);ctx.fill();
+          }
+        } else if(id==='shachi'){
+          // A training dummy arcs through the air, spins, and lands with a dust ring.
+          const phase=t%2.8, flight=phase<2.1;
+          const u=flight?phase/2.1:1;
+          const x=cx+Math.sin(u*Math.PI)*75, y=cy+48-Math.sin(u*Math.PI)*92;
+          if(flight){
+            ctx.save();ctx.translate(x,y);ctx.rotate(u*Math.PI*4);
+            ctx.fillStyle='#b77945';ctx.strokeStyle='#422006';ctx.lineWidth=3;
+            ctx.fillRect(-9,-17,18,34);ctx.strokeRect(-9,-17,18,34);
+            ctx.beginPath();ctx.arc(0,-23,9,0,Math.PI*2);ctx.fill();ctx.stroke();
+            ctx.restore();
+          } else {
+            const ring=(phase-2.1)/.7;
+            ctx.globalAlpha=1-ring;ctx.strokeStyle='#cbd5e1';ctx.lineWidth=4;
+            ctx.beginPath();ctx.ellipse(cx+45,cy+47,8+ring*35,4+ring*12,0,0,Math.PI*2);ctx.stroke();
+          }
+          ctx.globalAlpha=.9;ctx.fillStyle='#e2e8f0';
+          for(let i=0;i<3;i++){const a=t*3+i*2.1;ctx.beginPath();ctx.arc(cx+Math.cos(a)*36,cy+40+Math.sin(a)*7,2.5,0,Math.PI*2);ctx.fill();}
+        } else if(id==='saiyan'){
+          // Rotating aura and a brief white flash sell the transformation showcase.
+          const phase=t%4.2, transform=phase>1.2&&phase<1.65;
+          ctx.globalCompositeOperation='lighter';
+          ctx.globalAlpha=.25+.2*pulse;ctx.strokeStyle=phase<1.2?'#ffd21f':phase<2.8?'#ff4040':phase<3.6?'#3bb6ff':'#ffffff';
+          ctx.lineWidth=4+pulse*4;
+          ctx.beginPath();ctx.ellipse(cx,cy+2,48+pulse*5,66+pulse*7,Math.sin(t)*.08,0,Math.PI*2);ctx.stroke();
+          for(let i=0;i<8;i++){
+            const a=t*2+i*Math.PI/4, r=55+Math.sin(t*5+i)*8;
+            ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.lineTo(cx+Math.cos(a+.12)*(r+12),cy+Math.sin(a+.12)*(r+12));ctx.lineTo(cx+Math.cos(a-.08)*(r+18),cy+Math.sin(a-.08)*(r+18));ctx.closePath();ctx.fill();
+          }
+          if(transform){ctx.globalAlpha=.55;ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);}
+        }
+        ctx.restore();
+        showcaseFrame=requestAnimationFrame(frame);
+      }
+      showcaseFrame=requestAnimationFrame(frame);
+    }
+
+    $('bk3').onclick = () => show('brs'); $('bra').onclick = () => show('brs');
+    function leap(p,gd){
+      K=p.k; let nd=1e9; for(const e of P) if(e!==p && e.alive && sees(p.t,e)) nd = Math.min(nd, Math.hypot(e.x-p.x, e.y-p.y));
+      const md = (p.human && !touch) ? Math.hypot(mx/z+cam.x-p.x, my/z+cam.y-p.y) : (p.human && ts.a.active) ? Math.hypot(ts.a.x-ts.a.ox, ts.a.y-ts.a.ox)/60*K.sr : nd;
+      const maxRange = gd ? K.gr2 : K.sr; let d = Math.min(maxRange, md), ex = p.x+Math.cos(p.a)*d, ey = p.y+Math.sin(p.a)*d;
+      while(d>0 && hitW(ex,ey,15)){ d-=8; ex = p.x+Math.cos(p.a)*d; ey = p.y+Math.sin(p.a)*d; }
+      p.lp = {sx:p.x, sy:p.y, ex, ey, t:0, dur:Math.max(0.35, Math.min(1.1, d/260)), d:gd?K.gd:K.sd, r:gd?K.gr:K.sRad, b:!gd};
+      beep(250,.4,.15,'triangle',300);
+    }
+    function asteroid(p){
+      let b=420, t=null; for(const e of P) if(e!==p && e.alive && (gameMode=='showdown'||e.t!=p.t)){ const d=Math.hypot(e.x-p.x, e.y-p.y); if(d<b){ b=d; t=e; } }
+      if(!t) return false; MT.push({x:t.x, y:t.y, t:.9, m:.9, o:p}); beep(500,.5,.1,'triangle',-300); return true;
+    }
+    function impact(m){
+      shake=12; F.push({k:'r', x:m.x, y:m.y, vx:0, vy:0, l:.45, m:.45, rad:80}); puff(m.x, m.y, 14, '#ffb347', 1.6); beep(60,.4,.3,'sawtooth',-20);
+      if(networkMode && m.o?.netRemote) return;
+      for(const e of P) if(e!==m.o && e.alive && !e.lp && (gameMode=='showdown'||e.t!=m.o.t)){ const dx=e.x-m.x, dy=e.y-m.y, d=Math.hypot(dx,dy); if(d<80){ dmg(e, {d:2500, o:m.o, s:1, vx:dx||1, vy:dy}); mv(e, dx/(d||1)*25, dy/(d||1)*25); } }
+    }
+    function syU(p,dt){
+      if(p.tf>0||p.muiCharging>0){ p.chg=0; p.holdT=0; p.hw=false; p.wasOnCd=false; return; }
+      const isHolding = (mdown&&!touch)||(touch&&!!ts.a.active), m1 = p.k.mode==1;
+      if(p.kcd > 0){ p.wasOnCd = true; p.chg = 0; p.holdT = 0; p.hw = isHolding; if(isHolding && p.burst<=0 && p.bt<=0) p.burst = 6; burstU(p,dt); return; }
+      if(p.wasOnCd){ if(!isHolding) p.wasOnCd = false; else { if(p.burst<=0 && p.bt<=0) p.burst = 6; burstU(p,dt); p.hw = isHolding; return; } }
+      if(isHolding){ p.holdT+=dt; const ok = m1?p.am>=1:true; if(p.holdT>.3 && ok) p.chg = Math.min(1, (p.holdT-.3)/(m1?1:1.4)); else if(p.holdT>.3 && !m1 && p.burst<=0 && p.bt<=0) p.burst = 6; }
+      else if(p.hw){ if(p.chg>0){ if(m1) bigK(p,p.chg); else kame(p,p.chg); p.chg=0; } else if(p.holdT<=.3) sTap(p); p.holdT=0; }
+      p.hw = isHolding; burstU(p,dt);
+    }
+    function sTap(p){ if(p.tf>0) return; if(p.k.mode==1){ if(p.am>=1 && p.cd<=0){ if(networkMode && p===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('fire',p.a); p.am--; ki(p,0); p.cd=.18; } } else if(p.bt<=0 && p.burst<=0){ if(networkMode && p===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('fire',p.a); p.burst=6; } }
+    function burstU(p,dt){ if(p.burst>0 && p.bt<=0 && p.chg<=0 && p.tf<=0){ punch(p); p.burst--; p.bt=.055; } }
+    function punch(p){
+      K=p.k; const a = p.a + (Math.random()-.5)*.16, c = Math.cos(p.a), s = Math.sin(p.a);
+      B.push({x:p.x+c*20, y:p.y+s*20, vx:Math.cos(a)*K.bs, vy:Math.sin(a)*K.bs, r:K.rng, d:K.dmg, t:p.t, o:p, s:0, z:K.z, col:'#fff'});
+      p.rec=.06; p.alt^=1; playFistSound();
+    }
+    function ki(p,ch){
+      K=p.k; const c = Math.cos(p.a), s = Math.sin(p.a), startDmg = K.kd||1600, maxDmg = K.kmax||2600, dCalculated = startDmg + ch*(maxDmg - startDmg);
+      let kiCol = K.aura; if(p.form === 2) kiCol = '#ff3a3a'; else if(p.form === 3) kiCol = '#38bdf8';
+      B.push({x:p.x+c*24, y:p.y+s*24, vx:c*K.bs, vy:s*K.bs, r:K.rng+ch*140, d:dCalculated, t:p.t, o:p, s:0, z:12+ch*16, col:kiCol, bn:3+(ch>.6?1:0)});
+      p.rec=.1; if(ch>0) shake = Math.max(shake, 5+ch*6); puff(p.x+c*28, p.y+s*28, 4, kiCol, .6); playKameSound();
+    }
+    function bigK(p,ch){ if(p.am<1||p.kcd>0) return; p.am--; ki(p,ch); }
+    function kame(p,ch){
+      if(p.kcd>0) return;
+      K=p.k; let len=0; const c = Math.cos(p.a), s = Math.sin(p.a), mx_ = 300+ch*260, isMax = ch>=0.95;
+      while(len<mx_){
+        if(!isMax && tile(p.x+c*len, p.y+s*len)=='#') break;
+        if(isMax && tile(p.x+c*len, p.y+s*len)=='#'){ const ti=Math.floor((p.x+c*len)/T), tj=Math.floor((p.y+s*len)/T); if(ti>0&&tj>0&&ti<MW-1&&tj<MH-1){ M[tj][ti]='.'; if(networkMode && p===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); } }
+        len+=8;
+      }
+      p.chg=0; p.kcd = (p.form<=1?3:5); p.burst=0;
+      const startDmg = K.kd||700, maxDmg = K.kmax||2200, actualDmg = startDmg + ch*(maxDmg - startDmg);
+      let kameCol = K.aura || '#4cf'; if(p.form === 2) kameCol = '#ff3a3a'; else if(p.form === 3) kameCol = '#38bdf8';
+      if(networkMode && window.DaBrawlNet){
+        if(p===me) window.DaBrawlNet.sendAction('kame',p.a,{charge:ch});
+        else if(isNetworkHost && p.isBot) window.DaBrawlNet.sendAction('kame',p.a,{charge:ch,playerId:p.netId});
+      }
+      KM.push({o:p, a:p.a, x:p.x, y:p.y, len, w:14+ch*40, d:actualDmg, t:.6, m:.6, tk:0, col:kameCol, destroys:isMax, isMaxChg:isMax});
+      shake = 8+ch*12; playKameSound();
+    }
+    function beamHit(k){
+      if(networkMode && k.o?.netRemote) return;
+      const c = Math.cos(k.a), s = Math.sin(k.a);
+      for(const e of P){
+        if(e===k.o || !e.alive || e.lp || e.tf>0 || (gameMode=='knockout'&&e.t==k.o.t)) continue;
+        const rx = e.x-k.x, ry = e.y-k.y, al = rx*c + ry*s, pp = Math.abs(-rx*s + ry*c);
+        if(al>0 && al<k.len && pp<k.w+14 && !(k.instantRed && k.hitTargets && k.hitTargets.includes(e))){
+          if(k.instantRed){ if(!k.hitTargets) k.hitTargets=[]; k.hitTargets.push(e); }
+          dmg(e, {d:k.instantRed?2000:k.d/6, o:k.o, s:0, vx:c, vy:s}); mv(e, c*8, s*8);
+          if(k.isMaxChg){ k.o.sc = Math.min(1, k.o.sc + 0.20); k.isMaxChg = false; }
+        }
+      }
+      for(let i=0;i<4;i++){ const l = Math.random()*k.len; puff(k.x+c*l, k.y+s*l, 1, k.col, .5); }
+    }
+    function tele(p){
+      let b=420, t=null;
+      for(const e of P){ if(e===p || !e.alive || (gameMode=='knockout'&&e.t==p.t) || !sees(p.t,e)) continue; const d=Math.hypot(e.x-p.x, e.y-p.y); if(d<b){ b=d; t=e; } }
+      if(!t) return false;
+      playInstantTransmissionSound();
+      for(let i=0;i<42;i++){ const side=(Math.random()-.5)*46, len=18+Math.random()*34; F.push({k:'line', x:p.x+side, y:p.y+(Math.random()-.5)*76, vx:(Math.random()-.5)*24, vy:(Math.random()-.5)*24, c:'#05070d', l:.24+Math.random()*.16, m:.4, dx:len, dy:0}); }
+      for(let i=0;i<8;i++){
+        const a = t.a + Math.PI + (i?((i&1)?1:-1)*Math.ceil(i/2)*.6:0), nx = t.x+Math.cos(a)*42, ny = t.y+Math.sin(a)*42;
+        if(!hitW(nx,ny,15)){
+          p.x=nx; p.y=ny; p.a = Math.atan2(t.y-ny, t.x-nx);
+          for(let j=0;j<42;j++){ const side=(Math.random()-.5)*46, len=18+Math.random()*34; F.push({k:'line', x:nx+side, y:ny+(Math.random()-.5)*76, vx:(Math.random()-.5)*24, vy:(Math.random()-.5)*24, c:'#05070d', l:.24+Math.random()*.16, m:.4, dx:len, dy:0}); }
+          return true;
+        }
+      }
+      return false;
+    }
+    function xform(p){ p.tfn = p.form+1; p.tf = 1.8; p.sc=0; p.chg=0; p.burst=0; p.am=3; p.holdT=0; p.hw=false; if(networkMode && window.DaBrawlNet){ if(p===me) window.DaBrawlNet.sendAction('transform',p.a,{form:p.tfn}); else if(isNetworkHost && p.isBot && p.netId) window.DaBrawlNet.sendAction('transform',p.a,{form:p.tfn,playerId:p.netId}); } playTransformSound(p.tfn >= 4 ? 'galaxy' : 'normal'); }
+    function tfx(p,dt){
+      p.tf-=dt; const fm = FM[p.tfn]; shake = Math.max(shake, 14); const col = fm.aura || '#ffd21f';
+      if(p.tfn >= 4 && Math.random()<.6) F.push({k:'pillar', x:p.x, y:p.y, c:'#ffffff', l:.3, m:.3});
+      for(let i=0;i<6;i++){
+        const ang = -Math.PI/2 + (Math.random()-.5)*1.4, spd = 200 + Math.random()*240;
+        F.push({k:'p', x:p.x+(Math.random()-.5)*35, y:p.y+15, vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd, l:.35, m:.35, c:p.tfn>=4?'#b4c6ff':(i%2==0?'#ffffff':col), s:8+Math.random()*6});
+      }
+      if(Math.random()<.4) F.push({k:'r', x:p.x, y:p.y+12, vx:0, vy:0, l:.3, m:.3, rad:60+Math.random()*70});
+      if(p.form!=p.tfn && p.tf<.9){
+        p.form = p.tfn; p.k = Object.assign({}, BR.saiyan, fm); p.hp += fm.hp - p.mh; p.mh = fm.hp; wf=1; shake=25;
+        F.push({k:'r', x:p.x, y:p.y, vx:0, vy:0, l:.7, m:.7, rad:190}); puff(p.x,p.y,30,col,2.2); star(p.x,p.y,16);
+      }
+    }
+    function syAI(b,dt){
+      let o=null, bd=1e9; for(const e of P){ if(e===b||!e.alive||(gameMode=='knockout'&&e.t==b.t)) continue; const d=Math.hypot(e.x-b.x, e.y-b.y); if(d<bd){ bd=d; o=e; } }
+      if(!o) return; const a = Math.atan2(o.y-b.y, o.x-b.x); b.sw-=dt; if(b.sw<=0){ b.sw=.7+Math.random()*1.4; b.sd=Math.random()<.5?-1:1; }
+      const w = b.k.w, f = bd>w+40?1:bd<w-40?-1:0; step(b, Math.cos(a)*f + Math.cos(a+1.57)*b.sd*.7, Math.sin(a)*f + Math.sin(a+1.57)*b.sd*.7, dt); b.a = a;
+      if(b.sc>=1 && b.form<5){ sup(b); return; }
+      if(b.k.mode==1){ if(b.cd<=0 && b.am>=1 && bd<b.k.rng-20){ b.am--; ki(b, Math.random()<.3?.7:0); b.cd=.35+Math.random()*3; } }
+      else { if(b.kcd<=0 && bd>130 && bd<330 && b.kmt<=0 && Math.random()<dt*1.2) kame(b, .4+Math.random()*.5); else if(bd<b.k.rng+30 && b.burst<=0 && b.bt<=0) b.burst=6; burstU(b,dt); }
+      if(b.gcd<=0 && Math.random()<dt*.4) gadget(b);
+    }
+    function air(p,dt){
+      const l = p.lp, u = Math.min(1, l.t += dt/(l.dur||0.5)); p.x = l.sx+(l.ex-l.sx)*u; p.y = l.sy+(l.ey-l.sy)*u; p.h = Math.sin(u*Math.PI)*80;
+      if(u>=1){ p.lp=null; p.h=0; slam(p,l); }
+    }
+    function slam(p,l){
+      shake=14; F.push({k:'r', x:p.x, y:p.y, vx:0, vy:0, l:.45, m:.45, rad:l.r}); puff(p.x, p.y, 14, '#fff', 1.6); beep(70,.4,.3,'sawtooth',-30);
+      for(const e of P) if(e!==p && e.alive && !e.lp && (gameMode=='showdown'||e.t!=p.t)){ const dx=e.x-p.x, dy=e.y-p.y, d=Math.hypot(dx,dy); if(d<l.r){ dmg(e, {d:l.d, o:p, s:1, vx:dx||1, vy:dy}); mv(e, dx/(d||1)*45, dy/(d||1)*45); } }
+      if(l.b){ const ci=Math.floor(p.x/T), cj=Math.floor(p.y/T); for(let j=cj-2;j<=cj+2;j++)for(let i=ci-2;i<=ci+2;i++) if(i>0&&j>0&&i<MW-1&&j<MH-1&&M[j][i]=='#'&&Math.hypot((i+.5)*T-p.x, (j+.5)*T-p.y)<l.r){ M[j][i]='.'; puff((i+.5)*T, (j+.5)*T, 6, '#8a5a2b', 1.2); } }
+    }
+    function tx(s,x,y,sz,c='#fff',al='center'){ g.font=sz+"px 'Lilita One',Impact,sans-serif"; g.textAlign=al; g.lineWidth=sz/5; g.strokeStyle='#000'; g.lineJoin='round'; g.strokeText(s,x,y); g.fillStyle=c; g.fillText(s,x,y); }
+    const circ = (x,y,r,c,o,edgeColor,glowColor,glowBlur=0) => {
+      g.beginPath(); g.arc(x,y,r,0,6.283); g.fillStyle=c; g.fill();
+      if(o){
+        g.lineWidth=3; g.strokeStyle=edgeColor || '#000';
+        if(glowColor){ g.shadowColor=glowColor; g.shadowBlur=glowBlur; }
+        g.stroke();
+        if(glowColor){ g.shadowBlur=0; }
+      }
+    };
+    function drawSh(p){
+      const ca=Math.cos(p.a), sa=Math.sin(p.a), u=p.rec>0?1-p.rec/.22:1; g.scale(1, 1+Math.sin(p.walk)*.05);
+      g.fillStyle='#243049'; g.beginPath(); g.moveTo(-9,-20); g.lineTo(1,-44); g.lineTo(10,-20); g.closePath(); g.fill(); g.lineWidth=3; g.strokeStyle='#000'; g.stroke();
+      circ(0,0,25,'#243049',1); g.beginPath(); g.ellipse(0,6,15,16,0,0,6.283); g.fillStyle='#fff'; g.fill();
+      for(const o of[-9,9]){ circ(o,-6,7,'#fff',1); circ(o+ca*2.5, -6+sa*2.5, 3, '#000'); }
+      for(const s of[-1,1]){ const q=Math.max(0,Math.min(1,s<0?u*2:u*2-1)), f=20+Math.sin(q*Math.PI)*135; circ(ca*f-sa*s*16, sa*f+ca*s*16, 13, '#ff8a1c', 1); }
+    }
+    function drawSa(p){
+      const f = p.form||0, fm = FM[f]||{}, ca = Math.cos(p.a), sa = Math.sin(p.a), t = performance.now()/1000;
+      const isUIorMUI = !!(fm.isUI || fm.isMUI), mui = !!fm.isMUI;
+      const neon = mui ? '#7c3aed' : '#4f46e5';
+      const edge = mui ? '#ffffff' : '#e5e7eb';
+      const blur = mui ? 9 : 7;
+
+      // Fire-like aura for SS1 / Red / Blue. Only appears once transformation is complete.
+      if(f>=1 && f<=3 && p.tf<=0){
+        const palette = f===1 ? ['#fff36a','#ffe100','#ff9f00'] : f===2 ? ['#fff0c2','#ff6a16','#e51b23'] : ['#efffff','#39e8ff','#087bff'];
+        g.save(); g.globalCompositeOperation='lighter';
+        // Flickering flame tongues hug the fighter instead of forming a giant ring.
+        for(let i=0, flameCount=(p.ss2>0?14:30);i<flameCount;i++){
+          const phase=t*(5.2+(i%5)*.7)+i*2.17;
+          const side=(i%2===0?-1:1), x=side*(13+(i%5)*2.1)+Math.sin(phase)*3.4;
+          const y=-34+((i*17+Math.floor(t*18))%66);
+          const h=11+((Math.sin(phase*1.37)+1)*7), w=2.6+((i%3)*1.0);
+          g.globalAlpha=.34+.42*(.5+.5*Math.sin(phase));
+          g.fillStyle=palette[i%palette.length];
+          g.beginPath(); g.moveTo(x-w,y+h*.55); g.quadraticCurveTo(x-w*1.5,y,x+Math.sin(phase)*2,y-h); g.quadraticCurveTo(x+w*2,y,x+w,y+h*.55); g.closePath(); g.fill();
+        }
+        g.globalAlpha=.18; const core=g.createRadialGradient(0,-8,4,0,-8,34);
+        core.addColorStop(0,'rgba(255,255,255,.42)'); core.addColorStop(.5,palette[1]); core.addColorStop(1,'rgba(255,255,255,0)');
+        g.fillStyle=core; g.fillRect(-32,-46,64,78); g.restore();
+      }
+      g.scale(1, 1+Math.sin(p.walk)*.05);
+
+      // UI/MUI blue-white aura: concentrated behind and close to the fighter, not wide side spikes.
+      if(isUIorMUI){
+        g.save(); g.globalCompositeOperation='lighter';
+        const pulse=.78+.16*Math.sin(t*(mui?3.1:2.5));
+        // A subtle, pulsing ki halo sits behind the fighter; aura is drawn before the sprite.
+        const halo=g.createRadialGradient(0,-5,7,0,-5,31);
+        halo.addColorStop(0, mui?'rgba(235,246,255,.22)':'rgba(100,215,255,.19)');
+        halo.addColorStop(.55, mui?'rgba(155,205,255,.14)':'rgba(45,145,255,.13)');
+        halo.addColorStop(1,'rgba(55,155,255,0)');
+        g.globalAlpha=.72+.12*Math.sin(t*(mui?2.8:2.2));
+        g.fillStyle=halo; g.beginPath(); g.ellipse(0,-4,27,35,0,0,Math.PI*2); g.fill();
+        // Soft colored ki-smoke behind the body. Keep it narrow and behind the sprite.
+        const haze=g.createRadialGradient(0,-2,5,0,-2,36);
+        haze.addColorStop(0, mui?'rgba(225,240,255,.24)':'rgba(65,190,255,.22)');
+        haze.addColorStop(.52, mui?'rgba(130,190,255,.16)':'rgba(40,130,255,.16)');
+        haze.addColorStop(1,'rgba(40,150,255,0)');
+        g.globalAlpha=.8; g.fillStyle=haze; g.fillRect(-38,-48,76,88);
+        // Close, flowing flame ribbons mainly behind the shoulders and torso.
+        for(let i=0;i<18;i++){
+          const side=i%2===0?-1:1, band=Math.floor(i/2);
+          const phase=t*(4.2+(band%3)*.5)+band*1.63+(side<0?.8:0);
+          const x=side*(17+(band%4)*2.8)+Math.sin(phase)*2.1;
+          const y=-34+((band*13+Math.floor(t*13))%68);
+          const h=10+5*(.5+.5*Math.sin(phase*1.15));
+          g.globalAlpha=(.42+.28*(.5+.5*Math.sin(phase)))*pulse;
+          g.strokeStyle=band%3===0?'#ffffff':(mui?'#c8e2ff':'#55d9ff');
+          g.lineWidth=band%3===0?2.5:3; g.lineCap='round'; g.lineJoin='round';
+          g.beginPath(); g.moveTo(x,y+h*.7); g.quadraticCurveTo(x-side*3,y+1,x+side*1.3,y-h); g.stroke();
+          g.globalAlpha*=.65; g.strokeStyle='#eafaff'; g.lineWidth=.85;
+          g.beginPath(); g.moveTo(x+side*.8,y+h*.55); g.quadraticCurveTo(x-side*1.2,y,x+side*1.8,y-h*.65); g.stroke();
+        }
+        // Wispy gas curls behind the back, kept close to the silhouette.
+        for(let side of [-1,1]) for(let j=0;j<3;j++){
+          const phase=t*(1.8+j*.25)+j*2.1+(side<0?1:0);
+          const bx=side*(14+j*4), by=10-j*15;
+          g.globalAlpha=.18+.12*(.5+.5*Math.sin(phase));
+          g.strokeStyle=mui?'#d9eaff':'#49cfff'; g.lineWidth=3.2-j*.45; g.lineCap='round';
+          g.beginPath(); g.moveTo(bx,by+12); g.bezierCurveTo(bx+side*4,by+3,bx-side*3,by-4+Math.sin(phase)*2,bx+side*1.5,by-13); g.stroke();
+        }
+        // Small sparks stay close to the fighter instead of filling the sides of the screen.
+        for(let i=0;i<12;i++){
+          const phase=t*(1.1+(i%4)*.2)+i*2.4, side=i%2?-1:1;
+          const x=side*(21+(i%3)*3)+Math.sin(phase)*1.8;
+          const y=-36+((i*17+Math.floor(t*8))%70);
+          const tw=.45+.55*(.5+.5*Math.sin(t*3+i*1.7));
+          g.globalAlpha=(mui?.82:.7)*tw; g.fillStyle=i%3===0?'#ffffff':'#9be8ff';
+          g.beginPath(); g.arc(x,y,i%4===0?1.6:1,0,Math.PI*2); g.fill();
+        }
+        g.restore();
+      }
+
+      g.save();
+      if(isUIorMUI){
+        g.strokeStyle = '#000'; g.lineWidth = 3;
+        g.shadowColor = 'transparent'; g.shadowBlur = 0;
+      } else {
+        g.strokeStyle = '#000'; g.lineWidth = 3; g.shadowBlur = 0;
+      }
+      circ(0, 4, 19, '#ff7a00', 1, '#000');
+      g.fillStyle = '#1d4fd8'; g.fillRect(-9, 8, 18, 6);
+      
+      circ(0, -6, 15, '#ffd9b0', 1, '#000');
+
+      // Original shared Saiyan spike silhouette restored; form-specific hair colors stay in FM.
+      g.fillStyle = fm.hair || '#1a1a1a';
+      g.beginPath();
+      [[-15,-8],[-22,-28],[-10,-20],[-7,-40],[0,-22],[8,-42],[11,-20],[22,-28],[15,-8],[0,-16]].forEach(q=>g.lineTo(q[0],q[1]));
+      g.closePath(); g.fill();
+      g.strokeStyle='#000'; g.lineWidth=3; g.shadowBlur=0;
+      g.stroke();
+
+      // UI/MUI edge aura is drawn LAST, as strokes on the outside edge only.
+      // No filled neon shapes and no zig-zag tracing inside the hair/body.
+      // SS2 electrical sparks: bright, short lightning bolts around the outside silhouette.
+      if(f===1 && p.ss2>0){
+        g.save(); g.globalCompositeOperation='lighter';
+        // Lightweight SS2 lightning: six small outer-edge sparks, no canvas blur filters.
+        g.shadowBlur=0;
+        for(let i=0;i<6;i++){
+          const ph=t*5+i*2.41, side=i%2?-1:1, x=side*(22+(i%2)*2)+Math.sin(ph)*1.5;
+          const y=-30+((i*19+Math.floor(t*8))%58);
+          g.globalAlpha=.42+.3*(.5+.5*Math.sin(ph)); g.strokeStyle=i%3===0?'#a5f3fc':'#fff36a'; g.lineWidth=1.25;
+          g.beginPath(); g.moveTo(x,y); g.lineTo(x+side*2,y+4); g.lineTo(x-side,y+7); g.stroke();
+        }
+        g.restore();
+      }
+      // Kaioken overlays SS Blue's blue fire aura with a red outer flame edge.
+      if(f===3 && p.kaioken>0){
+        g.save(); g.globalCompositeOperation='lighter';
+        for(let i=0;i<22;i++){ const ph=t*9+i*2.4, side=i%2?-1:1, x=side*(17+(i%4)*2)+Math.sin(ph)*3, y=-31+((i*13+Math.floor(t*24))%62); g.globalAlpha=.45+.4*(.5+.5*Math.sin(ph)); g.strokeStyle=i%2?'#ff2020':'#ff8585'; g.lineWidth=2.4; g.beginPath(); g.moveTo(x,y+8); g.quadraticCurveTo(x+Math.sin(ph)*4,y,x+Math.cos(ph)*3,y-12); g.stroke(); }
+        g.restore();
+      }
+      g.shadowBlur=0;
+      for(const o of[-6,6]){
+        if(isUIorMUI){ g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=.68+.22*Math.sin(t*4+o); g.shadowColor=mui?'#f4fbff':'#56dfff'; g.shadowBlur=8; circ(o,-3,5.5,mui?'#eaf5ff':'#b8f3ff'); g.restore(); }
+        circ(o,-3,4.5,'#fff',1,'#000');
+        circ(o+ca*1.5,-3+sa*1.5,2.2,fm.eye||'#000');
+      }
+      const ex = Math.max(0, p.rec)*260;
+      for(const side of[-1,1]){
+        const d = 18 + ((side>0) == !!p.alt ? ex : 0);
+        circ(ca*d-sa*side*14, sa*d+ca*side*14, 7, '#ffd9b0', 1, '#000');
+      }
+
+      g.restore();
+      if(p.muiCharging > 0){
+        const chgRatio = (1.2 - p.muiCharging) / 1.2, chargeRad = 15 + chgRatio * 45;
+        // Keep the charging feedback on other forms; UI/MUI use their outline instead of giant rings.
+        g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=0.75; if(isUIorMUI){ const rr=7+chgRatio*12+Math.sin(t*24)*2; circ(ca*28, -7+sa*28, rr, mui?'#ffffff':'#93c5fd'); circ(ca*28, -7+sa*28, rr*0.52, '#ffffff'); circ(ca*28, -7+sa*28, rr*1.35, neon, 0.7, edge); } else { circ(ca*38, sa*38, chargeRad, '#ffffff'); circ(ca*38, sa*38, chargeRad*0.6, '#a5f3fc'); } g.restore();
+        shake = Math.max(shake, 12);
+        if(Math.random() < 0.6) F.push({k:'p', x: p.x + ca*38 + (Math.random()-.5)*40, y: p.y + sa*38 + (Math.random()-.5)*40, vx: (Math.random()-.5)*40, vy: (Math.random()-.5)*40, l: 0.3, m: 0.3, c: '#ffffff', s: 6});
+      } else if(p.chg>0){
+        const r = 6 + p.chg*26; if(isUIorMUI){ g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=.85; circ(ca*28,-7+sa*28,7+p.chg*13+Math.sin(t*24)*2,mui?'#fff':'#93c5fd'); circ(ca*28,-7+sa*28,4+p.chg*7,'#fff'); g.restore(); } else { circ(ca*32, sa*32, r+Math.sin(t*40)*2, fm.aura||'#5cf'); circ(ca*32, sa*32, r*.55, '#fff'); }
+      }
+    }
+    function drawP(p){
+      const v = p.human || gameMode=='showdown' || sees(0,p); if(!v) return;
+      if(p.afterimages){
+        for(const ai of p.afterimages){
+          g.save(); g.translate(ai.x, ai.y); g.globalAlpha = (ai.t / ai.maxT) * 0.45;
+          circ(0, 4, 19, '#7dd3fc', 1); g.fillStyle = '#1d4fd8'; g.fillRect(-9, 8, 18, 6); circ(0, -6, 15, '#ffd9b0', 1);
+          g.restore();
+        }
+      }
+      g.save(); g.translate(p.x, p.y-(p.h||0));
+      if(!p.alive){ const u=p.dt/.9; if(u>1){ g.restore(); return; } g.translate(0,-Math.sin(u*Math.PI)*34); g.rotate(u*14); g.scale(1-u*.6, 1-u*.6); g.globalAlpha=1-u; }
+      else { g.fillStyle='#0004'; g.beginPath(); g.ellipse(0,14,18,8,0,0,6.283); g.fill(); }
+      g.save();
+      // Removed the extra green outer circle; keep the Super-ready ring and team indicator.
+      if(p.sc >= 1){
+        const spinAngle = Date.now() * 0.0012, segments = 4, arcLen = (Math.PI * 2) / segments;
+        g.lineWidth = 5.5;
+        for(let i=0; i<segments; i++){
+          g.beginPath(); g.arc(0, 10, 28, spinAngle + (i * arcLen), spinAngle + (i * arcLen) + (arcLen * 0.7));
+          g.strokeStyle = '#ffd21f'; g.shadowColor = '#ffd21f'; g.shadowBlur = 12; g.stroke();
+        }
+        g.shadowBlur = 0;
+      }
+      g.restore();
+      g.strokeStyle = p.sc >= 1 ? '#ffd21f' : (p===me ? '#4f4' : (gameMode=='showdown' ? '#f80' : ((me && p.t===me.t) ? '#39f' : '#f44')));
+      g.lineWidth = p.sc >= 1 ? 5 : 4; if(p.sc >= 1){g.shadowColor='#ffd21f';g.shadowBlur=12;} g.beginPath(); g.ellipse(0,13,22,11,0,0,6.283); g.stroke(); g.shadowBlur=0;
+      if(p.tf>0){
+        const aura=(FM[p.tfn]&&FM[p.tfn].aura)||'#ffd21f';
+        g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=.22+.18*Math.sin(Date.now()*.018);
+        g.strokeStyle=aura; g.lineWidth=4+Math.min(7,p.tf*3); g.shadowColor=aura; g.shadowBlur=22;
+        g.beginPath(); g.ellipse(0,2,27+Math.sin(Date.now()*.012)*3,35+Math.sin(Date.now()*.015)*5,0,0,Math.PI*2); g.stroke(); g.restore();
+      }
+      if(p.b == 'shachi') drawSh(p);
+      else if(p.b == 'saiyan') drawSa(p);
+      else {
+        const bob = 1 + Math.sin(p.walk)*.05; g.scale(1, bob);
+        circ(-17,2,7,'#f2c200',1); circ(17,2,7,'#f2c200',1); circ(0,0,19,'#ffd21f',1);
+        for(const o of[-7,0,7]) circ(o,-19,5,'#e8262b',1);
+        const ca=Math.cos(p.a), sa=Math.sin(p.a);
+        for(const o of[-6,6]){ circ(o,-4,5.5,'#fff',1); circ(o+ca*2,-4+sa*2,2.4,'#000'); }
+        g.save(); g.translate(ca*14, sa*14+4); g.rotate(p.a); g.fillStyle='#ff8a1c'; g.strokeStyle='#000'; g.lineWidth=2; g.beginPath(); g.moveTo(0,-4); g.lineTo(9,0); g.lineTo(0,4); g.closePath(); g.fill(); g.stroke(); g.restore();
+        g.save(); g.rotate(p.a); const rc=Math.max(0,p.rec)*50; g.fillStyle='#6b3f1d'; g.strokeStyle='#000'; g.lineWidth=2.5; g.fillRect(2-rc,4,16,9); g.strokeRect(2-rc,4,16,9); g.fillStyle='#555'; g.fillRect(16-rc,5,24,7); g.strokeRect(16-rc,5,24,7); g.fillStyle='#999'; g.fillRect(36-rc,3,6,11); g.restore();
+      }
+      // Make a charged Kamehameha visible on every brawler, including remotely controlled bots.
+      // Saiyan forms already draw their own charge aura in drawSa().
+      if(p.k?.sy && p.chg>0 && p.b!=='saiyan' && p.alive){
+        const ca=Math.cos(p.a), sa=Math.sin(p.a), pulse=1+Math.sin(Date.now()*.025)*.12;
+        const rr=(8+p.chg*20)*pulse;
+        g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=.9;
+        g.shadowColor='#6ee7ff'; g.shadowBlur=12+p.chg*18;
+        g.fillStyle='#38bdf8'; g.beginPath(); g.arc(ca*31,sa*31,rr,0,Math.PI*2); g.fill();
+        g.fillStyle='#ffffff'; g.beginPath(); g.arc(ca*31,sa*31,rr*.48,0,Math.PI*2); g.fill();
+        g.strokeStyle='#bae6fd'; g.lineWidth=2+p.chg*3; g.beginPath(); g.arc(ca*31,sa*31,rr+5,0,Math.PI*2); g.stroke();
+        g.restore();
+      }
+      if(p.fl>0 && p.alive){ g.globalAlpha=.6; circ(0,0,20,'#fff'); }
+      if(p.tf>0 && p.tfn>=4){
+        g.globalAlpha = Math.min(1, p.tf); g.fillStyle = '#ffffff';
+        g.beginPath(); g.arc(0, -10, 48 + (1.8-p.tf)*12, 0, 6.283); g.fill();
+        g.fillRect(-20, -300, 40, 320); g.globalAlpha = 1;
+      }
+      g.restore();
+    }
+    function drawUI(p){
+      if(!p.alive || !(p.human||gameMode=='showdown'||sees(0,p))) return;
+      const bw = 50, x = p.x-bw/2, y = p.y-42; g.fillStyle='#000'; g.fillRect(x-2,y-2,bw+4,10); g.fillStyle='#333'; g.fillRect(x,y,bw,6);
+      const isTeammate = (gameMode!='showdown' && p.t===me.t && p!==me), isLowHp = !p.isDummy && !isTeammate && (p.hp / p.mh < 0.3);
+      const hpColor = isTeammate ? '#39f' : (isLowHp ? '#ff3333' : (p===me ? '#4f4' : (gameMode=='showdown' ? '#f80' : '#f44')));
+      g.fillStyle = hpColor; g.fillRect(x,y,p.isDummy?bw:bw*Math.max(0,p.hp)/p.mh,6);
+      tx(p.isDummy ? 'INF' : Math.ceil(p.hp), x + bw/2, y + 5, 12, '#fff');
+      tx(p.name, p.x, y-6, 15, '#fff');
+      if(p.tf>0) tx((p.tfn===3 && p.kaioken>0)?'KAIOKEN':FM[p.tfn].fn, p.x, p.y-85, 26, (p.tfn===3 && p.kaioken>0)?'#ff2020':FM[p.tfn].aura);
+      if(p.kaioken>0 && p.tf<=0) tx('KAIOKEN', p.x, p.y-76, 18, '#ff2020');
+      if(p.dodge>0) tx('ULTRA INSTINCT', p.x, p.y-70, 18, '#cfd8ff');
+      if(p===me && p.k.sy && p.k.mode===0 && p.kcd>0) tx('KAME '+Math.ceil(p.kcd), p.x, p.y+46, 14, '#6cf');
+      if(p===me && p.k.mode!==0){
+        for(let i=0;i<3;i++){
+          const f = Math.max(0, Math.min(1, p.am-i));
+          g.fillStyle='#000'; g.fillRect(p.x-24+i*17, p.y+27, 15, 7);
+          g.fillStyle='#555'; g.fillRect(p.x-23+i*17, p.y+28, 13, 5);
+          g.fillStyle='#ff9a1c'; g.fillRect(p.x-23+i*17, p.y+28, 13*f, 5);
+        }
+      }
+    }
+    function draw(){
+      try {
+        z = Math.min(W/(19*T), H/(10.5*T)); const vw = W/z, vh = H/z, tg = me.alive ? me : (P.find(p=>p.alive)||me);
+        const cx = vw>=MW*T ? (MW*T-vw)/2 : Math.max(0, Math.min(MW*T-vw, tg.x-vw/2)), cy = vh>=MH*T ? (MH*T-vh)/2 : Math.max(0, Math.min(MH*T-vh, tg.y-vh/2));
+        cam.x += (cx-cam.x)*.2; cam.y += (cy-cam.y)*.2;
+        g.setTransform(1,0,0,1,0,0); g.fillStyle='#0f172a'; g.fillRect(0,0,cv.width,cv.height);
+        g.setTransform(DPR*z, 0, 0, DPR*z, (-cam.x*z + (Math.random()-.5)*shake)*DPR, (-cam.y*z + (Math.random()-.5)*shake)*DPR);
+        const now = performance.now()/1000;
+        for(let j=0;j<MH;j++)for(let i=0;i<MW;i++){
+          const t=M[j][i], x=i*T, y=j*T;
+          g.fillStyle = ((i+j)&1) ? '#334155' : '#1e293b'; g.fillRect(x,y,T,T);
+          if(t=='~'){
+            g.fillStyle='#0284c7'; g.fillRect(x,y,T,T); g.strokeStyle='#38bdf8'; g.lineWidth=3;
+            g.beginPath(); g.moveTo(x+6, y+T/2); g.quadraticCurveTo(x+T/4, y+T/2-6+Math.sin(now*3+i)*3, x+T/2, y+T/2);
+            g.quadraticCurveTo(x+3*T/4, y+T/2+6-Math.sin(now*3+i)*3, x+T-6, y+T/2); g.stroke();
+          }
+          if(t=='#'){
+            g.fillStyle='#1e1b18'; g.fillRect(x,y+8,T,T-8); g.fillStyle='#b45309'; g.fillRect(x+2,y+2,T-4,T-12);
+            g.fillStyle='#d97706'; g.fillRect(x+2,y+2,T-4,8); g.strokeStyle='#000'; g.lineWidth=3; g.strokeRect(x+2,y+2,T-4,T-4);
+          }
+        }
+        g.strokeStyle='#000'; g.lineWidth=6; g.strokeRect(0,0,MW*T,MH*T);
+        if(gasDist > 0){
+          g.fillStyle='rgba(34, 197, 94, 0.45)'; g.fillRect(0, 0, MW*T, gasDist*T); g.fillRect(0, (MH-gasDist)*T, MW*T, gasDist*T);
+          g.fillRect(0, gasDist*T, gasDist*T, (MH-gasDist*2)*T); g.fillRect((MW-gasDist)*T, gasDist*T, gasDist*T, (MH-gasDist*2)*T);
+          g.strokeStyle='#22c55e'; g.lineWidth=4; g.strokeRect(gasDist*T, gasDist*T, (MW-gasDist*2)*T, (MH-gasDist*2)*T);
+        }
+        for(const f of F){
+          const u=f.l/f.m;
+          if(f.k=='p'){ g.globalAlpha=u*.8; circ(f.x,f.y,f.s*(1.4-u*.5),f.c); g.globalAlpha=1; }
+          else if(f.k=='s'){ g.globalAlpha=u; tx('★',f.x,f.y,22,'#ffd21f'); g.globalAlpha=1; }
+          else if(f.k=='l' || f.k=='line'){
+            g.globalAlpha=u; g.strokeStyle=f.c||'#000000'; g.lineWidth=f.k=='line'?3.5:3; g.beginPath();
+            if(f.dx){ g.moveTo(f.x-f.dx/2,f.y); g.lineTo(f.x+f.dx/2,f.y+(f.dy||0)); } else { g.moveTo(f.x, f.y-45); g.lineTo(f.x, f.y+45); } g.stroke(); g.globalAlpha=1;
+          }
+          else if(f.k=='pillar'){ g.globalAlpha=u*0.9; g.fillStyle=f.c; g.fillRect(f.x-24, f.y-300, 48, 320); g.globalAlpha=1; }
+          else if(f.k=='r'){ g.globalAlpha=u; g.strokeStyle='#fff'; g.lineWidth=8; g.beginPath(); g.arc(f.x,f.y,f.rad*(1.1-u*.9),0,6.283); g.stroke(); g.globalAlpha=1; }
+          else { g.globalAlpha=Math.min(1,u*2); tx(f.tx,f.x,f.y,20,f.c||'#ffe14d'); g.globalAlpha=1; }
+        }
+        for(const p of [...P].sort((a,b)=>a.y-b.y)) drawP(p);
+        for(const k of KM){
+          const u=k.t/k.m, L=k.len*Math.min(1,(1-u)*7), w=k.w*(u>.15?1:u/.15);
+          g.save(); g.translate(k.x,k.y); g.rotate(k.a); g.globalAlpha=.3; g.fillStyle=k.col; g.fillRect(0,-w,L,w*2);
+          g.globalAlpha=.75; g.fillRect(0,-w*.55,L,w*1.1); g.globalAlpha=1; g.fillStyle='#fff'; g.fillRect(0,-w*.28,L,w*.56);
+          circ(26,0,w*.8+Math.sin(performance.now()/40)*4,k.col); circ(26,0,w*.45,'#fff'); circ(L,0,w*.6,'#fff'); g.restore();
+        }
+        for(const m of MT){
+          const u=m.t/m.m; g.strokeStyle='#ff5a2a'; g.lineWidth=4; g.beginPath(); g.arc(m.x,m.y,80,0,6.283); g.stroke();
+          g.fillStyle='#ff5a2a33'; g.fill(); circ(m.x+u*40, m.y-u*420, 16, '#7a5a3a', 1);
+        }
+        for(const p of P) if(p.lp){ g.strokeStyle='#fffa'; g.lineWidth=4; g.beginPath(); g.arc(p.lp.ex, p.lp.ey, p.lp.r, 0, 6.283); g.stroke(); }
+        for(const b of B){
+          if(b.isFist){
+            g.save(); g.translate(b.x,b.y); g.rotate(Math.atan2(b.vy,b.vx)); g.fillStyle='#f97316'; g.strokeStyle='#000'; g.lineWidth=2;
+            g.beginPath(); g.arc(0,0,12,0,6.283); g.fill(); g.stroke(); g.fillStyle='#ffedd5'; g.fillRect(-4,-8,8,6); g.restore();
+          } else {
+            g.save(); g.shadowColor = b.col || '#ffe14d'; g.shadowBlur = 14; g.strokeStyle = b.col || '#ffe14d'; g.lineWidth = b.s ? 7 : 4;
+            g.beginPath(); g.moveTo(b.x, b.y); g.lineTo(b.x - b.vx*.03, b.y - b.vy*.03); g.stroke();
+            g.beginPath(); g.arc(b.x, b.y, b.z || (b.s ? 7 : 4.5), 0, Math.PI*2); g.fillStyle = b.col || '#ffe14d'; g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#ffffff'; g.stroke();
+            g.shadowBlur = 0; g.restore();
+          }
+        }
+        for(let j=0;j<MH;j++)for(let i=0;i<MW;i++)if(M[j][i]=='b'){
+          const x=i*T+T/2, y=j*T+T/2, sh = P.some(p=>p.alive&&Math.floor(p.x/T)==i&&Math.floor(p.y/T)==j)?Math.sin(now*14)*2:0;
+          g.globalAlpha=.93; for(const[ox,oy,r] of[[-12,6,15],[12,6,15],[0,-8,17],[-2,10,14]]) circ(x+ox+sh, y+oy, r, '#15803d', 0);
+          g.lineWidth=3; g.strokeStyle='#166534'; g.beginPath(); g.arc(x+sh, y-8, 17, 3.4, 6); g.stroke(); g.globalAlpha=1;
+        }
+        for(const p of P) drawUI(p);
+        g.setTransform(DPR, 0, 0, DPR, 0, 0);
+        if(touch && scr == 'game'){
+          const colors = {m:'#ffffff', a:'#2a7de0', s:'#ffd21f'}, stickCols = {m:'#ffffff', a:'#5cb6ff', s:'#ffe45c'};
+          for(const k of ['m', 'a', 's']){
+            const s = ts[k];
+            if(s.active){
+              const d = Math.hypot(s.x - s.ox, s.y - s.ox), m = Math.min(d, 55), a = Math.atan2(s.y - s.ox, s.x - s.ox);
+              g.globalAlpha = 0.35; circ(s.ox, s.oy, 60, colors[k]);
+              g.globalAlpha = 0.85; circ(s.ox + Math.cos(a)*m, s.oy + Math.sin(a)*m, 26, stickCols[k]);
+            }
+          }
+        }
+        if(wf>0){ g.fillStyle='rgba(255,255,255,'+wf*.85+')'; g.fillRect(0,0,W,H); wf = Math.max(0, wf-.025); }
+        g.fillStyle='#000a'; g.beginPath(); g.roundRect(W/2-90, 8, 180, 40, 20); g.fill();
+        if(gameMode == 'showdown'){
+          const aliveLeft = P.filter(p=>p.alive).length; tx('LEFT: '+aliveLeft, W/2, 36, 20, '#ffd21f');
+        } else {
+          tx(G.w[0], W/2-50, 38, 30, '#6bb6ff'); tx(isTestMode?'∞':'VS', W/2, 36, 20, '#ffd21f'); tx(G.w[1], W/2+50, 38, 30, '#ff7a7a');
+          for(const t of[0,1]) P.filter(p=>p.t==t).forEach((p,i) => circ(W/2+(t?1:-1)*(110+i*22), 28, 8, p.alive?(t?'#f44':'#39f'):'#555', 1));
+        }
+        tx(isTestMode?'PRACTICE':(gameMode=='showdown'?'SHOWDOWN':gameMode==='duel'?'1V1 DUEL':'KNOCKOUT'), 14, 32, 22, '#fff', 'left');
+        tx(gameMode==='showdown'?'10 Players':gameMode==='duel'?'1v1':'Round '+G.r, 14, 56, 16, '#ffd21f', 'left');
+        const s = $('sup'), r = Math.round(me.sc*100);
+        s.style.background = me.sc>=1 ? 'linear-gradient(#ffe45c,#ff9a00)' : 'linear-gradient(to top,#d9a900 '+r+'%,#444 '+r+'%)';
+        s.textContent = me.sc>=1 ? 'SUPER' : r+'%';
+        s.setAttribute('aria-label', me.sc>=1 ? 'Super ready' : 'Super charge '+r+' percent');
+        const gadgetButton = $('gad');
+        gadgetButton.textContent = me.gcd>0 ? String(Math.ceil(me.gcd)) : '⚡';
+        gadgetButton.setAttribute('aria-label', me.gcd>0 ? 'Gadget cooldown '+Math.ceil(me.gcd)+' seconds' : 'Gadget ready');
+        gadgetButton.style.opacity = me.gcd>0 ? .4 : 1;
+        if(G.ph=='count'){
+          const n = Math.ceil(G.t-.2);
+          if(G.t>2.9) tx(gameMode=='showdown'?'SHOWDOWN':'ROUND '+G.r, W/2, H/2, Math.min(90,W/8), '#ffd21f');
+          else if(n>0 && G.t>.2) tx(n, W/2, H/2+20, 110, '#fff');
+          else tx('FIGHT!', W/2, H/2+20, Math.min(100,W/7), '#ff5a2a');
+        }
+        if(G.ph=='end'){
+          const w = G.res == 'VICTORY!'; tx(G.res, W/2, H/2, Math.min(90,W/8), w?'#ffd21f':G.res=='DRAW'?'#fff':'#ff5a5a');
+        }
+      } catch(err){ console.error('Draw loop error recovered:', err); }
+    }
+    let last = 0;
+    let lastLoopError='';
+    function loop(t){
+      requestAnimationFrame(loop); const dt = Math.min(.05, (t-last)/1000||0); last = t;
+      if(scr == 'game'){
+        try { upd(dt); draw(); }
+        catch(err){
+          console.error('DaBrawl game loop failed:',err);
+          const msg=String(err&&err.message||err);
+          if(msg!==lastLoopError){lastLoopError=msg;const hint=$('mmHint');if(hint)hint.textContent='Game error: '+msg;}
+          // Keep the scene visible if a single simulation update fails.
+          try { draw(); } catch(drawErr){console.error('DaBrawl render failed:',drawErr);}
+        }
+      }
+    }
+    // Defensive click routing: keep primary navigation usable on mobile browsers.
+    document.addEventListener('click', e => {
+      const b = e.target.closest('button'); if(!b) return;
+      if(b.id === 'bra') { show('brs'); e.preventDefault(); }
+      else if(b.id === 'bk1') { show('menu'); e.preventDefault(); }
+      else if(b.id === 'bk3') { show('brs'); e.preventDefault(); }
+      else if(b.id === 'onlineBack') { show('menu'); e.preventDefault(); }
+    }, true);
+    window.onload = () => { initLogos(); updateMenuUI(); try { startMenuMusic(); } catch(err) { console.warn('Menu audio unavailable:', err); } requestAnimationFrame(loop); };
+  
+    // Multiplayer bridge used by the Supabase Realtime layer below.
+    window.DaBrawlGame = {
+      startNetworkGame(roster, matchId, mode, localId, hostId=localId,startAt=Date.now()+2500){
+        networkMode = true; isTestMode = false; isNetworkHost=(localId===hostId); networkResultApplied=false; gameMode = mode || 'knockout';
+        $('modeTxt').textContent = gameMode === 'showdown' ? 'SOLO SHOWDOWN' : gameMode === 'duel' ? '1v1 DUEL' : 'KNOCKOUT 3v3';
+        P=[]; me=null; build(); B=[]; F=[]; MT=[]; KM=[];
+        roster.forEach((entry,idx)=>{
+          const team = entry.team!==undefined ? entry.team : gameMode === 'showdown' ? idx % 2 : gameMode === 'duel' ? idx % 2 : (idx < 3 ? 0 : 1);
+          const slot = gameMode === 'showdown' || gameMode === 'duel' ? idx : idx % 3;
+          const brawler = BR[entry.brawler] ? entry.brawler : 'kuku';
+          const p = mk(team,slot,!entry.bot,entry.name,brawler,false);
+          p.netId = entry.id;
+          p.isBot = !!entry.bot;
+          p.netRemote = entry.bot ? !isNetworkHost : entry.id !== localId;
+          p.netLast = Date.now();
+          p.netTarget = {x:p.x,y:p.y,a:p.a};
+          P.push(p);
+          if(!entry.bot && entry.id === localId) me = p;
+        });
+        if(!me){ networkMode=false; show('menu'); return; }
+        G={ph:'count',t:Math.max(0,(startAt-Date.now())/1000),endAt:startAt,w:[0,0],r:1,res:''}; gasDist=0;
+        show('game');
+      },
+      setRoomMenuState(players,currentUserId,roomCode,isHost){
+        // The large centre brawler is always the signed-in player's own selection.
+        // Side slots represent other party members only, never a duplicate of the local player.
+        const buttons=[$('prevBtn'),$('nextBtn')];
+        const friends=players.filter(p=>p.userId!==currentUserId).sort((a,b)=>a.slot-b.slot);
+        buttons.forEach((btn,i)=>{
+          const p=friends[i];
+          if(!p){
+            btn.classList.remove('room-menu-slot','ready'); btn.innerHTML='+'; btn.title='Invite a friend by room code'; btn.setAttribute('aria-label','Add a friend by code');
+            btn.onclick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.openRoom?.();}; return;
+          }
+          btn.classList.add('room-menu-slot'); btn.classList.toggle('ready',p.ready);
+          const username=String(p.name||('Player '+p.slot)).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+          const brawler=String(p.brawler||'kuku');
+          btn.innerHTML='<canvas class="room-face" width="260" height="320"></canvas><span class="room-name" title="'+username+'">'+username+'</span><span class="room-brawler">'+brawler.toUpperCase()+'</span><span class="room-ready">'+(p.ready?'✓ READY':'NOT READY')+'</span>'+(isHost?'<span class="room-kick" role="button" tabindex="0" title="Remove from party">REMOVE</span>':'');
+          const avatar=btn.querySelector('canvas'); if(avatar) requestAnimationFrame(()=>rb(avatar,brawler,3.1,5));
+          btn.title=username+' · '+brawler.toUpperCase()+(p.ready?' · READY':' · NOT READY');
+          btn.setAttribute('aria-label',username+', '+brawler+(p.ready?' ready':' not ready'));
+          btn.onclick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.openRoom?.();};
+          const remove=btn.querySelector('.room-kick');if(remove){const kick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.removePartyMember?.(p.userId);};remove.onclick=kick;remove.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){kick(e);}};}
+        });
+        $('roomMenuBar').style.display=players.length?'flex':'none';
+        $('roomMenuCode').textContent='ROOM '+roomCode+' · PARTY';
+        $('roomLeaveBtn').style.display=players.length?'inline-block':'none';
+        const mine=players.find(p=>p.userId===currentUserId);
+        const readyBtn=$('play');
+        if(mine){
+          readyBtn.textContent=mine.ready?'NOT READY':'READY';
+          readyBtn.classList.toggle('ready',mine.ready);
+          readyBtn.onclick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.toggleReady?.();};
+          $('roomMenuStart').style.display='none';
+        }else{
+          readyBtn.textContent='PLAY'; readyBtn.classList.remove('ready');
+          readyBtn.onclick=()=>{beep(500,.1);if(gameMode==='duel'&&window.DaBrawlNet?.isInParty()){alert('1v1 is only available from solo PLAY, not while you are in a room/party.');return;}matchmake();};
+          $('roomMenuStart').style.display='none';
+        }
+      },
+      getLocalState(){
+        if(!me) return null;
+        const p=me;
+        return {id:p.netId,t:p.t,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my};
+      },
+      getNetworkStates(){
+        const pack=p=>({id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my});
+        if(!me) return [];
+        const states=[pack(me)];
+        if(isNetworkHost) for(const p of P) if(p!==me && p.isBot) states.push(pack(p));
+        return states;
+      },
+      applyRemoteState(state){
+        if(!state || !state.id) return;
+        const p=P.find(q=>q.netId===state.id);
+        if(!p || p===me) return;
+        // Keep position smooth; update health/combat fields from the owner's snapshot.
+        const nx=state.x ?? p.x, ny=state.y ?? p.y, now=Date.now();
+        const elapsed=Math.max(0.025,Math.min(0.20,(now-(p.netTargetAt||now))/1000));
+        p.netVx=(nx-(p.netTarget?.x ?? p.x))/elapsed; p.netVy=(ny-(p.netTarget?.y ?? p.y))/elapsed;
+        const maxSpeed=900, speed=Math.hypot(p.netVx,p.netVy);
+        if(speed>maxSpeed){p.netVx=p.netVx/speed*maxSpeed;p.netVy=p.netVy/speed*maxSpeed;}
+        p.netTarget = {x:nx,y:ny,a:state.a ?? p.a}; p.netTargetAt=now;
+        for(const k of ['hp','mh','alive','sc','am','cd','gcd','kcd','tf','tfn','form','chg','holdT','hw','muiCharging','burst','bt','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my']) if(state[k]!==undefined) p[k]=state[k];
+        if(p.b==='saiyan' && Number.isFinite(state.form)) p.k=Object.assign({},BR.saiyan,FM[state.form]||{});
+        p.netLast=now;
+      },
+      applyRemoteAction(msg){
+        if(!msg || !msg.playerId) return;
+        const p=P.find(q=>q.netId===msg.playerId);
+        if(!p || p===me) return;
+        if(msg.action==='damage'){
+          const amount=Math.max(0,Math.min(100000,Number(msg.damage)||0));
+          if(amount<=0) return;
+          const target=P.find(q=>q.netId===msg.targetId);
+          // A client can request damage to another human, but only that human's
+          // own client applies it. The host alone applies damage to authoritative bots.
+          if(target && target===me && me.alive){
+            dmg(me,{d:amount,o:p,s:0,vx:Number(msg.vx)||0,vy:Number(msg.vy)||0});
+          } else if(isNetworkHost && target && target.isBot && target!==me && target.alive){
+            dmg(target,{d:amount,o:p,s:0,vx:Number(msg.vx)||0,vy:Number(msg.vy)||0});
+          }
+          return;
+        }
+        if(msg.action==='wall-break'){
+          const i=Number(msg.i),j=Number(msg.j);
+          if(Number.isInteger(i)&&Number.isInteger(j)&&i>0&&j>0&&i<MW-1&&j<MH-1&&M[j]?.[i]==='#'){
+            M[j][i]='.'; puff(i*T+T/2,j*T+T/2,8,'#8a5a2b',1.2);
+          }
+          return;
+        }
+        if(msg.action==='transform'){
+          const requestedForm=Math.max(1,Math.min(5,Number(msg.form)||((p.form||0)+1)));
+          p.tfn=requestedForm; p.tf=Math.max(p.tf||0,1.8); p.sc=0; p.chg=0; p.burst=0; p.holdT=0; p.hw=false;
+          playTransformSound(requestedForm>=4?'galaxy':'normal');
+          return;
+        }
+        if(msg.action==='hit-feedback'){
+          const target=P.find(q=>q.netId===msg.targetId);
+          if(target){
+            target.fl=.16;
+            F.push({k:'t',x:target.x,y:target.y-30,vx:0,vy:-60,l:.7,m:.7,tx:String(Math.max(0,Math.round(Number(msg.damage)||0))),c:'#ffe45c'});
+            puff(target.x,target.y,8,'#ffe45c',.8); beep(260,.06,.05,'square',-80);
+          }
+          return;
+        }
+        if(!p.alive) return;
+        if(Number.isFinite(msg.angle)) p.a=msg.angle;
+        if(msg.action==='kame'){
+          p.a=Number.isFinite(msg.angle)?msg.angle:p.a;
+          p.kcd=0; kame(p,Math.max(0,Math.min(1,Number(msg.charge)||0)));
+        }
+        else if(msg.action==='bot-fire'){
+          p.a=Number.isFinite(msg.angle)?msg.angle:p.a;
+          if(msg.super && p.sc<1) p.sc=1;
+          fire(p,!!msg.super);
+        }
+        else if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.k.sy) sTap(p); else tryFire(p); }
+        else if(msg.action==='super'){
+          // Remote bot supers must not depend on this browser's local round phase.
+          // The host can be a fraction of a tick ahead, otherwise the non-host silently
+          // drops the bot's super when its local G.ph is still counting/ending.
+          p.sc=1; p.tf=0; p.chg=0; p.holdT=0;
+          if(p.k?.sy){
+            if(p.form<5 && !p.lp) xform(p);
+            else if(p.form===5 && !p.lp) superUltraKame(p);
+            else p.sc=0;
+          }else{
+            fire(p,1);
+            p.sc=0;
+          }
+        }
+        else if(msg.action==='gadget'){ p.gcd=0; p.dash=0; gadget(p); }
+      },
+      applyMatchResult(payload){
+        if(!networkMode || isNetworkHost || !me || networkResultApplied || !payload || !Number.isInteger(payload.hostTeam)) return;
+        networkResultApplied=true;
+        const win = me.t===payload.hostTeam ? !!payload.win : !payload.win;
+        const d=win?8:-4;
+        tr=Math.max(0,tr+d); bTrophies[selB]=Math.max(0,(bTrophies[selB]||0)+d); saveTrophies();
+        $('rt').textContent=win?'VICTORY!':'DEFEAT'; $('rt').style.color=win?'#ffd21f':'#ff5a5a';
+        $('rd').textContent=(d>0?'+':'')+d+' 🏆';
+        $('again').style.display='none'; $('home').style.display='none'; $('mmHint').textContent='';
+        show('res');
+      },
+      makeRemoteBot(id){
+        const p=P.find(q=>q.netId===id);
+        if(p && p!==me){ p.netRemote=false; p.human=false; p.netId=null; }
+      },
+      endNetworkGame(){ networkMode=false; }
+    };
+
+  </script>
+
+  <script>
+    // Keep login failures visible even if the ES module fails before attaching handlers.
+    window.addEventListener('error', event => {
+      const statusEl = document.getElementById('onlineStatus');
+      if (statusEl && !window.__daBrawlAuthReady) {
+        statusEl.textContent = 'Login system failed to start: ' + (event.message || 'JavaScript error') + '. Refresh the page and try again.';
+        statusEl.style.color = '#fca5a5';
+      }
+    });
+    window.addEventListener('unhandledrejection', event => {
+      const statusEl = document.getElementById('onlineStatus');
+      if (statusEl && !window.__daBrawlAuthReady) {
+        statusEl.textContent = 'Login system could not connect: ' + (event.reason?.message || String(event.reason || 'unknown error'));
+        statusEl.style.color = '#fca5a5';
+      }
+    });
+    window.addEventListener('click', event => {
+      const button = event.target.closest && event.target.closest('#onlineSignIn, #onlineSignUp');
+      if (button && !window.__daBrawlAuthReady) {
+        const statusEl = document.getElementById('onlineStatus');
+        if (statusEl) {
+          statusEl.textContent = 'Login system has not started yet. Please wait a moment; if this message stays, refresh the page and tell me the exact text.';
+          statusEl.style.color = '#fca5a5';
+        }
+      }
+    }, true);
+    setTimeout(() => {
+      const statusEl = document.getElementById('onlineStatus');
+      if (statusEl && !window.__daBrawlAuthReady && document.getElementById('onlineLobby')?.classList.contains('on')) {
+        statusEl.textContent = 'Login system is still loading. Check your connection, then refresh if it stays here.';
+        statusEl.style.color = '#fca5a5';
+      }
+    }, 2500);
+  </script>
+
+  <script type="module">
+    // Load Supabase with a backup CDN. If both fail, show the real startup problem
+    // instead of leaving the sign-in buttons silently dead.
+    let createClient;
+    try {
+      ({ createClient } = await import('https://esm.sh/@supabase/supabase-js@2'));
+    } catch (firstImportError) {
+      try {
+        ({ createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'));
+      } catch (secondImportError) {
+        const statusEl = document.getElementById('onlineStatus');
+        if (statusEl) {
+          statusEl.textContent = 'Login system could not load. Check your connection or try refreshing. Details: ' + (secondImportError?.message || firstImportError?.message || 'Supabase library unavailable');
+          statusEl.style.color = '#fca5a5';
+        }
+        console.error('DaBrawl Supabase startup failed:', firstImportError, secondImportError);
+        throw secondImportError;
+      }
+    }
+    const SUPABASE_URL = 'https://xqbfjpjdweibdbpeefze.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_6fzoQyw9JuuLHuGVbdyIjw_C9RTVQuu';
+    const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    let currentRoom = null, roomChannel = null;
+    const el = id => document.getElementById(id);
+    function status(msg, bad=false){ const n=el('onlineStatus'); n.textContent=msg; n.style.color=bad?'#fca5a5':'#cbd5e1'; }
+    const PROTOTYPE_WS_URL = 'wss://xqbfjpjdweibdbpeefze.supabase.co/functions/v1/dabrawl-match-prototype';
+    let prototypeSocket = null, prototypePingTimer = null, prototypeTicks = 0;
+    function stopPrototypeServer(reason='Disconnected'){
+      if(prototypePingTimer){clearInterval(prototypePingTimer);prototypePingTimer=null;}
+      const old=prototypeSocket;prototypeSocket=null;
+      if(old && old.readyState < WebSocket.CLOSING){old.close(1000,'Client stopped');}
+      const n=el('prototypeServerStatus'); if(n)n.textContent=reason;
+      const b=el('prototypeServerBtn'); if(b)b.textContent='CONNECT TO TEST SERVER';
+    }
+    async function startPrototypeServer(){
+      const btn=el('prototypeServerBtn'), line=el('prototypeServerStatus');
+      if(prototypeSocket && (prototypeSocket.readyState===WebSocket.OPEN || prototypeSocket.readyState===WebSocket.CONNECTING)){
+        stopPrototypeServer('Disconnected by you'); return;
+      }
+      btn.disabled=true; line.textContent='Getting your signed-in session…';
+      try{
+        const {data:{session},error}=await db.auth.getSession();
+        if(error || !session?.access_token) throw new Error('Please sign in again before connecting.');
+        prototypeTicks=0;
+        line.textContent='Connecting to the experimental server…';
+        const ws=new WebSocket(PROTOTYPE_WS_URL+'?room=dabrawl-lobby-check',['jwt-'+session.access_token,'dabrawl-prototype']);
+        prototypeSocket=ws;
+        ws.onopen=()=>{
+          if(prototypeSocket!==ws)return;
+          btn.disabled=false;btn.textContent='DISCONNECT TEST SERVER';
+          line.textContent='Connected · waiting for server ticks…';
+          prototypePingTimer=setInterval(()=>{
+            if(ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({type:'ping',clientSentAt:Date.now()}));
+          },1000);
+        };
+        ws.onmessage=e=>{
+          let m;try{m=JSON.parse(e.data)}catch{return}
+          if(m.type==='server-tick'){
+            prototypeTicks=m.tick;
+            line.textContent='Online · tick '+m.tick+' · server elapsed '+Math.round(m.elapsedMs/1000)+'s'+(line.dataset.ping?' · ping '+line.dataset.ping:'');
+          }else if(m.type==='pong'){
+            const ms=Math.max(0,Date.now()-Number(m.clientSentAt||Date.now()));
+            line.dataset.ping=ms+' ms';
+            line.textContent='Online · tick '+prototypeTicks+' · ping '+ms+' ms';
+          }else if(m.type==='reconnect-required'){
+            line.textContent='Server session limit reached; reconnect to continue testing.';
+          }else if(m.type==='error'){
+            line.textContent='Server error: '+String(m.message||'unknown error');
+          }
+        };
+        ws.onerror=()=>{if(prototypeSocket===ws)line.textContent='Connection error. Try again in a moment.';};
+        ws.onclose=e=>{
+          if(prototypeSocket!==ws)return;
+          if(prototypePingTimer){clearInterval(prototypePingTimer);prototypePingTimer=null;}
+          prototypeSocket=null;btn.disabled=false;btn.textContent='CONNECT TO TEST SERVER';
+          line.textContent='Disconnected (code '+e.code+'). '+(e.code===1012?'The prototype session reached its planned time limit.':'You can reconnect when ready.');
+        };
+      }catch(err){line.textContent=err?.message||'Could not connect to the test server.';btn.disabled=false;}
+    }
+    async function updateAuthUI(){
+      const {data:{user}} = await db.auth.getUser();
+      el('roomControls').style.display = user ? 'flex' : 'none';
+      el('onlineEmail').style.display = user ? 'none' : 'block';
+      el('onlinePassword').style.display = user ? 'none' : 'block';
+      el('onlineSignIn').style.display = user ? 'none' : 'inline-block';
+      el('onlineSignUp').style.display = user ? 'none' : 'inline-block';
+      el('onlineUser').textContent = user ? 'Signed in as: '+(user.user_metadata?.username || (user.email||'').split('@')[0]) : '';
+      if(user) status('Signed in. Create a room or enter a friend’s room code.');
+    }
+    // Bind authentication controls early so later lobby setup errors cannot leave them inert.
+    el('prototypeServerBtn').addEventListener('click', () => { void startPrototypeServer(); });
+    el('onlineSignIn').addEventListener('click', () => { void auth('in'); });
+    el('onlineSignUp').addEventListener('click', () => { void auth('up'); });
+    el('onlinePassword').addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); void auth('in'); } });
+    window.__daBrawlAuthReady = true;
+    let authBusy = false;
+    async function auth(mode){
+      if(authBusy) return;
+      const username=el('onlineEmail').value.trim().toLowerCase(), password=el('onlinePassword').value;
+      if(!/^[a-z0-9_]{3,20}$/.test(username)){status('Username must be 3–20 characters: letters, numbers, or underscores.',true);return;}
+      if(password.length<6){status('Password must have at least 6 characters.',true);return;}
+      // The player enters only a username. Supabase Auth stores it in an email-shaped alias;
+      // the project must have email confirmation disabled for this email-free account flow.
+      const email=username+'@dabrawl.com';
+      authBusy=true;
+      const signIn=el('onlineSignIn'), signUp=el('onlineSignUp');
+      signIn.disabled=true; signUp.disabled=true;
+      status(mode==='up'?'Creating your account…':'Signing in…');
+      try {
+        let result;
+        if(mode==='up'){
+          result=await db.auth.signUp({email,password,options:{data:{username}}});
+        } else {
+          result=await db.auth.signInWithPassword({email,password});
+          // Compatibility with accounts created by the earlier @dabrawl.game alias.
+          if(result.error) result=await db.auth.signInWithPassword({email:username+'@dabrawl.game',password});
+        }
+        if(result.error){
+          const message=String(result.error.message||'');
+          if(/rate limit|email rate limit|too many requests/i.test(message)){
+            status('Supabase has temporarily rate-limited account emails. Stop trying for now and wait for the limit to reset. To prevent this for username-only accounts, the project owner must turn OFF Confirm email in Supabase Dashboard → Authentication → Sign In / Providers (Email). I cannot change that project setting from the game.',true);
+          } else if(/invalid.*email|email.*invalid/i.test(message)){
+            status('The login service rejected the username alias. Please try again later or check the Supabase Auth configuration.',true);
+          } else if(/already registered|already exists|user already/i.test(message)){
+            status('That username already exists. Choose another username or use SIGN IN.',true);
+          } else if(/password/i.test(message) && mode==='up'){
+            status('Password was rejected. Use at least 6 characters.',true);
+          } else {
+            status(message || 'Account request failed. Please try again.',true);
+          }
+          return;
+        }
+        if(mode==='up' && !result.data.session){
+          status('The account was created, but the server is requiring email confirmation. Username-only accounts need Confirm email turned OFF in the Supabase Auth settings.',true);
+          return;
+        }
+        const signedUser=result.data?.user;
+        if(signedUser){const username=String(signedUser.user_metadata?.username||(signedUser.email||'').split('@')[0]||'player').toLowerCase();loadTrophiesForAccount('user_'+username);}
+        await updateAuthUI();
+      } catch(err) {
+        status('Could not reach the login service. Check your connection and try again.',true);
+      } finally {
+        authBusy=false;
+        signIn.disabled=false; signUp.disabled=false;
+      }
+    }
+    async function refreshRoom(){
+      if(!currentRoom)return;
+      const {data:room,error}=await db.from('game_rooms').select('*').eq('id',currentRoom.id).single();
+      if(error){status(error.message,true);return;}
+      currentRoom={...currentRoom,...room};
+      const {data:players,error:pe}=await db.from('game_room_players').select('player_slot,character_id,is_ready,user_id').eq('room_id',room.id).order('player_slot');
+      if(pe){status(pe.message,true);return;}
+      el('activeRoom').textContent='ROOM CODE: '+room.room_code;
+      const {data:{user}}=await db.auth.getUser();
+      const mine=players.find(p=>p.user_id===user?.id);
+      if(user && !mine){
+        if(roomChannel){const oldChannel=roomChannel;roomChannel=null;try{await db.removeChannel(oldChannel);}catch(e){}}
+        currentRoom=null;roomStartRequestedFor=null;$('modeBtn').disabled=false;$('modeBtn').title='Choose game mode';
+        const playButton=el('play');playButton.textContent='PLAY';playButton.classList.remove('ready');playButton.onclick=()=>{beep(500,.1);matchmake();};
+        window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';show('menu');
+        return;
+      }
+      const presence=roomChannel?.presenceState?.()||{};
+      const onlineUsers=Object.values(presence).flat().filter(p=>p&&p.userId);
+      const roomNameFor=id=>onlineUsers.find(p=>p.userId===id)?.name || (id===user?.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Connecting…');
+      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:2},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);const bn=p?.character_id||'kuku';return '<div style="width:150px;min-height:150px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><canvas class="lobby-brawler" data-brawler="'+bn+'" width="100" height="100" style="width:82px;height:82px"></canvas><div style="font-weight:bold">'+(p?String(roomNameFor(p.user_id)).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])):'Empty slot')+'</div><small>'+(p?String(bn).toUpperCase()+' · '+(p.is_ready?'✓ READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>';
+      el('roomPlayers').querySelectorAll('canvas.lobby-brawler').forEach(c=>requestAnimationFrame(()=>rb(c,c.dataset.brawler,1.65,8)));
+      window.DaBrawlGame?.setRoomMenuState(players.map(p=>({slot:p.player_slot,brawler:p.character_id||'kuku',ready:!!p.is_ready,userId:p.user_id,name:roomNameFor(p.user_id)})),user?.id,room.room_code,room.host_id===user?.id);
+      el('readyRoomBtn').style.display=user && mine ? 'inline-block':'none';
+      el('readyRoomBtn').textContent=mine?.is_ready?'NOT READY':'READY';
+      const roomExit=el('leaveRoomLobbyBtn');
+      roomExit.style.display=user && mine ? 'inline-block':'none';
+      roomExit.textContent=room.host_id===user?.id?'DISBAND ROOM':'LEAVE ROOM';
+      roomExit.title=room.host_id===user?.id?'Close this waiting room for everyone':'Leave this waiting room';
+      const roomMode=room.game_mode||'knockout';
+      gameMode=roomMode;
+      $('modeTxt').textContent=roomMode==='knockout'?'KNOCKOUT 3v3':roomMode==='showdown'?'SOLO SHOWDOWN':'1v1 DUEL';
+      $('modeBtn').disabled=!!user && room.host_id!==user.id;
+      $('modeBtn').title=room.host_id===user?.id?'Choose the party game mode':'Only the party leader chooses the game mode';
+      el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.every(p=>p.is_ready) ? 'inline-block':'none';
+      status('Lobby connected · '+players.length+'/2 players · '+roomMode.toUpperCase()+'. Both players ready to start.');
+      if(user && room.host_id===user.id && players.length===2 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
+        roomStartRequestedFor=room.id;
+        void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
+        setTimeout(()=>{if(!activeMatchId&&roomStartRequestedFor===room.id)roomStartRequestedFor=null;},5000);
+      }
+    }
+    async function createRoom(){
+      const btn=el('createRoomBtn');
+      const {data:{user},error:authError}=await db.auth.getUser();
+      if(authError){status('Could not check your login: '+authError.message,true);return;}
+      if(!user){status('Sign in first.',true);return;}
+      if(currentRoom){status('You are already in a room. Leave or refresh the lobby before creating another.',true);return;}
+      if(btn)btn.disabled=true;
+      status('Creating room…');
+      try {
+        for(let i=0;i<5;i++){
+          const code=Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b%32]).join('');
+          const {data:room,error}=await db.from('game_rooms').insert({room_code:code,host_id:user.id}).select('*').single();
+          if(error){if(error.code==='23505')continue;status('Room creation failed: '+error.message+' ('+(error.code||'database error')+').',true);return;}
+          const {error:joinError}=await db.from('game_room_players').insert({room_id:room.id,user_id:user.id,player_slot:1,character_id:localStorage.getItem('dabrawl_b')||'kuku',is_ready:false});
+          if(joinError){status('Room was created, but adding you failed: '+joinError.message+' ('+(joinError.code||'database error')+'). Check game_room_players insert permissions in Supabase.',true);return;}
+          currentRoom=room; subscribeRoom(); await refreshRoom(); show('menu'); return;
+        }
+        status('Could not create a unique room code after 5 tries. Try again.',true);
+      } catch(err) {
+        status('Room creation crashed: '+(err?.message||String(err)),true);
+      } finally {
+        if(btn)btn.disabled=false;
+      }
+    }
+    async function joinRoom(){
+      const code=el('roomCodeInput').value.trim().toUpperCase();
+      if(!code){status('Enter a room code.',true);return;}
+      status('Joining room…');
+      const {data:roomId,error}=await db.rpc('join_dabrawl_room',{p_room_code:code,p_character_id:(localStorage.getItem('dabrawl_b')||'kuku')});
+      if(error){status(error.message,true);return;}
+      const {data:room,error:re}=await db.from('game_rooms').select('*').eq('id',roomId).single();
+      if(re){status(re.message,true);return;}
+      currentRoom=room;subscribeRoom();await refreshRoom();show('menu');
+    }
+    function subscribeRoom(){
+      if(roomChannel)db.removeChannel(roomChannel);
+      roomChannel=db.channel('dabrawl-lobby-'+currentRoom.id,{config:{broadcast:{self:false},presence:{key:crypto.randomUUID?crypto.randomUUID():String(Date.now())}}})
+        .on('postgres_changes',{event:'*',schema:'public',table:'game_room_players',filter:'room_id=eq.'+currentRoom.id},()=>{void refreshRoom();})
+        .on('postgres_changes',{event:'*',schema:'public',table:'game_rooms',filter:'id=eq.'+currentRoom.id},()=>{void refreshRoom();})
+        .on('presence',{event:'sync'},()=>{void refreshRoom();})
+        .on('broadcast',{event:'room-refresh'},()=>{void refreshRoom();})
+        .on('broadcast',{event:'party-kicked'},async({payload})=>{
+          const {data:{user}}=await db.auth.getUser();
+          if(!user||payload?.userId!==user.id)return;
+          const old=roomChannel;roomChannel=null;currentRoom=null;roomStartRequestedFor=null;$('modeBtn').disabled=false;$('modeBtn').title='Choose game mode';
+          if(old)try{await db.removeChannel(old);}catch(e){}
+          const b=el('play');b.textContent='PLAY';b.classList.remove('ready');b.onclick=()=>{beep(500,.1);matchmake();};
+          window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';show('menu');status('You were removed from the party.');
+        })
+        .on('broadcast',{event:'room-match-start'},async({payload})=>{
+          if(!payload || !Array.isArray(payload.roster) || activeMatchId) return;
+          const {data:{user}}=await db.auth.getUser();
+          if(user && payload.roster.some(p=>p.id===user.id)) void startOnlineMatch(payload.roster,payload.matchId,payload.mode,user.id,payload.hostId||payload.roster.find(p=>!p.bot)?.id,payload.startAt);
+        })
+        .subscribe(async statusValue=>{
+          if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'){status('Room live connection failed. Check Supabase Realtime settings.',true);return;}
+          if(statusValue==='SUBSCRIBED'){
+            const {data:{user}}=await db.auth.getUser();
+            if(user && roomChannel) await roomChannel.track({userId:user.id,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler:localStorage.getItem('dabrawl_b')||'kuku'});
+            await refreshRoom();
+          }
+        });
+    }
+    let roomCountdownTimer=null, roomStartRequestedFor=null;
+    async function startRoomGame(){
+      if(!currentRoom || !roomChannel){status('Create or join a room first.',true);return;}
+      const {data:{user},error:authError}=await db.auth.getUser();
+      if(authError){status('Could not check your login: '+authError.message,true);return;}
+      if(!user){status('Sign in first.',true);return;}
+      if(currentRoom.host_id!==user.id){status('Only the room host can start the match.',true);return;}
+      const {data:players,error}=await db.from('game_room_players').select('player_slot,character_id,user_id,is_ready').eq('room_id',currentRoom.id).order('player_slot');
+      if(error){status('Could not load room players: '+error.message,true);return;}
+      if(players.length!==2){status('A room match needs exactly two players right now.',true);return;}
+      if(!players.every(p=>p.is_ready)){status('Both players must press READY before the match can start.',true);return;}
+      const {data:room,error:roomError}=await db.from('game_rooms').select('game_mode').eq('id',currentRoom.id).single();
+      if(roomError){status('Could not read the leader’s game mode: '+roomError.message,true);return;}
+      const mode=room?.game_mode||'knockout';
+      const presence=roomChannel?.presenceState?.()||{};
+      const live=Object.values(presence).flat().filter(p=>p&&p.userId);
+      const roster=players.map((p,i)=>({id:p.user_id,name:live.find(x=>x.userId===p.user_id)?.name||(p.user_id===user.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Player '+p.player_slot),brawler:p.character_id||'kuku',bot:false,team:mode==='knockout'?0:i}));
+      const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax'];
+      const botBrawlers=['kuku','shachi','saiyan'];
+      const target=mode==='knockout'?6:mode==='showdown'?10:2;
+      let seed=0; for(const ch of String(currentRoom.id)) seed=(seed*31+ch.charCodeAt(0))>>>0;
+      const seeded=()=>{seed=(seed*1664525+1013904223)>>>0;return seed;};
+      while(roster.length<target){
+        const i=roster.length, botIndex=i-players.length;
+        const team=mode==='knockout'?(i<3?0:1):i;
+        roster.push({id:'bot-'+currentRoom.id+'-'+i,name:botNames[botIndex%botNames.length]+' BOT',brawler:botBrawlers[seeded()%botBrawlers.length],bot:true,team});
+      }
+      const matchId='room-'+currentRoom.id+'-'+Date.now().toString(36);
+      const startAt=Date.now()+2500;
+      const payload={matchId,mode,roster,hostId:user.id,startAt};
+      status('Starting '+mode.toUpperCase()+'…');
+      try {
+        const sent=await roomChannel.send({type:'broadcast',event:'room-match-start',payload});
+        if(sent?.status && sent.status!=='ok'){roomStartRequestedFor=null;status('Could not notify your friend: '+(sent.status||'Realtime send failed')+'. Check Supabase Realtime settings.',true);return;}
+        await startOnlineMatch(roster,matchId,mode,user.id,user.id,startAt);
+      } catch(err){roomStartRequestedFor=null;status('Could not start room match: '+(err?.message||String(err)),true);}
+    }
+
+    // Public quick-play queue: Presence tracks who is waiting; Broadcast carries game state/actions.
+    const clientId = (crypto.randomUUID ? crypto.randomUUID() : 'p'+Math.random().toString(36).slice(2)+Date.now());
+    let activePlayerId=clientId;
+    let queueChannel=null, matchChannel=null, queueTimer=null, stateTimer=null, queueStartedAt=0, queueMode='knockout', queueDone=false, localDisplayName='Brawler', activeMatchId=null, activeMatchRoster=null, activeMatchHostId=null, activeMatchLocalId=null;
+    const seenAt = new Map();
+    const randomBrawler = () => ['kuku','shachi','saiyan'][Math.floor(Math.random()*3)];
+    function queueTarget(mode=queueMode){ return mode==='duel' ? 2 : mode==='showdown' ? 10 : 6; }
+    function queuePlayers(){
+      const state=queueChannel ? queueChannel.presenceState() : {};
+      const all=Object.values(state).flat().filter(p=>p && p.clientId);
+      const unique=new Map(); for(const p of all) if(!unique.has(p.clientId)) unique.set(p.clientId,p);
+      return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,queueTarget());
+    }
+    async function beginMatchmaking(mode){
+      // A completed private-room duel can queue again just like any other online match.
+      cancelMatchmaking(false); queueMode=mode||'knockout'; queueDone=false; queueStartedAt=Date.now();
+      show('mm'); $('mmTxt').textContent='CONNECTING TO PLAYERS…'; $('mmHint').textContent='Connecting to DaBrawl online matchmaking…';
+      try {
+        const {data:{user}}=await db.auth.getUser();
+        localDisplayName=(user && (user.user_metadata?.username || (user.email||'').split('@')[0])) || ('Brawler-'+clientId.slice(0,4));
+      } catch(e){ localDisplayName='Brawler-'+clientId.slice(0,4); }
+      queueChannel=db.channel('dabrawl-quickplay-'+queueMode,{config:{presence:{key:clientId},broadcast:{self:false}}});
+      queueChannel.on('broadcast',{event:'match-start'},({payload})=>{
+        if(activeMatchId || !payload || !Array.isArray(payload.roster) || !payload.roster.some(p=>p.id===clientId)) return;
+        queueDone=true; clearInterval(queueTimer); queueTimer=null;
+        void startOnlineMatch(payload.roster,payload.matchId,payload.mode,clientId,payload.hostId||payload.roster.find(p=>!p.bot)?.id);
+      });
+      queueChannel.subscribe(async statusValue=>{
+        if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){ $('mmTxt').textContent='CONNECTION ERROR'; $('mmHint').textContent='Online matchmaking could not connect. Check Supabase Realtime settings, then try again.'; status('Online matchmaking connection failed: '+statusValue,true); return; }
+        if(statusValue!=='SUBSCRIBED') return;
+        try {
+          await queueChannel.track({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
+          $('mmHint').textContent='Waiting up to 10 seconds for real players. Bots fill every remaining slot.';
+          const target=queueTarget();
+          const deadline=Date.now()+10000;
+          let finalized=false;
+          const finalize=async()=>{
+            if(finalized || queueDone) return;
+            const humansNow=queuePlayers();
+            // Start immediately once every slot for this mode is occupied.
+            if(humansNow.length<target && Date.now()<deadline) return;
+            finalized=true; queueDone=true; clearInterval(queueTimer); queueTimer=null;
+            let humans=humansNow;
+            if(!humans.some(p=>p.clientId===clientId)) humans.push({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
+            humans=humans.sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,target);
+            if(humans[0]?.clientId!==clientId){ $('mmTxt').textContent='WAITING FOR MATCH HOST…'; $('mmHint').textContent='The first player in the queue is starting the match…'; queueDone=false; return; }
+            const matchId='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+            const roster=humans.map((p,i)=>({id:p.clientId,name:String(p.name||('Player '+(i+1))).slice(0,20),brawler:p.brawler||'kuku',bot:false}));
+            const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax','Vex','Zane'];
+            while(roster.length<target){const i=roster.length;roster.push({id:null,name:botNames[Math.floor(Math.random()*botNames.length)]+' BOT',brawler:randomBrawler(),bot:true});}
+            if(queueMode==='duel') roster.forEach((p,i)=>p.team=i);
+            if(queueMode==='showdown') roster.forEach((p,i)=>p.team=i);
+            if(queueMode==='knockout'){const teams=[0,0,0,1,1,1];for(let i=teams.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[teams[i],teams[j]]=[teams[j],teams[i]];}roster.forEach((p,i)=>p.team=teams[i]);}
+            const payload={matchId,mode:queueMode,roster,hostId:clientId};
+            $('mmTxt').textContent='MATCH FOUND!'; $('mmHint').textContent='Starting with '+humans.length+' real player(s) and '+(target-humans.length)+' bots…';
+            try {
+              const sent=await queueChannel.send({type:'broadcast',event:'match-start',payload});
+              if(sent?.status && sent.status!=='ok'){ $('mmHint').textContent='Realtime could not notify the other players. Check Supabase settings.'; queueDone=false; finalized=false; return; }
+              await startOnlineMatch(roster,matchId,queueMode);
+            } catch(err){ $('mmHint').textContent='Could not notify the other players: '+(err.message||err); queueDone=false; finalized=false; }
+          };
+          const update=()=>{
+            const count=queuePlayers().length;
+            const remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));
+            $('mmTxt').textContent='PLAYERS JOINED: '+Math.min(target,count)+'/'+target+' · '+(count>=target?'STARTING NOW':remaining+'s');
+            if(count>=target || Date.now()>=deadline) void finalize();
+          };
+          update(); queueTimer=setInterval(update,250);
+        } catch(err){ status('Could not join matchmaking: '+(err.message||err),true); $('mmTxt').textContent='MATCHMAKING ERROR'; }
+      });
+    }
+    async function startOnlineMatch(roster,matchId,mode,localId=clientId,hostId=localId,startAt=Date.now()+2500){
+      if(activeMatchId || !roster.some(p=>p.id===localId)) return;
+      activeMatchId=matchId; activePlayerId=localId;
+      clearInterval(queueTimer); queueTimer=null;
+      if(queueChannel){const old=queueChannel;await new Promise(resolve=>setTimeout(resolve,1200)); if(queueChannel===old) queueChannel=null; await db.removeChannel(old);}
+      seenAt.clear();
+      $('mmTxt').textContent='GET READY!'; $('mmHint').textContent='Match found. Syncing players…';
+      $('ldFill').style.width='100%'; $('ldPct').textContent='100%'; show('loading');
+      activeMatchRoster=roster.map(p=>({...p})); activeMatchHostId=hostId; activeMatchLocalId=localId;
+      matchChannel=db.channel('dabrawl-match-'+matchId,{config:{broadcast:{self:false}}});
+      matchChannel.on('broadcast',{event:'match-state'},({payload})=>{if(Array.isArray(payload?.players)) for(const player of payload.players){window.DaBrawlGame?.applyRemoteState(player);seenAt.set(player.id,Date.now());}});
+      matchChannel.on('broadcast',{event:'player-state'},({payload})=>{if(payload?.player) {window.DaBrawlGame?.applyRemoteState(payload.player);seenAt.set(payload.player.id,Date.now());}});
+      matchChannel.on('broadcast',{event:'player-action'},({payload})=>window.DaBrawlGame?.applyRemoteAction(payload));
+      matchChannel.on('broadcast',{event:'match-ended'},({payload})=>{ if(!payload || activeMatchId!==matchId) return; window.DaBrawlGame?.applyMatchResult?.(payload); });
+      matchChannel.on('broadcast',{event:'match-control'},async({payload})=>{
+        if(!payload || activeMatchId!==matchId || payload.hostId!==activeMatchHostId) return;
+        if(payload.action==='leave'){
+          // Reset only this signed-in player's ready flag so the same party can queue again.
+          if(currentRoom && activeMatchLocalId){
+            try{ await db.from('game_room_players').update({is_ready:false}).eq('room_id',currentRoom.id).eq('user_id',activeMatchLocalId); }catch(e){}
+          }
+          roomStartRequestedFor=null;
+          await leaveMatch(); show('menu'); isTestMode=false;
+          if(currentRoom) void refreshRoom();
+          return;
+        }
+        if(payload.action==='rematch' && payload.matchId && Array.isArray(payload.roster)){
+          const next={...payload}; await leaveMatch();
+          await startOnlineMatch(next.roster,next.matchId,next.mode,activeMatchLocalId,next.hostId,next.startAt);
+        }
+      });
+      matchChannel.subscribe(statusValue=>{
+        if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){ $('mmTxt').textContent='CONNECTION LOST'; $('mmHint').textContent='Could not connect to the match. Check Supabase Realtime settings and try again.'; return; }
+        if(statusValue!=='SUBSCRIBED') return;
+        setTimeout(()=>{
+          if(!matchChannel || activeMatchId!==matchId) return;
+          window.DaBrawlGame?.startNetworkGame(roster,matchId,mode,localId,hostId,startAt);
+          clearInterval(stateTimer);
+          stateTimer=setInterval(()=>{
+            if(!matchChannel || activeMatchId!==matchId) return;
+            const players=window.DaBrawlGame?.getNetworkStates?.() || [window.DaBrawlGame?.getLocalState()].filter(Boolean);
+            if(players.length) void matchChannel.send({type:'broadcast',event:'match-state',payload:{sentAt:Date.now(),players}});
+            // Do not replace a temporarily silent player with a bot: browsers throttle background tabs.
+            // The player's next state packet will resynchronize them when their tab becomes active again.
+          },50);
+        },650);
+      });
+    }
+    async function announceMatchEnd(win){ if(!matchChannel || !activeMatchId || !isNetworkHost) return; const local=window.DaBrawlGame?.getLocalState?.(); await matchChannel.send({type:'broadcast',event:'match-ended',payload:{win:!!win,hostTeam:local?.t,hostId:activeMatchHostId,matchId:activeMatchId}}); }
+    async function requestRematch(){
+      if(!isNetworkHost || !matchChannel || !activeMatchRoster) return;
+      const nextId='rematch-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6), startAt=Date.now()+3000;
+      const payload={action:'rematch',matchId:nextId,mode:lastQueueMode,roster:activeMatchRoster,hostId:activeMatchHostId,startAt};
+      const ch=matchChannel; await ch.send({type:'broadcast',event:'match-control',payload});
+      await leaveMatch(); await startOnlineMatch(payload.roster,payload.matchId,payload.mode,activeMatchLocalId,payload.hostId,payload.startAt);
+    }
+    async function hostLeaveMatch(){
+      if(!isNetworkHost || !matchChannel) return;
+      const ch=matchChannel;
+      await ch.send({type:'broadcast',event:'match-control',payload:{action:'leave',hostId:activeMatchHostId}});
+      // Clear the host's own ready flag as well; both friends can ready up again
+      // without leaving/recreating the room.
+      if(currentRoom && activeMatchLocalId){
+        try{ await db.from('game_room_players').update({is_ready:false}).eq('room_id',currentRoom.id).eq('user_id',activeMatchLocalId); }catch(e){}
+      }
+      roomStartRequestedFor=null;
+      await leaveMatch(); show('menu'); isTestMode=false;
+      if(currentRoom) void refreshRoom();
+    }
+    function sendMatchAction(action,angle,extra={}){
+      if(!matchChannel || !activeMatchId) return;
+      void matchChannel.send({type:'broadcast',event:'player-action',payload:{playerId:activePlayerId,action,angle,...extra}});
+    }
+    document.addEventListener('visibilitychange',()=>{
+      if(document.hidden) return;
+      if(matchChannel && activeMatchId){
+        const player=window.DaBrawlGame?.getLocalState();
+        if(player) void matchChannel.send({type:'broadcast',event:'player-state',payload:{player}});
+      }
+      if(roomChannel && currentRoom) void refreshRoom();
+    });
+    window.addEventListener('pageshow',()=>{
+      if(matchChannel && activeMatchId){
+        const player=window.DaBrawlGame?.getLocalState();
+        if(player) void matchChannel.send({type:'broadcast',event:'player-state',payload:{player}});
+      }
+    });
+    function cancelMatchmaking(returnMenu=true){
+      queueDone=true; clearInterval(queueTimer); queueTimer=null;
+      if(queueChannel){const old=queueChannel;queueChannel=null;void db.removeChannel(old);}
+      if(returnMenu && document.getElementById('mm')?.classList.contains('on')) show('menu');
+    }
+    async function leaveMatch(){
+      clearInterval(stateTimer); stateTimer=null; clearInterval(queueTimer); queueTimer=null;
+      roomStartRequestedFor=null;
+      activeMatchId=null; activePlayerId=clientId; seenAt.clear();
+      if(matchChannel){const old=matchChannel;matchChannel=null;await db.removeChannel(old);}
+      if(window.DaBrawlGame) window.DaBrawlGame.endNetworkGame();
+    }
+    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,toggleReady:null,openRoom:null};
+
+    let friendsPresenceChannel=null, friendsPresenceTimer=null;
+    const friendsEscape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    function friendsMsg(msg,bad=false){const n=el('friendsStatus');if(n){n.textContent=msg;n.style.color=bad?'#fca5a5':'#cbd5e1';}}
+    async function stopFriendsPresence(){
+      if(friendsPresenceTimer){clearInterval(friendsPresenceTimer);friendsPresenceTimer=null;}
+      if(friendsPresenceChannel){const old=friendsPresenceChannel;friendsPresenceChannel=null;try{await db.removeChannel(old);}catch(_){}}
+    }
+    async function startFriendsPresence(user){
+      await stopFriendsPresence();
+      friendsPresenceChannel=db.channel('dabrawl-friends-presence',{config:{presence:{key:user.id}}});
+      friendsPresenceChannel.subscribe(async state=>{
+        if(state!=='SUBSCRIBED')return;
+        const name=String(user.user_metadata?.username||(user.email||'').split('@')[0]||'Player');
+        await friendsPresenceChannel.track({userId:user.id,name,onlineAt:Date.now()});
+      });
+      friendsPresenceTimer=setInterval(()=>{if(friendsPresenceChannel?.state==='joined')void friendsPresenceChannel.track({userId:user.id,name:String(user.user_metadata?.username||(user.email||'').split('@')[0]||'Player'),onlineAt:Date.now()});},30000);
+    }
+    function currentOnlineIds(){
+      if(!friendsPresenceChannel)return new Set();
+      return new Set(Object.values(friendsPresenceChannel.presenceState()).flat().filter(p=>p?.userId).map(p=>p.userId));
+    }
+    async function loadFriendsScreen(){
+      show('friendsScreen');
+      const {data:{user},error}=await db.auth.getUser();
+      if(error||!user){el('friendRequests').textContent='Sign in on the Friends & Room Codes screen first.';el('friendList').textContent='You need an account to add friends.';friendsMsg('Sign in to use friends.',true);return;}
+      friendsMsg('Loading friend list…');
+      try{
+        await startFriendsPresence(user);
+        const {data:rows,error:queryError}=await db.from('dabrawl_friend_requests').select('id,requester_id,addressee_id,status,created_at').or('requester_id.eq.'+user.id+',addressee_id.eq.'+user.id).order('created_at',{ascending:false});
+        if(queryError)throw queryError;
+        const incoming=rows.filter(r=>r.addressee_id===user.id&&r.status==='pending');
+        const outgoing=rows.filter(r=>r.requester_id===user.id&&r.status==='pending');
+        const accepted=rows.filter(r=>r.status==='accepted');
+        const otherIds=[...new Set([...incoming.map(r=>r.requester_id),...outgoing.map(r=>r.addressee_id),...accepted.map(r=>r.requester_id===user.id?r.addressee_id:r.requester_id)])];
+        let profiles=[];
+        if(otherIds.length){const {data,error:profileError}=await db.from('dabrawl_player_profiles').select('user_id,username').in('user_id',otherIds);if(profileError)throw profileError;profiles=profileError?[]:(data||[]);}
+        const profileById=new Map(profiles.map(p=>[p.user_id,p.username]));
+        el('friendRequests').innerHTML=(incoming.length||outgoing.length)?[
+          ...incoming.map(r=>'<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #334155"><span><b>'+friendsEscape(profileById.get(r.requester_id)||'Player')+'</b> · wants to be friends</span><span><button class="btn y" data-friend-accept="'+r.id+'" style="font-size:14px">ACCEPT</button> <button class="btn" data-friend-decline="'+r.id+'" style="font-size:14px">DECLINE</button></span></div>'),
+          ...outgoing.map(r=>'<div style="padding:8px 0;color:#cbd5e1">'+friendsEscape(profileById.get(r.addressee_id)||'Player')+' · request sent</div>')
+        ].join(''):'<span style="color:#94a3b8">No pending requests.</span>';
+        el('friendList').innerHTML=accepted.length?accepted.map(r=>{const id=r.requester_id===user.id?r.addressee_id:r.requester_id;const online=currentOnlineIds().has(id);return '<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #334155"><span style="width:10px;height:10px;border-radius:50%;background:'+(online?'#22c55e':'#64748b')+';display:inline-block"></span><b style="flex:1">'+friendsEscape(profileById.get(id)||'Player')+'</b><span style="color:'+(online?'#86efac':'#94a3b8')+'">'+(online?'ONLINE':'OFFLINE')+'</span></div>';}).join(''):'<span style="color:#94a3b8">No friends yet. Add someone by username above.</span>';
+        el('friendRequests').querySelectorAll('[data-friend-accept]').forEach(b=>b.onclick=()=>void respondFriendRequest(b.dataset.friendAccept,'accepted'));
+        el('friendRequests').querySelectorAll('[data-friend-decline]').forEach(b=>b.onclick=()=>void respondFriendRequest(b.dataset.friendDecline,'declined'));
+        friendsMsg('Friend list updated.');
+      }catch(err){friendsMsg('Could not load friends: '+(err?.message||String(err))+'. If this is the first setup, apply the friends migration in Supabase.',true);}
+    }
+    async function sendFriendRequest(){
+      const {data:{user}}=await db.auth.getUser();
+      if(!user){friendsMsg('Sign in first to send friend requests.',true);return;}
+      const username=el('friendUsername').value.trim().toLowerCase();
+      if(!/^[a-z0-9_]{3,20}$/.test(username)){friendsMsg('Enter a username with 3–20 letters, numbers or underscores.',true);return;}
+      try{
+        const {data:profile,error}=await db.from('dabrawl_player_profiles').select('user_id,username').eq('username',username).maybeSingle();
+        if(error)throw error;
+        if(!profile){friendsMsg('Username not found. Check the spelling.',true);return;}
+        if(profile.user_id===user.id){friendsMsg('You cannot add yourself.',true);return;}
+        const {data:existing,error:existingError}=await db.from('dabrawl_friend_requests').select('id,requester_id,addressee_id,status').or('and(requester_id.eq.'+user.id+',addressee_id.eq.'+profile.user_id+'),and(requester_id.eq.'+profile.user_id+',addressee_id.eq.'+user.id+')');
+        if(existingError)throw existingError;
+        if(existing?.some(r=>r.status==='accepted')){friendsMsg('You are already friends with '+profile.username+'.');return;}
+        const pendingIncoming=existing?.find(r=>r.status==='pending'&&r.addressee_id===user.id);
+        if(pendingIncoming){friendsMsg('They already sent you a request — accept it below.');await loadFriendsScreen();return;}
+        if(existing?.some(r=>r.status==='pending')){friendsMsg('A request is already pending.');return;}
+        const {error:insertError}=await db.from('dabrawl_friend_requests').insert({requester_id:user.id,addressee_id:profile.user_id,status:'pending'});
+        if(insertError)throw insertError;
+        el('friendUsername').value='';friendsMsg('Friend request sent to '+profile.username+'.');await loadFriendsScreen();
+      }catch(err){friendsMsg('Could not send request: '+(err?.message||String(err))+'. Check that the friends migration is applied.',true);}
+    }
+    async function respondFriendRequest(id,statusValue){
+      try{
+        const {data:{user}}=await db.auth.getUser();if(!user)throw new Error('Sign in again.');
+        const {error}=await db.from('dabrawl_friend_requests').update({status:statusValue}).eq('id',id).eq('addressee_id',user.id).eq('status','pending');
+        if(error)throw error;
+        friendsMsg(statusValue==='accepted'?'Friend request accepted.':'Friend request declined.');
+        await loadFriendsScreen();
+      }catch(err){friendsMsg('Could not update request: '+(err?.message||String(err)),true);}
+    }
+    const openFriends = async () => { show('onlineLobby'); await updateAuthUI(); };
+
+    el('prevBtn').addEventListener('click', e=>{if(!currentRoom){e.preventDefault();void openFriends();}});
+    el('nextBtn').addEventListener('click', e=>{if(!currentRoom){e.preventDefault();void loadFriendsScreen();}});
+    el('onlineBack').addEventListener('click',()=>show('menu'));
+    el('friendsBack').addEventListener('click',()=>{void stopFriendsPresence();show('menu');});
+    el('friendsRefresh').addEventListener('click',()=>void loadFriendsScreen());
+    el('sendFriendRequest').addEventListener('click',()=>void sendFriendRequest());
+    el('friendUsername').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void sendFriendRequest();}});
+    db.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>{if(session?.user)void startFriendsPresence(session.user);else void stopFriendsPresence();},0);});
+    db.auth.getSession().then(({data})=>{if(data?.session?.user)void startFriendsPresence(data.session.user);}).catch(()=>{});
+    el('createRoomBtn').addEventListener('click',createRoom);
+    el('joinRoomBtn').addEventListener('click',joinRoom);
+    el('startRoomBtn').addEventListener('click',startRoomGame);
+    function resetLocalRoomState(message){
+      const old=roomChannel;roomChannel=null;currentRoom=null;roomStartRequestedFor=null;
+      $('modeBtn').disabled=false;$('modeBtn').title='Choose game mode';
+      const b=el('play');b.textContent='PLAY';b.classList.remove('ready');b.onclick=()=>{beep(500,.1);matchmake();};
+      window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';
+      el('leaveRoomLobbyBtn').style.display='none';el('readyRoomBtn').style.display='none';el('startRoomBtn').style.display='none';
+      if(old)void db.removeChannel(old);
+      show('menu');status(message);
+    }
+    async function leaveParty(){
+      if(!currentRoom)return;
+      const room=currentRoom;
+      const {data:{user},error:authError}=await db.auth.getUser();
+      if(authError||!user){status('Sign in again before leaving the room.',true);return;}
+      const isHost=room.host_id===user.id;
+      if(isHost){
+        if(!confirm('Disband this room? The other player will be returned to the menu.'))return;
+        const {error}=await db.rpc('disband_dabrawl_room',{p_room_id:room.id});
+        if(error){status('Could not disband room: '+error.message,true);return;}
+        await roomChannel?.send({type:'broadcast',event:'room-disbanded',payload:{roomId:room.id}});
+        resetLocalRoomState('Room disbanded. Everyone has been returned to the menu.');
+        return;
+      }
+      const {error}=await db.rpc('leave_dabrawl_room',{p_room_id:room.id});
+      if(error){status('Could not leave party: '+error.message,true);return;}
+      await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
+      resetLocalRoomState('You left the room.');
+    }
+    let readyBusy=false;
+    async function toggleRoomReady(){
+      if(readyBusy)return;readyBusy=true;
+      try{
+        if(!currentRoom){status('Join a room first.',true);return;}
+        const {data:{user},error:authError}=await db.auth.getUser();
+        if(authError||!user){status('Sign in again to change READY.',true);return;}
+        const {data:mine,error:meErr}=await db.from('game_room_players').select('is_ready').eq('room_id',currentRoom.id).eq('user_id',user.id).maybeSingle();
+        if(meErr||!mine){status('Your party slot was not found. Reopen the room and try again.',true);return;}
+        const {error}=await db.from('game_room_players').update({is_ready:!mine.is_ready}).eq('room_id',currentRoom.id).eq('user_id',user.id);
+        if(error){status('READY failed: '+error.message,true);return;}
+        status(!mine.is_ready?'READY saved. Waiting for party…':'You are not ready.');
+        await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
+        await refreshRoom();
+      }catch(err){status('READY failed: '+(err?.message||String(err)),true);}
+      finally{readyBusy=false;}
+    }
+    async function updateRoomBrawler(brawler){
+      if(!currentRoom||!['kuku','shachi','saiyan'].includes(brawler))return;
+      const {data:{user}}=await db.auth.getUser();if(!user)return;
+      const {error}=await db.from('game_room_players').update({character_id:brawler,is_ready:false}).eq('room_id',currentRoom.id).eq('user_id',user.id);
+      if(error){status('Brawler selection sync failed: '+error.message,true);return;}
+      await roomChannel?.track({userId:user.id,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler});
+      await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
+      await refreshRoom();
+    }
+    async function changeRoomMode(){
+      if(!currentRoom)return;
+      const {data:{user}}=await db.auth.getUser();
+      if(!user||currentRoom.host_id!==user.id){status('Only the party leader can choose the game mode.',true);return;}
+      const modes=['knockout','showdown','duel'];
+      const current=currentRoom.game_mode||'knockout';
+      const next=modes[(modes.indexOf(current)+1)%modes.length];
+      const {error}=await db.from('game_rooms').update({game_mode:next}).eq('id',currentRoom.id).eq('host_id',user.id);
+      if(error){status('Could not change party mode: '+error.message,true);return;}
+      currentRoom.game_mode=next;gameMode=next;
+      $('modeTxt').textContent=next==='knockout'?'KNOCKOUT 3v3':next==='showdown'?'SOLO SHOWDOWN':'1v1 DUEL';
+      status('Party leader selected '+next.toUpperCase()+'.');
+      await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
+      await refreshRoom();
+    }
+    window.DaBrawlNet.toggleReady=toggleRoomReady;
+    window.DaBrawlNet.changeRoomMode=changeRoomMode;
+    window.DaBrawlNet.updateBrawler=updateRoomBrawler;
+    window.DaBrawlNet.removePartyMember=async targetId=>{
+      if(!currentRoom)return;
+      const {data:{user}}=await db.auth.getUser();
+      if(!user||currentRoom.host_id!==user.id){status('Only the party leader can kick players.',true);return;}
+      const {error}=await db.rpc('kick_dabrawl_room_player',{p_room_id:currentRoom.id,p_target_user_id:targetId});
+      if(error){status('Could not remove player: '+error.message,true);return;}
+      await roomChannel?.send({type:'broadcast',event:'party-kicked',payload:{userId:targetId}});
+      await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
+      await refreshRoom();
+    };
+    window.DaBrawlNet.openRoom=()=>show('onlineLobby');
+    el('roomMenuStart').addEventListener('click',startRoomGame);
+    el('roomLeaveBtn').addEventListener('click',leaveParty);
+    el('roomMenuCode').addEventListener('click',()=>show('onlineLobby'));
+    el('readyRoomBtn').addEventListener('click',toggleRoomReady);
+    el('refreshRoomBtn').addEventListener('click',refreshRoom);
+    el('leaveRoomLobbyBtn').addEventListener('click',()=>void leaveParty());
+    el('onlineSignOut').addEventListener('click',async()=>{stopPrototypeServer('Disconnected because you signed out');if(roomChannel)await db.removeChannel(roomChannel);roomChannel=null;currentRoom=null;await db.auth.signOut();await updateAuthUI();status('Signed out.');});
+    db.auth.onAuthStateChange(()=>{setTimeout(updateAuthUI,0);});
+  </script>
+
+</body>
+</html>
