@@ -7,7 +7,8 @@ import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseCli
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
-const TICK_MS = 50;
+// Run authoritative simulation at ~60 Hz for smoother movement and combat.
+const TICK_MS = 1000 / 60;
 const INPUT_TIMEOUT_MS = 250;
 const ROOM_TTL_MS = 120_000;
 const DISCONNECT_GRACE_MS = 10_000;
