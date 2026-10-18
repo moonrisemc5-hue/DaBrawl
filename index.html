@@ -583,7 +583,7 @@
       show('onlineLobby');
     };
     $('settingsBack').onclick = () => { waitingForBind=null; show('menu'); };
-    $('settingsAccount').onclick = () => { waitingForBind=null; show('onlineLobby'); updateAuthUI(); };
+    // The legacy settingsAccount button was replaced by inline sign-in/sign-out controls.
     $('resetKeybinds').onclick = () => { keyBinds={...DEFAULT_BINDS};waitingForBind=null;$('keybindHint').textContent='Default controls restored.';saveKeyBinds(); };
     $('bk1').onclick = () => show('menu');
     function applyGameMode(mode){
