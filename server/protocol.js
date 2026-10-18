@@ -28,3 +28,5 @@ export function assignTeams(playerCount, mode) {
   const split = Math.ceil(count / 2);
   return Array.from({ length: count }, (_, index) => index < split ? 0 : 1);
 }
+
+export const canConfigureRoom = (actorId, ownerId, phase) => phase === "waiting" && Boolean(actorId) && actorId === ownerId;
