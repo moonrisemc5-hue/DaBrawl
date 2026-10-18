@@ -1,6 +1,6 @@
 # DaBrawl persistent match server (deployment foundation)
 
-This is a separate Node.js/WebSocket service intended for a persistent host (for example, a container service). It is deliberately separate from GitHub Pages and from the existing Supabase Edge Function prototype. It validates Supabase access tokens and owns room state, movement, basic projectile simulation, health, transformations, super-meter, knockouts, and match clocks in server memory.
+This is a separate Node.js/WebSocket service intended for a persistent host (for example, a container service). It is deliberately separate from GitHub Pages and from the existing Supabase Edge Function prototype. It validates Supabase access tokens and owns room state, movement, basic projectile simulation, health, transformations, super-meter, knockouts, readiness, and match clocks in server memory. It limits rooms and per-socket message rates, validates input payloads, and does not echo the access token as the negotiated WebSocket subprotocol.
 
 ## Important status
 
@@ -9,6 +9,10 @@ This service is **not yet connected to live DaBrawl matches**. The current brows
 ## Host
 
 Deploy this directory as a Node 20+ container. Build from the repository root with `server/Dockerfile` or set the build context to `server/`. Configure `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the DaBrawl Supabase project. Start command: `npm start`; health endpoint: `/health`; WebSocket path: `/match?room=ROOM_CODE`. Do not add a service-role key.
+
+## Local checks
+
+Run `npm run check` and `npm test` from this directory. The unit tests cover message parsing, room-code validation, movement-axis validation, supported modes, and player-name sanitization.
 
 ## Wire protocol
 
