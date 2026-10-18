@@ -4,7 +4,7 @@ This is a separate Node.js/WebSocket service intended for a persistent host (for
 
 ## Important status
 
-This service is **not yet connected to live DaBrawl matches**. The current browser game has more nuanced brawler-specific attacks and collision rules than this first server engine. Do not switch production matchmaking to it until the client protocol and all brawler rules are ported and verified. The existing Supabase Realtime path remains untouched.
+This service is **not yet connected to live DaBrawl matches**. The server now includes explicit baseline rules for Kuku, Shachi and Saiyan, including Shachi's slam and Saiyan's transform super. This is not yet a full port: terrain, exact ability timings, form-specific stats, gadgets and bot AI still need to be reconciled with the browser game. Do not switch production matchmaking to it until the client protocol and all brawler rules are ported and verified. The existing Supabase Realtime path remains untouched.
 
 ## Host
 
