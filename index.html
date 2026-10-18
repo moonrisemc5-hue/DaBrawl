@@ -133,6 +133,25 @@
     <button class="btn" id="onlineBack">BACK</button>
   </div>
 
+  <div class="scr" id="friendsScreen" style="z-index:510;background:radial-gradient(circle at 50% 15%,#26365d,#080d1d 84%);">
+    <h2>FRIENDS</h2>
+    <p style="font:14px Arial,sans-serif;color:#cbd5e1;margin:0">Add friends by username, accept requests, and see who is online.</p>
+    <div style="width:min(94vw,650px);max-height:58vh;overflow:auto;display:flex;flex-direction:column;gap:12px">
+      <section style="padding:13px;background:#111c35;border:2px solid #334155;border-radius:14px">
+        <h3 style="margin:0 0 8px;color:var(--y);font-size:23px">ADD A FRIEND</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="friendUsername" maxlength="20" placeholder="Exact username" style="flex:1;min-width:160px;padding:11px;border:2px solid #000;border-radius:9px;font:16px Arial,sans-serif"><button class="btn y" id="sendFriendRequest" style="font-size:17px">SEND REQUEST</button></div>
+      </section>
+      <section style="padding:13px;background:#111c35;border:2px solid #334155;border-radius:14px">
+        <h3 style="margin:0 0 8px;color:var(--y);font-size:23px">FRIEND REQUESTS</h3><div id="friendRequests" style="font:14px Arial,sans-serif">Sign in to view requests.</div>
+      </section>
+      <section style="padding:13px;background:#111c35;border:2px solid #334155;border-radius:14px">
+        <h3 style="margin:0 0 8px;color:var(--y);font-size:23px">YOUR FRIENDS</h3><div id="friendList" style="font:14px Arial,sans-serif">Sign in to view friends.</div>
+      </section>
+      <div id="friendsStatus" style="font:14px Arial,sans-serif;color:#cbd5e1"></div>
+    </div>
+    <button class="btn" id="friendsRefresh">REFRESH</button><button class="btn" id="friendsBack">BACK</button>
+  </div>
+
   <div class="scr" id="modePicker">
     <h2>CHOOSE A GAME MODE</h2>
     <p style="font:15px Arial,sans-serif;color:#cbd5e1;margin:0">Pick a mode to see its rules and arena preview.</p>
@@ -2135,10 +2154,93 @@ function gadget(p){
     }
     window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,toggleReady:null,openRoom:null};
 
+    let friendsPresenceChannel=null, friendsPresenceTimer=null;
+    const friendsEscape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    function friendsMsg(msg,bad=false){const n=el('friendsStatus');if(n){n.textContent=msg;n.style.color=bad?'#fca5a5':'#cbd5e1';}}
+    async function stopFriendsPresence(){
+      if(friendsPresenceTimer){clearInterval(friendsPresenceTimer);friendsPresenceTimer=null;}
+      if(friendsPresenceChannel){const old=friendsPresenceChannel;friendsPresenceChannel=null;try{await db.removeChannel(old);}catch(_){}}
+    }
+    async function startFriendsPresence(user){
+      await stopFriendsPresence();
+      friendsPresenceChannel=db.channel('dabrawl-friends-presence',{config:{presence:{key:user.id}}});
+      friendsPresenceChannel.subscribe(async state=>{
+        if(state!=='SUBSCRIBED')return;
+        const name=String(user.user_metadata?.username||(user.email||'').split('@')[0]||'Player');
+        await friendsPresenceChannel.track({userId:user.id,name,onlineAt:Date.now()});
+      });
+      friendsPresenceTimer=setInterval(()=>{if(friendsPresenceChannel?.state==='joined')void friendsPresenceChannel.track({userId:user.id,name:String(user.user_metadata?.username||(user.email||'').split('@')[0]||'Player'),onlineAt:Date.now()});},30000);
+    }
+    function currentOnlineIds(){
+      if(!friendsPresenceChannel)return new Set();
+      return new Set(Object.values(friendsPresenceChannel.presenceState()).flat().filter(p=>p?.userId).map(p=>p.userId));
+    }
+    async function loadFriendsScreen(){
+      show('friendsScreen');
+      const {data:{user},error}=await db.auth.getUser();
+      if(error||!user){el('friendRequests').textContent='Sign in on the Friends & Room Codes screen first.';el('friendList').textContent='You need an account to add friends.';friendsMsg('Sign in to use friends.',true);return;}
+      friendsMsg('Loading friend list…');
+      try{
+        await startFriendsPresence(user);
+        const {data:rows,error:queryError}=await db.from('dabrawl_friend_requests').select('id,requester_id,addressee_id,status,created_at').or('requester_id.eq.'+user.id+',addressee_id.eq.'+user.id).order('created_at',{ascending:false});
+        if(queryError)throw queryError;
+        const incoming=rows.filter(r=>r.addressee_id===user.id&&r.status==='pending');
+        const outgoing=rows.filter(r=>r.requester_id===user.id&&r.status==='pending');
+        const accepted=rows.filter(r=>r.status==='accepted');
+        const otherIds=[...new Set([...incoming.map(r=>r.requester_id),...outgoing.map(r=>r.addressee_id),...accepted.map(r=>r.requester_id===user.id?r.addressee_id:r.requester_id)])];
+        let profiles=[];
+        if(otherIds.length){const {data,error:profileError}=await db.from('dabrawl_player_profiles').select('user_id,username').in('user_id',otherIds);if(profileError)throw profileError;profiles=profileError?[]:(data||[]);}
+        const profileById=new Map(profiles.map(p=>[p.user_id,p.username]));
+        el('friendRequests').innerHTML=(incoming.length||outgoing.length)?[
+          ...incoming.map(r=>'<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #334155"><span><b>'+friendsEscape(profileById.get(r.requester_id)||'Player')+'</b> · wants to be friends</span><span><button class="btn y" data-friend-accept="'+r.id+'" style="font-size:14px">ACCEPT</button> <button class="btn" data-friend-decline="'+r.id+'" style="font-size:14px">DECLINE</button></span></div>'),
+          ...outgoing.map(r=>'<div style="padding:8px 0;color:#cbd5e1">'+friendsEscape(profileById.get(r.addressee_id)||'Player')+' · request sent</div>')
+        ].join(''):'<span style="color:#94a3b8">No pending requests.</span>';
+        el('friendList').innerHTML=accepted.length?accepted.map(r=>{const id=r.requester_id===user.id?r.addressee_id:r.requester_id;const online=currentOnlineIds().has(id);return '<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #334155"><span style="width:10px;height:10px;border-radius:50%;background:'+(online?'#22c55e':'#64748b')+';display:inline-block"></span><b style="flex:1">'+friendsEscape(profileById.get(id)||'Player')+'</b><span style="color:'+(online?'#86efac':'#94a3b8')+'">'+(online?'ONLINE':'OFFLINE')+'</span></div>';}).join(''):'<span style="color:#94a3b8">No friends yet. Add someone by username above.</span>';
+        el('friendRequests').querySelectorAll('[data-friend-accept]').forEach(b=>b.onclick=()=>void respondFriendRequest(b.dataset.friendAccept,'accepted'));
+        el('friendRequests').querySelectorAll('[data-friend-decline]').forEach(b=>b.onclick=()=>void respondFriendRequest(b.dataset.friendDecline,'declined'));
+        friendsMsg('Friend list updated.');
+      }catch(err){friendsMsg('Could not load friends: '+(err?.message||String(err))+'. If this is the first setup, apply the friends migration in Supabase.',true);}
+    }
+    async function sendFriendRequest(){
+      const {data:{user}}=await db.auth.getUser();
+      if(!user){friendsMsg('Sign in first to send friend requests.',true);return;}
+      const username=el('friendUsername').value.trim().toLowerCase();
+      if(!/^[a-z0-9_]{3,20}$/.test(username)){friendsMsg('Enter a username with 3–20 letters, numbers or underscores.',true);return;}
+      try{
+        const {data:profile,error}=await db.from('dabrawl_player_profiles').select('user_id,username').eq('username',username).maybeSingle();
+        if(error)throw error;
+        if(!profile){friendsMsg('Username not found. Check the spelling.',true);return;}
+        if(profile.user_id===user.id){friendsMsg('You cannot add yourself.',true);return;}
+        const {data:existing,error:existingError}=await db.from('dabrawl_friend_requests').select('id,requester_id,addressee_id,status').or('and(requester_id.eq.'+user.id+',addressee_id.eq.'+profile.user_id+'),and(requester_id.eq.'+profile.user_id+',addressee_id.eq.'+user.id+')');
+        if(existingError)throw existingError;
+        if(existing?.some(r=>r.status==='accepted')){friendsMsg('You are already friends with '+profile.username+'.');return;}
+        const pendingIncoming=existing?.find(r=>r.status==='pending'&&r.addressee_id===user.id);
+        if(pendingIncoming){friendsMsg('They already sent you a request — accept it below.');await loadFriendsScreen();return;}
+        if(existing?.some(r=>r.status==='pending')){friendsMsg('A request is already pending.');return;}
+        const {error:insertError}=await db.from('dabrawl_friend_requests').insert({requester_id:user.id,addressee_id:profile.user_id,status:'pending'});
+        if(insertError)throw insertError;
+        el('friendUsername').value='';friendsMsg('Friend request sent to '+profile.username+'.');await loadFriendsScreen();
+      }catch(err){friendsMsg('Could not send request: '+(err?.message||String(err))+'. Check that the friends migration is applied.',true);}
+    }
+    async function respondFriendRequest(id,statusValue){
+      try{
+        const {data:{user}}=await db.auth.getUser();if(!user)throw new Error('Sign in again.');
+        const {error}=await db.from('dabrawl_friend_requests').update({status:statusValue}).eq('id',id).eq('addressee_id',user.id).eq('status','pending');
+        if(error)throw error;
+        friendsMsg(statusValue==='accepted'?'Friend request accepted.':'Friend request declined.');
+        await loadFriendsScreen();
+      }catch(err){friendsMsg('Could not update request: '+(err?.message||String(err)),true);}
+    }
     const openFriends = async () => { show('onlineLobby'); await updateAuthUI(); };
+
     el('prevBtn').addEventListener('click', e=>{if(!currentRoom){e.preventDefault();void openFriends();}});
-    el('nextBtn').addEventListener('click', e=>{if(!currentRoom){e.preventDefault();void openFriends();}});
+    el('nextBtn').addEventListener('click', e=>{if(!currentRoom){e.preventDefault();void loadFriendsScreen();}});
     el('onlineBack').addEventListener('click',()=>show('menu'));
+    el('friendsBack').addEventListener('click',()=>{void stopFriendsPresence();show('menu');});
+    el('friendsRefresh').addEventListener('click',()=>void loadFriendsScreen());
+    el('sendFriendRequest').addEventListener('click',()=>void sendFriendRequest());
+    el('friendUsername').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void sendFriendRequest();}});
+    db.auth.onAuthStateChange((_event,session)=>{if(!session)void stopFriendsPresence();});
     el('createRoomBtn').addEventListener('click',createRoom);
     el('joinRoomBtn').addEventListener('click',joinRoom);
     el('startRoomBtn').addEventListener('click',startRoomGame);
