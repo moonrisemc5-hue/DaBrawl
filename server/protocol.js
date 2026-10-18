@@ -16,6 +16,7 @@ export function parseClientMessage(raw) {
   try { message = JSON.parse(String(raw)); } catch { throw new Error("Invalid JSON message"); }
   if (!message || typeof message !== "object" || Array.isArray(message) || typeof message.type !== "string") throw new Error("Invalid message");
 
+  const onlyKeys = (...keys) => { if (Object.keys(message).some(key => !keys.includes(key))) throw new Error("Unexpected message field"); };
   const optionalString = (key, max) => {
     if (message[key] !== undefined && (typeof message[key] !== "string" || message[key].length > max)) {
       throw new Error(`Invalid ${key}`);
@@ -23,26 +24,31 @@ export function parseClientMessage(raw) {
   };
   switch (message.type) {
     case "join":
+      onlyKeys("type", "name", "brawler", "mode", "ready");
       optionalString("name", 80);
       optionalString("brawler", 32);
       optionalString("mode", 32);
       if (message.ready !== undefined && typeof message.ready !== "boolean") throw new Error("Invalid ready flag");
       break;
     case "ready":
+      onlyKeys("type", "ready");
       if (typeof message.ready !== "boolean") throw new Error("Invalid ready flag");
       break;
     case "input":
+      onlyKeys("type", "seq", "x", "y", "aim");
       if (!Number.isSafeInteger(message.seq) || message.seq < 0) throw new Error("Invalid input sequence");
       if (!Number.isFinite(message.x) || !Number.isFinite(message.y)) throw new Error("Invalid movement axes");
       if (message.aim !== undefined && !Number.isFinite(message.aim)) throw new Error("Invalid aim");
       break;
     case "action":
+      onlyKeys("type", "action", "angle", "form", "clientSentAt");
       if (!["fire", "super", "transform", "gadget", "kame-start", "kame-release", "add-bot", "ping"].includes(message.action)) throw new Error("Unsupported action");
       if (message.angle !== undefined && !Number.isFinite(message.angle)) throw new Error("Invalid angle");
       if (message.form !== undefined && !Number.isFinite(message.form)) throw new Error("Invalid form");
       if (message.clientSentAt !== undefined && !Number.isFinite(message.clientSentAt)) throw new Error("Invalid ping timestamp");
       break;
     case "ping":
+      onlyKeys("type", "clientSentAt");
       if (message.clientSentAt !== undefined && !Number.isFinite(message.clientSentAt)) throw new Error("Invalid ping timestamp");
       break;
     default:

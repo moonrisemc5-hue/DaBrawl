@@ -30,9 +30,12 @@ test("bot chooses a collision-safe route around an obstacle",()=>{
  const runner={...bot,x:130,y:100};
  const foe={...enemy,x:280,y:100};
  const d=decideBotAction(runner,[runner,foe],obstacleWorld,4000);
- const next= (awaitMove=>awaitMove)(d.input);
- const {movePlayerWithObstacles,PLAYER_RADIUS}=globalThis.__botWorldHelpers||{};
- // A nonzero direction around the obstacle is expected; direct rightward motion is blocked.
- assert.ok(Math.hypot(next.x,next.y)>0);
- assert.ok(!(Math.abs(next.x-1)<1e-9 && Math.abs(next.y)<1e-9));
+ const next=movePlayerWithObstacles(runner.x,runner.y,d.input.x*24,d.input.y*24,obstacleWorld,PLAYER_RADIUS);
+ // A nonzero step must actually be made, and the player collision radius must remain clear of the wall.
+ assert.ok(Math.hypot(next.x-runner.x,next.y-runner.y)>1);
+ const obstacle=obstacleWorld.obstacles[0];
+ const nearestX=Math.max(obstacle.x,Math.min(next.x,obstacle.x+obstacle.width));
+ const nearestY=Math.max(obstacle.y,Math.min(next.y,obstacle.y+obstacle.height));
+ assert.ok(Math.hypot(next.x-nearestX,next.y-nearestY)>=PLAYER_RADIUS-1e-7);
+ assert.ok(!(Math.abs(d.input.x-1)<1e-9 && Math.abs(d.input.y)<1e-9));
 });

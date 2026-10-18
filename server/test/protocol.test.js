@@ -132,5 +132,11 @@ test("Kame charge actions do not accept client-authored charge values", () => {
 
 test("accepts owner-requested bot addition without client-authored bot identity", () => {
   assert.deepEqual(parseClientMessage('{"type":"action","action":"add-bot"}'), { type:"action", action:"add-bot" });
-  assert.equal(parseClientMessage('{"type":"action","action":"add-bot","isBot":true}').action, "add-bot");
+  assert.throws(() => parseClientMessage('{"type":"action","action":"add-bot","isBot":true}'), /Unexpected message field/);
+});
+
+test("rejects unknown fields instead of passing unvalidated client data into game logic",()=>{
+  assert.throws(()=>parseClientMessage('{"type":"join","name":"Ivor","ownerId":"attacker"}'),/Unexpected message field/);
+  assert.throws(()=>parseClientMessage('{"type":"input","seq":1,"x":0,"y":0,"isBot":true}'),/Unexpected message field/);
+  assert.doesNotThrow(()=>parseClientMessage('{"type":"action","action":"ping","clientSentAt":12}'));
 });
