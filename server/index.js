@@ -2,7 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer, WebSocket } from "ws";
-import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase } from "./protocol.js";
+import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams } from "./protocol.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -52,6 +52,8 @@ function event(room, name, data = {}) { room.events.push({ name, at: now(), ...d
 
 function startMatch(room) {
   if (room.phase !== "waiting" || room.players.size < 2 || ![...room.players.values()].every(p => p.ready)) return;
+  const roster = [...room.players.values()].sort((a, b) => a.slot - b.slot);
+  assignTeams(roster.length, room.mode).forEach((team, index) => { roster[index].team = team; });
   room.phase = "countdown"; room.startedAt = now() + 2500; room.endsAt = room.startedAt + 180_000;
   event(room, "match-countdown", { startAt: room.startedAt });
 }
