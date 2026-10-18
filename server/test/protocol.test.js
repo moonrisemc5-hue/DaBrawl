@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, resolveRoomOwner, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer } from "../protocol.js";
+import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, resolveRoomOwner, canStartMatch, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer } from "../protocol.js";
 
 test("sanitizes names and limits their length", () => {
   assert.equal(cleanText("  Ivor<script>\n  "), "Ivorscript");
@@ -139,4 +139,15 @@ test("rejects unknown fields instead of passing unvalidated client data into gam
   assert.throws(()=>parseClientMessage('{"type":"join","name":"Ivor","ownerId":"attacker"}'),/Unexpected message field/);
   assert.throws(()=>parseClientMessage('{"type":"input","seq":1,"x":0,"y":0,"isBot":true}'),/Unexpected message field/);
   assert.doesNotThrow(()=>parseClientMessage('{"type":"action","action":"ping","clientSentAt":12}'));
+});
+
+test("starts a match only when two or more connected players are ready in the waiting phase", () => {
+  const owner = { id: "owner", connected: true, ready: true };
+  const bot = { id: "bot:room:1", connected: true, ready: true, isBot: true };
+  assert.equal(canStartMatch("waiting", [owner]), false);
+  assert.equal(canStartMatch("waiting", [owner, { ...bot, ready: false }]), false);
+  assert.equal(canStartMatch("waiting", [owner, { ...bot, connected: false }]), false);
+  assert.equal(canStartMatch("countdown", [owner, bot]), false);
+  assert.equal(canStartMatch("playing", [owner, bot]), false);
+  assert.equal(canStartMatch("waiting", [owner, bot]), true);
 });

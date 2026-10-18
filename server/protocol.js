@@ -96,3 +96,9 @@ export const shouldForfeitDisconnectedPlayer = (connected, disconnectedAt, curre
   Number.isFinite(graceMs) &&
   graceMs >= 0 &&
   currentTime - disconnectedAt >= graceMs;
+
+export function canStartMatch(phase, players) {
+  if (phase !== "waiting" || !players || typeof players[Symbol.iterator] !== "function") return false;
+  const roster = [...players];
+  return roster.length >= 2 && roster.every(player => player && player.connected === true && player.ready === true);
+}

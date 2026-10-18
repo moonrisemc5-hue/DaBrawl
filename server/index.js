@@ -2,7 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer, WebSocket } from "ws";
-import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer, resolveRoomOwner } from "./protocol.js";
+import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer, resolveRoomOwner, canStartMatch } from "./protocol.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -70,7 +70,7 @@ function cancelCountdown(room, reason) {
   event(room, "match-countdown-cancelled", { reason });
 }
 function startMatch(room) {
-  if (room.phase !== "waiting" || room.players.size < 2 || ![...room.players.values()].every(p => p.connected && p.ready)) return;
+  if (!canStartMatch(room.phase, room.players.values())) return;
   const roster = [...room.players.values()].sort((a, b) => a.slot - b.slot);
   assignTeams(roster.length, room.mode).forEach((team, index) => { roster[index].team = team; });
   room.phase = "countdown"; room.startedAt = now() + 2500; room.endsAt = room.startedAt + 180_000;
@@ -409,7 +409,7 @@ wss.on("connection", (ws,_req,meta) => {
           const slot=room.players.size, id=`bot:${room.code}:${slot}`;
           const choices=["kuku","shachi","saiyan"]; const brawler=choices[(slot-1)%choices.length];
           const bot=makePlayer({id},{name:`Bot ${slot}`,brawler},slot); bot.isBot=true; bot.connected=true; bot.socket=null; bot.ready=true; room.players.set(id,bot);
-          event(room,"bot-joined",{playerId:id,brawler}); sendState(room);
+          startMatch(room); event(room,"bot-joined",{playerId:id,brawler}); sendState(room);
         } else if (m.action==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
         else throw new Error("Unsupported action");
       } else if (m.type==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
