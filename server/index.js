@@ -15,7 +15,7 @@ const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
 
 import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "./brawlers.js";
-import { advanceProjectile, findProjectileContact, findProjectileObstacleHit, projectileStillInRange } from "./combat.js";
+import { advanceProjectile, findProjectileContact, findProjectileObstacleHit, projectileStillInRange, isTargetDamageable } from "./combat.js";
 import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
 import { beginKameCharge, finishKameCharge, cancelKameCharge, kameChargePower } from "./charge.js";
 import { movementDelta, movePlayerWithObstacles, resolvePlayerCollisions, PLAYER_RADIUS } from "./world.js";
@@ -132,7 +132,7 @@ function doFire(room, p, isSuper = false) {
   if (isSuper && stats.superKind === "slam") {
     let hits = 0;
     for (const target of room.players.values()) {
-      if (!target.alive || target.team === p.team || target.id === p.id) continue;
+      if (!isTargetDamageable(target, p, t)) continue;
       if (Math.hypot(target.x-p.x,target.y-p.y) > stats.superRange) continue;
       target.hp = Math.max(0, target.hp-stats.superDamage);
       target.meter = clamp(target.meter+12,0,100);
@@ -169,8 +169,7 @@ function doKame(room, player, angle) {
   const damage = (startDamage + power * (maxDamage - startDamage)) / 6;
   let hits = 0;
   for (const target of room.players.values()) {
-    if (!target.alive || target.id === player.id || target.team === player.team ||
-        (Number.isFinite(target.invulnerableUntil) && target.invulnerableUntil > at)) continue;
+    if (!isTargetDamageable(target, player, at)) continue;
     const rx = target.x - player.x, ry = target.y - player.y;
     const along = rx * dx + ry * dy, perpendicular = Math.abs(-rx * dy + ry * dx);
     if (along <= 0 || along >= traced.length || perpendicular >= width + PLAYER_RADIUS) continue;
@@ -277,8 +276,7 @@ function stepRoom(room, dt) {
         const owner = room.players.get(beam.ownerId);
         const dx = Math.cos(beam.aim), dy = Math.sin(beam.aim);
         if (owner?.alive) for (const target of room.players.values()) {
-          if (!target.alive || target.id === beam.ownerId || target.team === beam.team ||
-              target.transformUntil > t || (Number.isFinite(target.invulnerableUntil) && target.invulnerableUntil > t)) continue;
+          if (!isTargetDamageable(target, { id: beam.ownerId, team: beam.team }, t)) continue;
           const rx = target.x - beam.x, ry = target.y - beam.y;
           const along = rx * dx + ry * dy, perpendicular = Math.abs(-rx * dy + ry * dx);
           if (along <= 0 || along >= beam.length || perpendicular >= beam.width + 14) continue;

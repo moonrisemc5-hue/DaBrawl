@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { advanceProjectile, findProjectileHit, projectileStillInRange } from "../combat.js";
+import { advanceProjectile, findProjectileHit, projectileStillInRange, isTargetDamageable } from "../combat.js";
 
 test("advances projectile position and traveled distance deterministically", () => {
   const projectile = { x: 10, y: 20, angle: 0, speed: 100, traveled: 5, range: 100 };
@@ -83,4 +83,23 @@ test("reports player contact order so a wall behind a target does not block the 
   ], 1000, 19);
   const wall = findProjectileObstacleHit(projectile, [{ x: 70, y: 30, width: 10, height: 40 }]);
   assert.ok(contact.t < wall.t);
+});
+
+test("all damage sources share friendly-fire, knockout, transformation, and invulnerability rules", () => {
+  const attacker = { id: "attacker", team: 0 };
+  const target = { id: "target", team: 1, alive: true, hp: 100 };
+  assert.equal(isTargetDamageable(target, attacker, 1000), true);
+  assert.equal(isTargetDamageable({ ...target, team: 0 }, attacker, 1000), false);
+  assert.equal(isTargetDamageable({ ...target, alive: false }, attacker, 1000), false);
+  assert.equal(isTargetDamageable({ ...target, invulnerableUntil: 1001 }, attacker, 1000), false);
+  assert.equal(isTargetDamageable({ ...target, invulnerableUntil: 1000 }, attacker, 1000), true);
+  assert.equal(isTargetDamageable({ ...target, transformUntil: 1001 }, attacker, 1000), false);
+  assert.equal(isTargetDamageable({ ...target, transformUntil: 1000 }, attacker, 1000), true);
+  assert.equal(isTargetDamageable(target, target, 1000), false);
+});
+
+test("projectile collision ignores a target during transformation protection", () => {
+  const projectile = { x: 100, y: 100, ownerId: "owner", team: 0 };
+  const target = { id: "target", team: 1, alive: true, x: 100, y: 100, transformUntil: 2000 };
+  assert.equal(findProjectileHit(projectile, [target], 1000, 19), null);
 });

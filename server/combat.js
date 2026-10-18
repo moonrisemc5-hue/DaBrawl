@@ -26,6 +26,15 @@ function closestPointOnSegment(px, py, x1, y1, x2, y2) {
   return { t, distanceSquared: (px - x) ** 2 + (py - y) ** 2 };
 }
 
+export function isTargetDamageable(target, attacker, atTime) {
+  return Boolean(target && attacker &&
+    target.alive === true &&
+    target.id !== attacker.id &&
+    target.team !== attacker.team &&
+    !(Number.isFinite(target.invulnerableUntil) && target.invulnerableUntil > atTime) &&
+    !(Number.isFinite(target.transformUntil) && target.transformUntil > atTime));
+}
+
 export function findProjectileContact(projectile, players, atTime, radius = 19) {
   const x1 = Number.isFinite(projectile.previousX) ? projectile.previousX : projectile.x;
   const y1 = Number.isFinite(projectile.previousY) ? projectile.previousY : projectile.y;
@@ -33,8 +42,7 @@ export function findProjectileContact(projectile, players, atTime, radius = 19) 
   let firstContact = null;
   let firstHitT = Infinity;
   for (const target of players) {
-    if (!target.alive || target.id === projectile.ownerId || target.team === projectile.team ||
-        (Number.isFinite(target.invulnerableUntil) && target.invulnerableUntil > atTime)) continue;
+    if (!isTargetDamageable(target, { id: projectile.ownerId, team: projectile.team }, atTime)) continue;
     const contact = closestPointOnSegment(target.x, target.y, x1, y1, projectile.x, projectile.y);
     if (contact.distanceSquared <= radiusSquared && contact.t < firstHitT) {
       firstContact = { player: target, t: contact.t };
