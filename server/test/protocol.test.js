@@ -119,7 +119,7 @@ test("accepts server-timed Saiyan Kame charge actions and validates aim", () => 
   assert.doesNotThrow(() => parseClientMessage(JSON.stringify({ type: "action", action: "kame-start" })));
   assert.doesNotThrow(() => parseClientMessage(JSON.stringify({ type: "action", action: "kame-release", angle: 1.2 })));
   assert.throws(() => parseClientMessage(JSON.stringify({ type: "action", action: "kame-release", angle: "east" })), /Invalid angle/);
-  assert.throws(() => parseClientMessage(JSON.stringify({ type: "action", action: "kame", charge: 1.1 })), /Unsupported action/);
+  assert.throws(() => parseClientMessage(JSON.stringify({ type: "action", action: "kame", charge: 1.1 })), /Unexpected message field/);
 });
 
 
