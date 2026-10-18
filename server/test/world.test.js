@@ -64,3 +64,24 @@ test("falls back to non-overlapping deterministic cells for a crowded edge spawn
     for (let j = i + 1; j < first.length; j++) assert.ok(Math.hypot(first[j].x - first[i].x, first[j].y - first[i].y) >= PLAYER_RADIUS * 2 - 1e-7);
   }
 });
+
+
+test("blocks a player's collision circle at rectangle obstacles", async () => {
+  const { movePlayerWithObstacles } = await import("../world.js");
+  const obstacleWorld = { ...world, obstacles: [{ x: 300, y: 180, width: 100, height: 100 }] };
+  const stopped = movePlayerWithObstacles(270, 230, 40, 0, obstacleWorld);
+  assert.equal(stopped.x, 270);
+  assert.equal(stopped.y, 230);
+  const fromInsideEdge = movePlayerWithObstacles(270, 160, 40, 20, obstacleWorld);
+  assert.equal(fromInsideEdge.x, 270);
+  assert.equal(fromInsideEdge.y, 180 - PLAYER_RADIUS);
+});
+
+test("slides along obstacle faces and validates obstacle geometry", async () => {
+  const { movePlayerWithObstacles } = await import("../world.js");
+  const obstacleWorld = { ...world, obstacles: [{ x: 300, y: 180, width: 100, height: 100 }] };
+  const slid = movePlayerWithObstacles(270, 150, 40, 30, obstacleWorld);
+  assert.equal(slid.x, 270);
+  assert.equal(slid.y, 180 - PLAYER_RADIUS);
+  assert.throws(() => movePlayerWithObstacles(100, 100, 1, 1, { ...world, obstacles: [{ x: 0, y: 0, width: -1, height: 10 }] }), /Invalid world obstacle/);
+});

@@ -72,3 +72,42 @@ export function movementDelta(x, y, speed, dt) {
   }
   return { x: x * speed * dt, y: y * speed * dt };
 }
+
+
+// Rectangles use { x, y, width, height } in world coordinates. The server
+// supplies the actual map geometry through world.obstacles; an empty list
+// intentionally means no terrain collision is enabled yet.
+function intersectsObstacle(x, y, radius, obstacle) {
+  const nearestX = Math.max(obstacle.x, Math.min(x, obstacle.x + obstacle.width));
+  const nearestY = Math.max(obstacle.y, Math.min(y, obstacle.y + obstacle.height));
+  return Math.hypot(x - nearestX, y - nearestY) < radius - 1e-7;
+}
+
+function validObstacles(world) {
+  const obstacles = world?.obstacles ?? [];
+  if (!Array.isArray(obstacles)) throw new TypeError("World obstacles must be an array");
+  for (const o of obstacles) {
+    if (!o || ![o.x, o.y, o.width, o.height].every(Number.isFinite) || o.width <= 0 || o.height <= 0) {
+      throw new TypeError("Invalid world obstacle rectangle");
+    }
+  }
+  return obstacles;
+}
+
+/**
+ * Move a circular player through a rectangle-obstacle world. Movement is
+ * resolved on each axis independently, allowing the player to slide along
+ * walls rather than getting stuck on a diagonal corner.
+ */
+export function movePlayerWithObstacles(x, y, dx, dy, world, radius = PLAYER_RADIUS) {
+  if (![x, y, dx, dy, radius].every(Number.isFinite) || radius < 0) {
+    throw new TypeError("Invalid obstacle movement input");
+  }
+  const obstacles = validObstacles(world);
+  const start = clampPlayerPosition(x, y, world, radius);
+  let nextX = clampPlayerPosition(start.x + dx, start.y, world, radius).x;
+  if (obstacles.some(o => intersectsObstacle(nextX, start.y, radius, o))) nextX = start.x;
+  let nextY = clampPlayerPosition(nextX, start.y + dy, world, radius).y;
+  if (obstacles.some(o => intersectsObstacle(nextX, nextY, radius, o))) nextY = start.y;
+  return { x: nextX, y: nextY };
+}
