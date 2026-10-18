@@ -101,12 +101,8 @@
       <button class="plus" id="nextBtn" aria-label="Create or join a room" title="Create lobby / enter room code" style="margin-bottom:0">+</button>
     </div>
     <button class="plus" id="friendsBtn" aria-label="Friends: add or remove friends" title="Friends" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);z-index:320;font-size:28px">👥</button>
-    <div class="menu-bottom-controls" style="position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:10px;z-index:300">
-      <div style="display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap">
-        <button class="mode-sel" id="modeBtn">🎮 <span id="modeTxt">KNOCKOUT 3v3</span> ▾</button>
-        <button class="btn y" id="play">PLAY</button>
-      </div>
-    </div>
+    <div class="menu-bottom-controls" style="position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:center;z-index:300"><button class="mode-sel" id="modeBtn">🎮 <span id="modeTxt">KNOCKOUT 3v3</span> ▾</button></div>
+    <button class="btn y" id="play" style="position:absolute;right:18px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:300">PLAY</button>
      
   </div>
 
@@ -127,8 +123,8 @@
         <div id="prototypeServerStatus" style="font:13px Arial,sans-serif;color:#cbd5e1;margin-top:7px">Not connected</div>
       </div>
       <button class="btn y" id="createRoomBtn" style="font-size:28px;padding:8px 22px">CREATE ROOM</button>
-      <button class="btn purple" id="lobbyFriendsBtn">ADD / REMOVE FRIENDS</button>
-      <div style="display:flex;gap:8px;width:100%;justify-content:center"><input id="roomCodeInput" maxlength="8" placeholder="ROOM CODE" style="min-width:0;width:180px;padding:10px;border:3px solid #000;border-radius:10px;font:22px Arial,sans-serif;text-transform:uppercase"><button class="btn" id="joinRoomBtn">JOIN</button></div>
+      <div id="lobbyFriendsList" style="width:100%;display:flex;flex-direction:column;gap:6px"></div><button class="btn purple" id="lobbyFriendsBtn">MANAGE FRIENDS</button>
+      <div id="roomCodeRow" style="display:flex;gap:8px;width:100%;justify-content:center"><input id="roomCodeInput" maxlength="8" placeholder="ROOM CODE" style="min-width:0;width:180px;padding:10px;border:3px solid #000;border-radius:10px;font:22px Arial,sans-serif;text-transform:uppercase"><button class="btn" id="joinRoomBtn">JOIN</button></div>
       <div id="activeRoom" style="font:20px Arial,sans-serif;color:#fde047"></div>
       <div id="roomPlayers" style="font:16px Arial,sans-serif;color:#fff"></div>
       <button class="btn" id="readyRoomBtn" style="display:none">READY</button><button class="btn y" id="startRoomBtn" style="display:none">START MATCH</button><button class="btn" id="leaveRoomLobbyBtn" style="display:none;border:2px solid #ef4444;color:#fecaca">LEAVE ROOM</button>
@@ -156,6 +152,7 @@
     <button class="btn" id="friendsRefresh">REFRESH</button><button class="btn" id="friendsBack">BACK</button>
   </div>
 
+  <div id="roomInvitePopup" style="display:none;position:fixed;inset:0;z-index:9999;background:#000b;align-items:center;justify-content:center;padding:20px;box-sizing:border-box"><div style="width:min(92vw,420px);padding:22px;background:#111c35;border:3px solid #ffd21f;border-radius:18px;text-align:center;box-shadow:0 15px 55px #000"><h2 style="margin:0 0 10px;color:#ffd21f">ROOM INVITATION</h2><p id="roomInviteText" style="color:#e2e8f0;line-height:1.5">Your friend invited you to join.</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn y" id="roomInviteAccept">JOIN ROOM</button><button class="btn" id="roomInviteDecline">DECLINE</button></div></div></div>
   <div class="scr" id="modePicker">
     <h2>CHOOSE A GAME MODE</h2>
     <p style="font:15px Arial,sans-serif;color:#cbd5e1;margin:0">Pick a mode to see its rules and arena preview.</p>
@@ -192,7 +189,7 @@
       <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
         <h3 style="margin:0 0 6px;color:var(--y);font-size:24px">ACCOUNT</h3>
         <p style="font:14px Arial,sans-serif;color:#cbd5e1;margin:0 0 10px">Sign in, create an account, manage your room, or sign out from the account screen.</p>
-        <button class="btn purple" id="settingsAccount">ACCOUNT / MULTIPLAYER</button>
+        <div id="settingsSignedOut" style="display:flex;flex-direction:column;gap:8px"><input id="settingsUsername" type="text" autocomplete="username" maxlength="20" placeholder="Username" style="padding:11px;border:2px solid #000;border-radius:9px;font:16px Arial,sans-serif"><input id="settingsPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Password (at least 6 characters)" style="padding:11px;border:2px solid #000;border-radius:9px;font:16px Arial,sans-serif"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="settingsSignIn">SIGN IN</button><button class="btn purple" id="settingsCreateAccount">CREATE ACCOUNT</button></div></div><div id="settingsSignedIn" style="display:none;flex-direction:column;gap:8px"><div id="settingsAccountName" style="color:#93c5fd;overflow-wrap:anywhere"></div><button class="btn purple" id="settingsSignOut">SIGN OUT</button></div><div id="settingsAccountStatus" style="font:13px Arial,sans-serif;color:#cbd5e1"></div>
       </section>
     </div>
     <button class="btn" id="settingsBack">BACK</button>
@@ -953,13 +950,16 @@ function gadget(p){
           c.fillStyle='#ffd21f';c.strokeStyle='#713f12';c.lineWidth=2.5;c.beginPath();c.ellipse(x,y,12,10,0,0,Math.PI*2);c.fill();c.stroke();c.beginPath();c.ellipse(x-10,y+2,7,4,Math.sin(phase*24)*.8,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#111827';c.beginPath();c.arc(x+4,y-2,1.8,0,Math.PI*2);c.fill();c.fillStyle='#f97316';c.beginPath();c.moveTo(x+10,y);c.lineTo(x+18,y+3);c.lineTo(x+10,y+5);c.fill();
           if(flee>.05){c.globalAlpha=Math.min(.7,flee);c.strokeStyle='#fef3c7';c.lineWidth=2;for(let i=0;i<3;i++){c.beginPath();c.moveTo(x-14-i*5,y+8+i*3);c.lineTo(x-23-i*5,y+8+i*3);c.stroke();}c.globalAlpha=1;}}
       }else if(id==='shachi'){
-        const punch=Math.max(0,Math.min(1,(phase-.35)/.42)),x=cx+w*.2+Math.max(0,phase-.55)*w*.35,y=cy+(phase<.55?h*.17:h*.17-Math.sin(Math.min(1,(phase-.55)/1.45)*Math.PI)*h*.27);
-        c.save();if(phase<.78){c.strokeStyle='#e5e7eb';c.lineWidth=8;c.lineCap='round';c.beginPath();c.moveTo(cx+12,cy+4);c.lineTo(cx+w*(.13+.13*punch),cy+4);c.stroke();c.fillStyle='#f59e0b';c.strokeStyle='#111827';c.lineWidth=3;c.beginPath();c.arc(cx+w*(.14+.13*punch),cy+4,10,0,Math.PI*2);c.fill();c.stroke();if(phase>.45){c.strokeStyle='#fff';c.lineWidth=3;for(let i=0;i<7;i++){const q=i*Math.PI*2/7;c.beginPath();c.moveTo(cx+w*.29+Math.cos(q)*5,cy+4+Math.sin(q)*5);c.lineTo(cx+w*.29+Math.cos(q)*22,cy+4+Math.sin(q)*22);c.stroke();}}}
-        if(phase<.55||phase>2.3){c.fillStyle='#b77945';c.strokeStyle='#422006';c.lineWidth=3;c.fillRect(x-9,y-17,18,34);c.strokeRect(x-9,y-17,18,34);c.beginPath();c.arc(x,y-23,9,0,Math.PI*2);c.fill();c.stroke();c.lineWidth=4;c.beginPath();c.moveTo(x-8,y-3);c.lineTo(x-18,y+8);c.moveTo(x+8,y-3);c.lineTo(x+18,y+8);c.stroke();}
-        else{const u=Math.min(1,(phase-.55)/1.45);c.save();c.translate(x,y);c.rotate(u*Math.PI*3);c.fillStyle='#b77945';c.strokeStyle='#422006';c.lineWidth=3;c.fillRect(-9,-17,18,34);c.strokeRect(-9,-17,18,34);c.beginPath();c.arc(0,-23,9,0,Math.PI*2);c.fill();c.stroke();c.restore();}
-        if(phase>2.3){const ring=Math.min(1,(phase-2.3)/.65);c.globalAlpha=1-ring;c.strokeStyle='#cbd5e1';c.lineWidth=4;c.beginPath();c.ellipse(x,y+15,8+ring*30,4+ring*10,0,0,Math.PI*2);c.stroke();c.globalAlpha=1;}c.restore();
+        // Large, upright training dummy directly beside Shachi; the fist visibly connects.
+        const hitAt=.82,punch=Math.max(0,Math.min(1,(phase-.48)/.24)),baseX=cx+w*.30,baseY=cy+h*.20,launch=Math.max(0,phase-hitAt),fly=Math.min(1,launch/1.45),dx=baseX+launch*w*.34,dyDummy=baseY-Math.sin(fly*Math.PI)*h*.29+launch*h*.05;
+        c.save();c.globalAlpha=.22*(1-fly*.6);c.fillStyle='#000';c.beginPath();c.ellipse(baseX,baseY+38,26,8,0,0,Math.PI*2);c.fill();c.globalAlpha=1;
+        const sx=cx-w*.10,sy=cy+4,shoulderX=sx+25,shoulderY=sy-3,fistX=phase<hitAt?shoulderX+(baseX-shoulderX-17)*punch:baseX-18;
+        c.lineCap='round';c.strokeStyle='#f1c7a5';c.lineWidth=13;c.beginPath();c.moveTo(shoulderX-8,shoulderY+2);c.lineTo(fistX,shoulderY+2);c.stroke();c.fillStyle='#f5c9a5';c.strokeStyle='#111827';c.lineWidth=3;c.beginPath();c.arc(fistX,shoulderY+2,9,0,Math.PI*2);c.fill();c.stroke();
+        if(phase>.65&&phase<1.18){c.globalAlpha=Math.max(0,1-Math.abs(phase-.82)/.36);c.strokeStyle='#fff7ed';c.lineWidth=4;for(let i=0;i<8;i++){const q=i*Math.PI/4;c.beginPath();c.moveTo(baseX-14+Math.cos(q)*5,baseY+Math.sin(q)*8);c.lineTo(baseX-14+Math.cos(q)*23,baseY+Math.sin(q)*23);c.stroke();}c.globalAlpha=1;}
+        if(phase<3){c.save();c.translate(dx,dyDummy);c.rotate(launch>0?fly*Math.PI*3:0);c.fillStyle='#7c4524';c.strokeStyle='#2b160b';c.lineWidth=4;c.beginPath();c.roundRect(-17,-44,34,76,8);c.fill();c.stroke();c.fillStyle='#a66a3d';c.fillRect(-12,-39,24,64);c.strokeStyle='#4a2613';c.lineWidth=4;c.beginPath();c.moveTo(-16,-19);c.lineTo(16,-19);c.moveTo(-16,5);c.lineTo(16,5);c.stroke();c.fillStyle='#eab308';c.fillRect(-16,-7,32,10);c.fillStyle='#f1c27d';c.beginPath();c.ellipse(0,-52,20,13,0,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#111827';c.beginPath();c.arc(-7,-54,2.4,0,Math.PI*2);c.arc(7,-54,2.4,0,Math.PI*2);c.fill();c.restore();}
+        else{const ring=Math.min(1,(phase-3)/.3);c.globalAlpha=1-ring;c.strokeStyle='#d1d5db';c.lineWidth=4;c.beginPath();c.ellipse(dx,dyDummy+32,10+ring*35,5+ring*12,0,0,Math.PI*2);c.stroke();}c.restore();
       }else if(id==='saiyan'){
-        if(phase>.55&&phase<2.55){const power=Math.min(1,(phase-.55)/.55,(2.55-phase)/.45);c.save();c.globalCompositeOperation='lighter';c.globalAlpha=.3+.3*Math.max(0,power);c.strokeStyle='#ffd21f';c.lineWidth=5;c.shadowColor='#ffe45c';c.shadowBlur=24;const pulse=Math.sin(phase*24)*4;c.beginPath();c.ellipse(cx,cy,w*.18+pulse,h*.28+pulse,0,0,Math.PI*2);c.stroke();for(let i=0;i<10;i++){const q=phase*4+i*Math.PI/5,r=w*.2+Math.sin(phase*20+i)*7;c.fillStyle=i%2?'#fff36a':'#fbbf24';c.beginPath();c.moveTo(cx+Math.cos(q)*r,cy+Math.sin(q)*r);c.lineTo(cx+Math.cos(q+.12)*(r+14),cy+Math.sin(q+.12)*(r+14));c.lineTo(cx+Math.cos(q-.1)*(r+20),cy+Math.sin(q-.1)*(r+20));c.closePath();c.fill();}c.restore();}
+        if(phase>.55&&phase<2.55){const power=Math.min(1,(phase-.55)/.55,(2.55-phase)/.45),palette=['#fff36a','#ffe100','#ff9f00'];c.save();c.globalCompositeOperation='lighter';for(let i=0;i<30;i++){const q=phase*5.2+(i%5)*.7+i*2.17,side=i%2===0?-1:1,x=cx+side*(13+(i%5)*2.1)+Math.sin(q)*3.4,y=cy-34+((i*17+Math.floor(phase*18))%66),hh=11+((Math.sin(q*1.37)+1)*7),ww=2.6+(i%3);c.globalAlpha=power*(.34+.42*(.5+.5*Math.sin(q)));c.fillStyle=palette[i%3];c.beginPath();c.moveTo(x-ww,y+hh*.55);c.quadraticCurveTo(x-ww*1.5,y,x+Math.sin(q)*2,y-hh);c.quadraticCurveTo(x+ww*2,y,x+ww,y+hh*.55);c.closePath();c.fill();}c.globalAlpha=.22*power;const core=c.createRadialGradient(cx,cy-8,4,cx,cy-8,34);core.addColorStop(0,'rgba(255,255,255,.42)');core.addColorStop(.5,palette[1]);core.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=core;c.fillRect(cx-32,cy-46,64,78);if(phase<1.18){const burst=1-(phase-.72)/.46;c.globalAlpha=Math.max(0,burst)*.9;c.strokeStyle='#fff36a';c.lineWidth=3;for(let i=0;i<14;i++){const q=i*Math.PI/7+phase*2,r=25+(1-burst)*34;c.beginPath();c.moveTo(cx+Math.cos(q)*r,cy+Math.sin(q)*r);c.lineTo(cx+Math.cos(q)*(r+22),cy+Math.sin(q)*(r+22));c.stroke();}}if(phase<1.35){const ring=Math.max(0,(phase-.68)/.67);c.globalAlpha=.8*(1-ring);c.strokeStyle='#fff';c.lineWidth=4;c.beginPath();c.ellipse(cx,cy+12,10+ring*w*.28,6+ring*h*.16,0,0,Math.PI*2);c.stroke();}c.restore();}
         if(phase>.72&&phase<1.08){c.globalAlpha=1-(phase-.72)/.36;c.fillStyle='#fff';c.fillRect(0,0,w,h);}
       }
       c.restore();return phase<3.35;
@@ -1764,10 +1764,17 @@ function gadget(p){
       el('onlineSignUp').style.display = user ? 'none' : 'inline-block';
       el('onlineUser').textContent = user ? 'Signed in as: '+(user.user_metadata?.username || (user.email||'').split('@')[0]) : '';
       if(user) status('Signed in. Create a room or enter a friend’s room code.');
+      const name=user?(user.user_metadata?.username||(user.email||'').split('@')[0]):'';
+      if(el('settingsSignedOut'))el('settingsSignedOut').style.display=user?'none':'flex';if(el('settingsSignedIn'))el('settingsSignedIn').style.display=user?'flex':'none';if(el('settingsAccountName'))el('settingsAccountName').textContent=user?'Signed in as '+name:'';if(el('settingsUsername')&&!el('settingsUsername').value&&name)el('settingsUsername').value=name;
+      syncRoomActions();if(user)void loadLobbyFriends(user);
     }
+    function syncRoomActions(){const inRoom=!!currentRoom;if(el('createRoomBtn'))el('createRoomBtn').style.display=inRoom?'none':'inline-block';if(el('roomCodeRow'))el('roomCodeRow').style.display=inRoom?'none':'flex';}
+    async function loadLobbyFriends(user){const host=el('lobbyFriendsList');if(!host||!user)return;try{const {data:rows,error}=await db.from('dabrawl_friend_requests').select('requester_id,addressee_id,status').or('requester_id.eq.'+user.id+',addressee_id.eq.'+user.id).eq('status','accepted');if(error)throw error;const ids=[...new Set((rows||[]).map(r=>r.requester_id===user.id?r.addressee_id:r.requester_id))];if(!ids.length){host.innerHTML='<div style="color:#94a3b8;text-align:center">No friends yet. Use Manage Friends to add some.</div>';return;}const {data:profiles,error:pe}=await db.from('dabrawl_player_profiles').select('user_id,username').in('user_id',ids);if(pe)throw pe;const names=new Map((profiles||[]).map(p=>[p.user_id,p.username]));host.innerHTML='<div style="color:#fde047;font-weight:bold;text-align:center">YOUR FRIENDS · INVITE TO ROOM</div>'+rows.map(r=>{const id=r.requester_id===user.id?r.addressee_id:r.requester_id;return '<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid #334155;border-radius:9px;background:#0b1224"><span style="flex:1">'+friendsEscape(names.get(id)||'Player')+'</span><button class="btn y" data-room-invite="'+id+'" style="font-size:13px;padding:5px 10px" '+(currentRoom?'':'disabled title="Create a room first"')+ ' title="Invite to room">+</button></div>';}).join('');host.querySelectorAll('[data-room-invite]').forEach(b=>b.onclick=()=>void sendRoomInvite(b.dataset.roomInvite));}catch(err){host.textContent='Could not load friends: '+(err?.message||String(err));}}
+    async function sendRoomInvite(recipientId){const {data:{user}}=await db.auth.getUser();if(!user){status('Sign in first.',true);return;}if(!currentRoom){status('Create a room first, then invite a friend.',true);return;}const {error}=await db.from('dabrawl_room_invites').insert({sender_id:user.id,recipient_id:recipientId,room_code:currentRoom.room_code,status:'pending'});if(error){status('Could not send room invite: '+error.message,true);return;}status('Room invitation sent.');}
     // Bind authentication controls early so later lobby setup errors cannot leave them inert.
     el('prototypeServerBtn').addEventListener('click', () => { void startPrototypeServer(); });
     el('onlineSignIn').addEventListener('click', () => { void auth('in'); });
+    el('settingsSignIn').addEventListener('click',()=>{el('onlineEmail').value=el('settingsUsername').value;el('onlinePassword').value=el('settingsPassword').value;void auth('in');});el('settingsCreateAccount').addEventListener('click',()=>{el('onlineEmail').value=el('settingsUsername').value;el('onlinePassword').value=el('settingsPassword').value;void auth('up');});el('settingsPassword').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();el('onlineEmail').value=el('settingsUsername').value;el('onlinePassword').value=el('settingsPassword').value;void auth('in');}});el('settingsSignOut').addEventListener('click',async()=>{const {error}=await db.auth.signOut();if(error){el('settingsAccountStatus').textContent=error.message;return;}el('settingsAccountStatus').textContent='Signed out.';await updateAuthUI();});el('roomInviteAccept').addEventListener('click',()=>void respondRoomInvite(true));el('roomInviteDecline').addEventListener('click',()=>void respondRoomInvite(false));
     el('onlineSignUp').addEventListener('click', () => { void auth('up'); });
     el('onlinePassword').addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); void auth('in'); } });
     window.__daBrawlAuthReady = true;
@@ -1826,7 +1833,7 @@ function gadget(p){
       if(!currentRoom)return;
       const {data:room,error}=await db.from('game_rooms').select('*').eq('id',currentRoom.id).single();
       if(error){status(error.message,true);return;}
-      currentRoom={...currentRoom,...room};
+      currentRoom={...currentRoom,...room};syncRoomActions();
       const {data:players,error:pe}=await db.from('game_room_players').select('player_slot,character_id,is_ready,user_id').eq('room_id',room.id).order('player_slot');
       if(pe){status(pe.message,true);return;}
       el('activeRoom').textContent='ROOM CODE: '+room.room_code;
@@ -1879,7 +1886,7 @@ function gadget(p){
           if(error){if(error.code==='23505')continue;status('Room creation failed: '+error.message+' ('+(error.code||'database error')+').',true);return;}
           const {error:joinError}=await db.from('game_room_players').insert({room_id:room.id,user_id:user.id,player_slot:1,character_id:localStorage.getItem('dabrawl_b')||'kuku',is_ready:false});
           if(joinError){status('Room was created, but adding you failed: '+joinError.message+' ('+(joinError.code||'database error')+'). Check game_room_players insert permissions in Supabase.',true);return;}
-          currentRoom=room; subscribeRoom(); await refreshRoom(); show('menu'); return;
+          currentRoom=room; syncRoomActions(); void loadLobbyFriends(user); await refreshRoom(); setScreen('menu'); return;
         }
         status('Could not create a unique room code after 5 tries. Try again.',true);
       } catch(err) {
@@ -1896,7 +1903,7 @@ function gadget(p){
       if(error){status(error.message,true);return;}
       const {data:room,error:re}=await db.from('game_rooms').select('*').eq('id',roomId).single();
       if(re){status(re.message,true);return;}
-      currentRoom=room;subscribeRoom();await refreshRoom();show('menu');
+      currentRoom=room;syncRoomActions();void loadLobbyFriends((await db.auth.getUser()).data.user);subscribeRoom();await refreshRoom();show('menu');
     }
     function subscribeRoom(){
       if(roomChannel)db.removeChannel(roomChannel);
@@ -2150,9 +2157,18 @@ function gadget(p){
       if(friendsPresenceTimer){clearInterval(friendsPresenceTimer);friendsPresenceTimer=null;}
       if(friendsPresenceChannel){const old=friendsPresenceChannel;friendsPresenceChannel=null;try{await db.removeChannel(old);}catch(_){}}
     }
+    let pendingRoomInvites=[],activeRoomInvite=null;
+    const screenIsGame=()=>!!document.getElementById('game')?.classList.contains('on');
+    function setScreen(id){document.querySelectorAll('.scr').forEach(node=>node.classList.toggle('on',node.id===id));}
+    function displayRoomInvite(inv){if(!inv)return;if(screenIsGame()){pendingRoomInvites.push(inv);return;}activeRoomInvite=inv;el('roomInviteText').textContent=(inv.senderName||'Your friend')+' invited you to join room '+inv.room_code+'. Join or decline?';el('roomInvitePopup').style.display='flex';}
+    function closeRoomInvite(){el('roomInvitePopup').style.display='none';activeRoomInvite=null;}
+    async function respondRoomInvite(accept){const inv=activeRoomInvite;if(!inv)return;try{const {data:{user}}=await db.auth.getUser();if(!user)throw new Error('Sign in first.');const {error}=await db.from('dabrawl_room_invites').update({status:accept?'accepted':'declined'}).eq('id',inv.id).eq('recipient_id',user.id);if(error)throw error;closeRoomInvite();if(accept){show('onlineLobby');await updateAuthUI();el('roomCodeInput').value=inv.room_code;await joinRoom();}}catch(err){status('Could not respond to invitation: '+(err?.message||String(err)),true);}}
+    setInterval(()=>{if(!screenIsGame()&&!activeRoomInvite&&pendingRoomInvites.length)displayRoomInvite(pendingRoomInvites.shift());},500);
     async function startFriendsPresence(user){
       await stopFriendsPresence();
-      friendsPresenceChannel=db.channel('dabrawl-friends-presence',{config:{presence:{key:user.id}}});
+      friendsPresenceChannel=db.channel('dabrawl-friends-presence',{config:{presence:{key:user.id}}})
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'dabrawl_room_invites',filter:'recipient_id=eq.'+user.id},async({new:inv})=>{if(inv?.status!=='pending')return;const {data:profile}=await db.from('dabrawl_player_profiles').select('username').eq('user_id',inv.sender_id).maybeSingle();displayRoomInvite({...inv,senderName:profile?.username||'Your friend'});})
+;
       friendsPresenceChannel.subscribe(async state=>{
         if(state!=='SUBSCRIBED')return;
         const name=String(user.user_metadata?.username||(user.email||'').split('@')[0]||'Player');
@@ -2184,10 +2200,10 @@ function gadget(p){
           ...incoming.map(r=>'<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #334155"><span><b>'+friendsEscape(profileById.get(r.requester_id)||'Player')+'</b> · wants to be friends</span><span><button class="btn y" data-friend-accept="'+r.id+'" style="font-size:14px">ACCEPT</button> <button class="btn" data-friend-decline="'+r.id+'" style="font-size:14px">DECLINE</button></span></div>'),
           ...outgoing.map(r=>'<div style="padding:8px 0;color:#cbd5e1">'+friendsEscape(profileById.get(r.addressee_id)||'Player')+' · request sent</div>')
         ].join(''):'<span style="color:#94a3b8">No pending requests.</span>';
-        el('friendList').innerHTML=accepted.length?accepted.map(r=>{const id=r.requester_id===user.id?r.addressee_id:r.requester_id;const online=currentOnlineIds().has(id);return '<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #334155"><span style="width:10px;height:10px;border-radius:50%;background:'+(online?'#22c55e':'#64748b')+';display:inline-block"></span><b style="flex:1">'+friendsEscape(profileById.get(id)||'Player')+'</b><span style="color:'+(online?'#86efac':'#94a3b8')+'">'+(online?'ONLINE':'OFFLINE')+'</span><button class="btn r" data-friend-remove="'+r.id+'" style="font-size:13px;padding:4px 9px">REMOVE</button></div>';}).join(''):'<span style="color:#94a3b8">No friends yet. Add someone by username above.</span>';
+        el('friendList').innerHTML=accepted.length?accepted.map(r=>{const id=r.requester_id===user.id?r.addressee_id:r.requester_id;const online=currentOnlineIds().has(id);return '<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #334155"><span style="width:10px;height:10px;border-radius:50%;background:'+(online?'#22c55e':'#64748b')+';display:inline-block"></span><b style="flex:1">'+friendsEscape(profileById.get(id)||'Player')+'</b><span style="color:'+(online?'#86efac':'#94a3b8')+'">'+(online?'ONLINE':'OFFLINE')+'</span><button class="btn y" data-room-invite="'+id+'" style="font-size:13px;padding:4px 9px" '+(currentRoom?'':'disabled title="Create a room first"')+ ' title="Invite to room">+</button><button class="btn r" data-friend-remove="'+r.id+'" style="font-size:13px;padding:4px 9px">REMOVE</button></div>';}).join(''):'<span style="color:#94a3b8">No friends yet. Add someone by username above.</span>';
         el('friendRequests').querySelectorAll('[data-friend-accept]').forEach(b=>b.onclick=()=>void respondFriendRequest(b.dataset.friendAccept,'accepted'));
         el('friendRequests').querySelectorAll('[data-friend-decline]').forEach(b=>b.onclick=()=>void respondFriendRequest(b.dataset.friendDecline,'declined'));
-        el('friendList').querySelectorAll('[data-friend-remove]').forEach(b=>b.onclick=()=>void removeFriend(b.dataset.friendRemove));
+        el('friendList').querySelectorAll('[data-friend-remove]').forEach(b=>b.onclick=()=>void removeFriend(b.dataset.friendRemove));el('friendList').querySelectorAll('[data-room-invite]').forEach(b=>b.onclick=()=>void sendRoomInvite(b.dataset.roomInvite));
         friendsMsg('Friend list updated.');
       }catch(err){friendsMsg('Could not load friends: '+(err?.message||String(err))+'. If this is the first setup, apply the friends migration in Supabase.',true);}
     }
@@ -2234,12 +2250,12 @@ function gadget(p){
     el('friendUsername').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void sendFriendRequest();}});
     db.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>{if(session?.user)void startFriendsPresence(session.user);else void stopFriendsPresence();},0);});
     db.auth.getSession().then(({data})=>{if(data?.session?.user)void startFriendsPresence(data.session.user);}).catch(()=>{});
-    el('lobbyFriendsBtn').addEventListener('click',()=>void loadFriendsScreen());
+    el('lobbyFriendsBtn').addEventListener('click',()=>{setScreen('friendsScreen');void loadFriendsScreen();});
     el('createRoomBtn').addEventListener('click',createRoom);
     el('joinRoomBtn').addEventListener('click',joinRoom);
     el('startRoomBtn').addEventListener('click',startRoomGame);
     function resetLocalRoomState(message){
-      const old=roomChannel;roomChannel=null;currentRoom=null;roomStartRequestedFor=null;
+      const old=roomChannel;roomChannel=null;currentRoom=null;syncRoomActions();roomStartRequestedFor=null;
       $('modeBtn').disabled=false;$('modeBtn').title='Choose game mode';
       const b=el('play');b.textContent='PLAY';b.classList.remove('ready');b.onclick=()=>{beep(500,.1);matchmake();};
       window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';
@@ -2327,7 +2343,7 @@ function gadget(p){
     el('readyRoomBtn').addEventListener('click',toggleRoomReady);
     el('refreshRoomBtn').addEventListener('click',refreshRoom);
     el('leaveRoomLobbyBtn').addEventListener('click',()=>void leaveParty());
-    el('onlineSignOut').addEventListener('click',async()=>{stopPrototypeServer('Disconnected because you signed out');if(roomChannel)await db.removeChannel(roomChannel);roomChannel=null;currentRoom=null;await db.auth.signOut();await updateAuthUI();status('Signed out.');});
+    el('onlineSignOut').addEventListener('click',async()=>{stopPrototypeServer('Disconnected because you signed out');if(roomChannel)await db.removeChannel(roomChannel);roomChannel=null;currentRoom=null;syncRoomActions();await db.auth.signOut();await updateAuthUI();status('Signed out.');});
     db.auth.onAuthStateChange(()=>{setTimeout(updateAuthUI,0);});
   </script>
 
