@@ -47,5 +47,5 @@ The new service instead sends `state` snapshots shaped as `{ state: { mode, phas
 
 - This contract does not connect the server to the browser game.
 - It does not deploy the Node service or change hosting.
-- The Node service stores rooms in memory; restart recovery is not implemented.
+- The Node service stores rooms in memory; restart recovery is not implemented. Unfinished Saiyan Kame charges are cancelled on disconnect forfeits, knockouts, and room cleanup.
 - The existing Supabase Edge Function prototype and the live Realtime match path remain separate.

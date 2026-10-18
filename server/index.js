@@ -186,6 +186,7 @@ function stepRoom(room, dt) {
     for (const p of room.players.values()) {
       if (p.alive && shouldForfeitDisconnectedPlayer(p.connected, p.disconnectedAt, t, DISCONNECT_GRACE_MS)) {
         p.alive = false;
+        cancelKameCharge(p);
         p.input = { x: 0, y: 0 };
         p.disconnectedAt = 0;
         event(room, "player-forfeit", { playerId: p.id, reason: "disconnect" });
@@ -241,7 +242,7 @@ function stepRoom(room, dt) {
       hit.hp = Math.max(0, hit.hp-b.damage); hit.meter = clamp(hit.meter+12,0,100);
       const owner = room.players.get(b.ownerId); if (owner) owner.meter = clamp(owner.meter+18,0,100);
       event(room, "hit", { projectileId:b.id, attackerId:b.ownerId, targetId:hit.id, damage:b.damage, hp:hit.hp });
-      if (hit.hp <= 0) { hit.alive=false; hit.input={x:0,y:0}; event(room,"knockout",{playerId:hit.id,by:b.ownerId}); }
+      if (hit.hp <= 0) { hit.alive=false; cancelKameCharge(hit); hit.input={x:0,y:0}; event(room,"knockout",{playerId:hit.id,by:b.ownerId}); }
     } else if (projectileStillInRange(b, room.world.width, room.world.height)) keep.push(b);
   }
   room.projectiles = keep;
@@ -262,7 +263,7 @@ function stepRoom(room, dt) {
           target.hp = Math.max(0, target.hp - beam.damage);
           target.meter = clamp(target.meter + 12, 0, 100);
           event(room, "hit", { attackerId: beam.ownerId, targetId: target.id, damage: beam.damage, hp: target.hp, mui: true });
-          if (target.hp <= 0) { target.alive = false; target.input = { x: 0, y: 0 }; event(room, "knockout", { playerId: target.id, by: beam.ownerId }); }
+          if (target.hp <= 0) { target.alive = false; cancelKameCharge(target); target.input = { x: 0, y: 0 }; event(room, "knockout", { playerId: target.id, by: beam.ownerId }); }
         }
         beam.nextHitAt = t + 100;
       }
@@ -276,6 +277,7 @@ function cleanupRoom(room) {
   const currentTime = now();
   for (const [id,p] of room.players) {
     if (!shouldExpireDisconnectedPlayer(p.connected, p.lastSeen, currentTime, ROOM_TTL_MS)) continue;
+    cancelKameCharge(p);
     room.players.delete(id);
   }
   room.ownerId = resolveRoomOwner(room.ownerId, [...room.players.values()]);

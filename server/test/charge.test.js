@@ -29,3 +29,13 @@ test("cancels a held charge when its owner is interrupted", async () => {
   assert.equal(player.kameChargeStartedAt, 0);
   assert.equal(cancelKameCharge(player), false);
 });
+
+test("cancelling a charge is safe for disconnected and already-reset players", async () => {
+  const { cancelKameCharge } = await import("../charge.js");
+  assert.equal(cancelKameCharge(null), false);
+  assert.equal(cancelKameCharge({ kameChargeStartedAt: 0 }), false);
+  const player = { kameChargeStartedAt: 4200 };
+  assert.equal(cancelKameCharge(player), true);
+  assert.equal(player.kameChargeStartedAt, 0);
+  assert.equal(cancelKameCharge(player), false);
+});
