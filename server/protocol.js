@@ -65,3 +65,5 @@ export const canConfigureRoom = (actorId, ownerId, phase) => phase === "waiting"
 
 export const PROTOCOL_VIOLATION_LIMIT = 8;
 export const shouldCloseForProtocolViolations = count => Number.isSafeInteger(count) && count >= PROTOCOL_VIOLATION_LIMIT;
+
+export const shouldCancelCountdown = (phase, ready) => phase === "countdown" && ready === false;
