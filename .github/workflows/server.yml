@@ -36,3 +36,15 @@ jobs:
         run: npm test
       - name: Build production Docker image
         run: docker build -f server/Dockerfile -t dabrawl-server:ci .
+      - name: Smoke-test container startup and health endpoint
+        run: |
+          docker run -d --name dabrawl-server-smoke -p 8080:8080 dabrawl-server:ci
+          trap 'docker logs dabrawl-server-smoke; docker rm -f dabrawl-server-smoke >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8080/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs dabrawl-server-smoke
+          exit 1
