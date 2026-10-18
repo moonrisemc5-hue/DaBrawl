@@ -8,6 +8,7 @@ const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
 const TICK_MS = 50;
+const INPUT_TIMEOUT_MS = 250;
 const ROOM_TTL_MS = 120_000;
 const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
@@ -23,7 +24,7 @@ const now = () => Date.now();
 
 function makeRoom(code, mode = "knockout") {
   return { code, mode: validMode(mode),
-    phase: "waiting", createdAt: now(), updatedAt: now(), startedAt: 0, endsAt: 0, tick: 0,
+    phase: "waiting", createdAt: now(), updatedAt: now(), emptySince: 0, startedAt: 0, endsAt: 0, tick: 0,
     players: new Map(), projectiles: [], events: [], winner: null };
 }
 function makePlayer(user, msg, slot) {
@@ -62,8 +63,10 @@ function joinRoom(room, user, msg, socket) {
     player = makePlayer(user, msg, room.players.size);
     room.players.set(user.id, player);
   }
+  if (player.socket && player.socket !== socket) player.socket.close(4001, "Reconnected from another session");
   player.name = cleanText(msg.name || player.name);
   if (BRAWLERS[msg.brawler]) player.brawler = msg.brawler;
+  room.emptySince = 0;
   player.socket = socket; player.connected = true; player.lastSeen = now(); room.updatedAt = now();
   return player;
 }
@@ -115,6 +118,7 @@ function stepRoom(room, dt) {
   if (room.phase === "playing") {
     for (const p of room.players.values()) {
       if (!p.connected || !p.alive) continue;
+      if (t - p.lastSeen > INPUT_TIMEOUT_MS) p.input = { x: 0, y: 0 };
       const stats = BRAWLERS[p.brawler] || BRAWLERS.default;
       const x = p.input.x, y = p.input.y, mag = Math.hypot(x,y) || 1;
       p.x = clamp(p.x + x / mag * stats.speed * dt, WORLD.margin, WORLD.width-WORLD.margin);
@@ -156,7 +160,12 @@ function cleanupRoom(room) {
     if (p.connected || now()-p.lastSeen < ROOM_TTL_MS) continue;
     room.players.delete(id);
   }
-  if (!room.players.size && now()-room.updatedAt > ROOM_TTL_MS) rooms.delete(room.code);
+  if (!room.players.size) {
+    if (!room.emptySince) room.emptySince = now();
+    if (now() - room.emptySince > ROOM_TTL_MS) rooms.delete(room.code);
+  } else {
+    room.emptySince = 0;
+  }
 }
 const server = http.createServer((req,res) => {
   const path = new URL(req.url || "/", "http://localhost").pathname;
