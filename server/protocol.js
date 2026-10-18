@@ -62,3 +62,6 @@ export function assignTeams(playerCount, mode) {
 }
 
 export const canConfigureRoom = (actorId, ownerId, phase) => phase === "waiting" && Boolean(actorId) && actorId === ownerId;
+
+export const PROTOCOL_VIOLATION_LIMIT = 8;
+export const shouldCloseForProtocolViolations = count => Number.isSafeInteger(count) && count >= PROTOCOL_VIOLATION_LIMIT;
