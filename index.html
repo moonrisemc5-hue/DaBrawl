@@ -2240,7 +2240,8 @@ function gadget(p){
     el('friendsRefresh').addEventListener('click',()=>void loadFriendsScreen());
     el('sendFriendRequest').addEventListener('click',()=>void sendFriendRequest());
     el('friendUsername').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void sendFriendRequest();}});
-    db.auth.onAuthStateChange((_event,session)=>{if(!session)void stopFriendsPresence();});
+    db.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>{if(session?.user)void startFriendsPresence(session.user);else void stopFriendsPresence();},0);});
+    db.auth.getSession().then(({data})=>{if(data?.session?.user)void startFriendsPresence(data.session.user);}).catch(()=>{});
     el('createRoomBtn').addEventListener('click',createRoom);
     el('joinRoomBtn').addEventListener('click',joinRoom);
     el('startRoomBtn').addEventListener('click',startRoomGame);
