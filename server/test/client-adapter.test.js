@@ -5,12 +5,13 @@ import { adaptServerPlayer, adaptServerPacket } from "../client-adapter.js";
 test("maps a valid authoritative player to the browser-facing field names", () => {
   assert.deepEqual(adaptServerPlayer({
     id: "user-1", name: "Ivor", brawler: "kuku", team: 1, slot: 3,
+    gadgetCharges: 1, gadgetCooldownMs: 450,
     x: 123, y: 234, aim: 1.25, hp: 4500, maxHp: 7000, alive: true,
     meter: 48, form: 2, transforming: true, connected: true, ready: false
   }), {
-    id: "user-1", x: 123, y: 234, a: 1.25, hp: 4500, mh: 7000, alive: true,
+    id: "user-1", name: "Ivor", x: 123, y: 234, a: 1.25, hp: 4500, mh: 7000, alive: true,
     sc: 48, form: 2, tfn: 2, tf: 1, brawler: "kuku", team: 1, slot: 3,
-    connected: true, ready: false
+    gadgetCharges: 1, gadgetCooldownMs: 450, connected: true, ready: false
   });
 });
 
@@ -68,4 +69,29 @@ test("normalizes acknowledgements and errors", () => {
     kind:"ack", seq:9, clientSentAt:null, serverTime:500
   });
   assert.deepEqual(adaptServerPacket({type:"error",message:"nope"}), {kind:"error",message:"nope"});
+});
+
+
+test("preserves player display names and authoritative gadget timing without inventing missing values", () => {
+  const player = adaptServerPlayer({
+    id: "p2", name: "Teno", x: 1, y: 2, hp: 80, maxHp: 100,
+    gadgetCharges: 2, gadgetCooldownMs: 0
+  });
+  assert.equal(player.name, "Teno");
+  assert.equal(player.gadgetCharges, 2);
+  assert.equal(player.gadgetCooldownMs, 0);
+
+  const olderSnapshot = adaptServerPlayer({ id: "p3", x: 1, y: 2, hp: 80, maxHp: 100 });
+  assert.equal(olderSnapshot.name, "");
+  assert.equal(olderSnapshot.gadgetCharges, null);
+  assert.equal(olderSnapshot.gadgetCooldownMs, null);
+});
+
+test("clamps malformed negative gadget timing to zero", () => {
+  const player = adaptServerPlayer({
+    id: "p4", x: 1, y: 2, hp: 80, maxHp: 100,
+    gadgetCharges: -1, gadgetCooldownMs: -500
+  });
+  assert.equal(player.gadgetCharges, 0);
+  assert.equal(player.gadgetCooldownMs, 0);
 });
