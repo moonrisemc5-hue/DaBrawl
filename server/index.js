@@ -432,7 +432,7 @@ wss.on("connection", (ws,_req,meta) => {
     }
   });
   ws.on("close",()=>{ if (player.socket !== ws) return; cancelKameCharge(player); player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); player.disconnectedAt=player.lastSeen; room.updatedAt=now(); cancelCountdown(room, "player-disconnected"); event(room,"player-disconnected",{playerId:player.id}); });
-  ws.on("error",()=>{ if (player.socket !== ws) return; cancelKameCharge(player); player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); player.disconnectedAt=player.lastSeen; cancelCountdown(room, "connection-error"); });
+  ws.on("error",()=>{ if (player.socket !== ws) return; cancelKameCharge(player); player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); player.disconnectedAt=player.lastSeen; room.updatedAt=now(); cancelCountdown(room, "connection-error"); event(room,"player-disconnected",{playerId:player.id,reason:"connection-error"}); });
   emit(room,"player-joined",{playerId:player.id}); sendState(room);
 });
 let lastTickAt=now();
