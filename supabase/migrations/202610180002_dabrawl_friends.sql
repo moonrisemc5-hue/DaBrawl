@@ -17,7 +17,8 @@ create table if not exists public.dabrawl_friend_requests (
 );
 
 create unique index if not exists dabrawl_friend_requests_one_pair
-  on public.dabrawl_friend_requests (least(requester_id, addressee_id), greatest(requester_id, addressee_id));
+  on public.dabrawl_friend_requests (least(requester_id, addressee_id), greatest(requester_id, addressee_id))
+  where status in ('pending','accepted');
 create index if not exists dabrawl_friend_requests_addressee_status
   on public.dabrawl_friend_requests (addressee_id, status);
 create index if not exists dabrawl_friend_requests_requester_status
