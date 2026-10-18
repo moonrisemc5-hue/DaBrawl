@@ -1452,8 +1452,9 @@ function gadget(p){
         }
         if(wf>0){ g.fillStyle='rgba(255,255,255,'+wf*.85+')'; g.fillRect(0,0,W,H); wf = Math.max(0, wf-.025); }
         g.fillStyle='#000a'; g.beginPath(); g.roundRect(W/2-90, 8, 180, 40, 20); g.fill();
-        if(gameMode == 'showdown'){
-          const aliveLeft = P.filter(p=>p.alive).length; tx('LEFT: '+aliveLeft, W/2, 36, 20, '#ffd21f');
+        if(gameMode == 'showdown' || gameMode === 'duo'){
+          const aliveLeft = gameMode==='duo' ? new Set(P.filter(p=>p.alive).map(p=>p.t)).size : P.filter(p=>p.alive).length;
+          tx(gameMode==='duo'?'TEAMS LEFT: '+aliveLeft:'LEFT: '+aliveLeft, W/2, 36, 20, '#ffd21f');
         } else {
           tx(G.w[0], W/2-50, 38, 30, '#6bb6ff'); tx(isTestMode?'∞':'VS', W/2, 36, 20, '#ffd21f'); tx(G.w[1], W/2+50, 38, 30, '#ff7a7a');
           for(const t of[0,1]) P.filter(p=>p.t==t).forEach((p,i) => circ(W/2+(t?1:-1)*(110+i*22), 28, 8, p.alive?(t?'#f44':'#39f'):'#555', 1));
