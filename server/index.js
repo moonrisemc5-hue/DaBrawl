@@ -10,7 +10,7 @@ const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
 const TICK_MS = 50;
 const ROOM_TTL_MS = 120_000;
 const MAX_PLAYERS = 6;
-const MAX_ROOMS = 1000;
+const MAX_ROOMS = 100;
 const WORLD = { width: 800, height: 520, margin: 28 };
 const BRAWLERS = {
   kuku: { hp: 3000, speed: 205, damage: 260, range: 230, cooldown: 380, spread: 0.68, pellets: 8, superDamage: 650, superRange: 340 },
@@ -36,7 +36,7 @@ function makePlayer(user, msg, slot) {
     x: slot % 2 ? 620 : 180, y: 150 + Math.floor(slot / 2) * 70, aim: slot % 2 ? Math.PI : 0,
     hp: BRAWLERS[brawler].hp, maxHp: BRAWLERS[brawler].hp, alive: true, meter: 0,
     form: 0, transformUntil: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0,
-    connected: true, socket: null, lastSeen: now(), invulnerableUntil: 0 };
+    connected: true, socket: null, lastSeen: now(), invulnerableUntil: 0, ready: false };
 }
 function emit(room, type, data = {}) {
   const packet = JSON.stringify({ type, room: room.code, tick: room.tick, serverTime: now(), ...data });
@@ -47,14 +47,14 @@ function snapshot(room) {
     winner: room.winner, tick: room.tick, players: [...room.players.values()].map(p => ({
       id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,
       hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,
-      transforming:p.transformUntil>now(),connected:p.connected
+      transforming:p.transformUntil>now(),connected:p.connected,ready:p.ready
     })), projectiles: room.projectiles.map(b => ({ id:b.id,ownerId:b.ownerId,x:b.x,y:b.y,angle:b.angle,super:b.super })) };
 }
 function sendState(room) { emit(room, "state", { state: snapshot(room) }); }
 function event(room, name, data = {}) { room.events.push({ name, at: now(), ...data }); if (room.events.length > 80) room.events.shift(); emit(room, "event", { event: name, ...data }); }
 
 function startMatch(room) {
-  if (room.phase !== "waiting" || room.players.size < 2) return;
+  if (room.phase !== "waiting" || room.players.size < 2 || ![...room.players.values()].every(p => p.ready)) return;
   room.phase = "countdown"; room.startedAt = now() + 2500; room.endsAt = room.startedAt + 180_000;
   event(room, "match-countdown", { startAt: room.startedAt });
 }
@@ -185,9 +185,10 @@ wss.on("connection", (ws,_req,meta) => {
           player.hp=player.maxHp;
         }
         if (room.phase==="waiting") room.mode=validMode(m.mode);
+        if (typeof m.ready === "boolean") player.ready=m.ready;
         if (m.ready===true) startMatch(room);
         emit(room,"player-joined",{playerId:player.id}); sendState(room);
-      } else if (m.type==="ready") { if (m.ready===true) startMatch(room); sendState(room); }
+      } else if (m.type==="ready") { player.ready=m.ready===true; if (player.ready) startMatch(room); sendState(room); }
       else if (m.type==="input") {
         const seq=Math.floor(finite(m.seq,-1)); if (seq<=player.seq) return;
         player.seq=seq; player.input=validAxes(m.x,m.y); player.aim=clamp(finite(m.aim,player.aim),-Math.PI*2,Math.PI*2);
