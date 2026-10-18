@@ -58,6 +58,8 @@
     #sup { right: calc(28px + env(safe-area-inset-right,0px)); bottom: calc(130px + env(safe-area-inset-bottom,0px)); width: 82px; height: 82px; font-size: 18px; background: #444; }
     #gad { right: calc(130px + env(safe-area-inset-right,0px)); bottom: calc(30px + env(safe-area-inset-bottom,0px)); width: 62px; height: 62px; font-size: 20px; background: #2a9d3c; }
     #leaveBtn { position: fixed; left: 16px; top: calc(12px + env(safe-area-inset-top,0px)); z-index: 399; display: none; pointer-events: auto; }
+    .menu-bottom-controls { width:min(96vw,760px); }
+    @media(max-width:600px){ #friendsBtn{right:8px!important;top:42%!important;width:52px!important;height:52px!important;font-size:23px!important} .menu-bottom-controls{bottom:calc(8px + env(safe-area-inset-bottom,0px))!important} #pv{width:min(250px,38vh);height:min(250px,38vh)} }
     .mode-sel { background: linear-gradient(#2b2d42, #141629); border: 3px solid #000; border-radius: 24px; padding: 8px 24px; font-size: 20px; color: var(--y); cursor: pointer; box-shadow: 0 4px 0 #000; display: flex; align-items: center; gap: 10px; pointer-events: auto; z-index: 300; }
     .bar-wrap { width: min(80vw, 360px); height: 26px; background: #000; border: 3px solid #000; border-radius: 14px; overflow: hidden; position: relative; box-shadow: 0 4px 0 #000; }
     .bar-fill { height: 100%; width: 0%; background: linear-gradient(#ff9a00, #ffe45c); transition: width .1s linear; }
@@ -96,10 +98,11 @@
         <div id="bn">KUKU</div>
         <canvas id="pv" width="300" height="300"></canvas>
       </div>
-      <button class="plus" id="nextBtn" aria-label="Friends" title="Friends" style="margin-bottom:0;font-size:30px">♟</button>
+      <button class="plus" id="nextBtn" aria-label="Create or join a room" title="Create lobby / enter room code" style="margin-bottom:0">+</button>
     </div>
-    <div style="position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:flex-end;gap:10px;z-index:300">
-      <div style="display:flex;align-items:center;gap:12px">
+    <button class="plus" id="friendsBtn" aria-label="Friends: add or remove friends" title="Friends" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);z-index:320;font-size:28px">👥</button>
+    <div class="menu-bottom-controls" style="position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:10px;z-index:300">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap">
         <button class="mode-sel" id="modeBtn">🎮 <span id="modeTxt">KNOCKOUT 3v3</span> ▾</button>
         <button class="btn y" id="play">PLAY</button>
       </div>
@@ -124,6 +127,7 @@
         <div id="prototypeServerStatus" style="font:13px Arial,sans-serif;color:#cbd5e1;margin-top:7px">Not connected</div>
       </div>
       <button class="btn y" id="createRoomBtn" style="font-size:28px;padding:8px 22px">CREATE ROOM</button>
+      <button class="btn purple" id="lobbyFriendsBtn">ADD / REMOVE FRIENDS</button>
       <div style="display:flex;gap:8px;width:100%;justify-content:center"><input id="roomCodeInput" maxlength="8" placeholder="ROOM CODE" style="min-width:0;width:180px;padding:10px;border:3px solid #000;border-radius:10px;font:22px Arial,sans-serif;text-transform:uppercase"><button class="btn" id="joinRoomBtn">JOIN</button></div>
       <div id="activeRoom" style="font:20px Arial,sans-serif;color:#fde047"></div>
       <div id="roomPlayers" style="font:16px Arial,sans-serif;color:#fff"></div>
@@ -486,7 +490,7 @@
     try { const saved = JSON.parse(localStorage.getItem('dabrawl_keybinds')||'{}'); for(const k of Object.keys(DEFAULT_BINDS)) if(typeof saved[k]==='string'&&saved[k]) keyBinds[k]=saved[k].toLowerCase(); } catch(_){}
     const bindLabels = {up:'Move up',down:'Move down',left:'Move left',right:'Move right',super:'Use Super',gadget:'Use Gadget',autoAim:'Auto-aim / shoot'};
     let waitingForBind = null;
-    function keyName(k){return k===' '?'SPACE':k.startsWith('arrow')?('ARROW '+k.slice(5).toUpperCase()):k.length===1?k.toUpperCase():k.toUpperCase();}
+    function keyName(k){return k===' '?'SPACE':k==='control'?'CTRL':k==='shift'?'SHIFT':k==='alt'?'ALT':k==='meta'?'WIN':k.startsWith('arrow')?('ARROW '+k.slice(5).toUpperCase()):k.length===1?k.toUpperCase():k.toUpperCase();}
     function saveKeyBinds(){try{localStorage.setItem('dabrawl_keybinds',JSON.stringify(keyBinds));}catch(_){} renderKeybinds();}
     function renderKeybinds(){
       const host=$('keybindRows'); if(!host)return; host.innerHTML='';
@@ -503,7 +507,7 @@
         e.preventDefault(); e.stopPropagation();
         if(e.key==='Escape'){waitingForBind=null;$('keybindHint').textContent='Choose a control, then press the key you want to use.';renderKeybinds();return;}
         const next=e.key.toLowerCase();
-        if(['tab','shift','control','alt','meta'].includes(next))return;
+        if(next==='tab')return;
         const conflict=Object.keys(keyBinds).find(k=>k!==waitingForBind&&keyBinds[k]===next);
         if(conflict){$('keybindHint').textContent='That key is already assigned to '+bindLabels[conflict]+'. Choose another key.';return;}
         keyBinds[waitingForBind]=next;waitingForBind=null;$('keybindHint').textContent='Controls saved on this device.';saveKeyBinds();return;
@@ -897,12 +901,12 @@ function gadget(p){
       } else { $('again').style.display=''; $('home').style.display=''; }
       show('res');
     }
-    function updateMenuUI(){ try { $('bn').textContent = BR[selB].nm; setTimeout(() => rb($('pv'), selB, 2.6, 8), 20); } catch(e){} }
+    function updateMenuUI(){ try { $('bn').textContent = BR[selB].nm; if(!menuShowcaseFrame)setTimeout(() => {if(!menuShowcaseFrame)rb($('pv'), selB, 2.6, 8);}, 20); } catch(e){} }
     function rb(c,id,sc,dy){
       try {
         if(!c) return; const ctx = c.getContext('2d'); if(!ctx) return;
         ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,c.width,c.height); ctx.setTransform(sc,0,0,sc,c.width/2,c.height/2+dy);
-        const oldG = g; g = ctx; drawP({x:0,y:0,t:0,b:id,a:0.5,walk:0,rec:0,fl:0,alive:true,dt:0,hp:1000,mh:1000,k:BR[id]}); g = oldG;
+        const oldG = g; g = ctx; drawP({x:0,y:0,t:0,b:id,a:arguments[5]??0.15,walk:0,rec:0,fl:0,alive:true,dt:0,hp:1000,mh:1000,k:BR[id],form:arguments[4]||0,tf:arguments[6]||0,tfn:arguments[7]||1,sc:0,afterimages:[]}); g = oldG;
       } catch(e){}
     }
     function grid(){
@@ -932,80 +936,36 @@ function gadget(p){
       $('dRankIcon').textContent = 'RANK ' + bR; $('dRankIcon').style.background = bStyle.bg; $('dRankIcon').style.borderColor = bStyle.border;
       startShowcaseAnimation(id);
       $('dsel').textContent = id == selB ? 'SELECTED' : 'SELECT';
-      $('dsel').onclick = () => { selB = id; try { localStorage.setItem('dabrawl_b', id); } catch(e){} window.DaBrawlNet?.updateBrawler?.(id); show('menu'); };
+      $('dsel').onclick = () => { selB = id; try { localStorage.setItem('dabrawl_b', id); } catch(e){} window.DaBrawlNet?.updateBrawler?.(id); show('menu'); updateMenuUI(); playMenuShowcase(id,true); };
       $('dTry').onclick = () => { selB = id; try { localStorage.setItem('dabrawl_b', id); } catch(e){} window.DaBrawlNet?.updateBrawler?.(id); startLoadingScreen(true); };
     }
-    // Animated brawler showcase: small, self-contained effects on the detail preview.
-    // It never touches match state, controls, trophies, or network simulation.
-    let showcaseFrame = 0, showcaseToken = 0;
-    function startShowcaseAnimation(id){
-      const token = ++showcaseToken, canvas = $('dpv');
-      if(showcaseFrame) cancelAnimationFrame(showcaseFrame);
-      const ctx = canvas.getContext('2d');
-      const started = performance.now();
-      function frame(now){
-        if(token !== showcaseToken || !$('det').classList.contains('on')) return;
-        const t = (now-started)/1000;
-        rb(canvas,id,3.2,10);
-        ctx.setTransform(1,0,0,1,0,0);
-        const w=canvas.width,h=canvas.height,cx=w/2,cy=h/2+8;
-        ctx.save();
-        // A gentle stage glow keeps the character readable while the effects animate.
-        const pulse=.5+.5*Math.sin(t*3.2);
-        if(id==='kuku'){
-          // Egg pops open, then a chick bounces out and briefly flaps its wings.
-          const phase=t%3.2, ex=cx+42, ey=cy+45;
-          ctx.globalAlpha=.95;
-          ctx.fillStyle='#f8fafc';ctx.strokeStyle='#713f12';ctx.lineWidth=3;
-          if(phase<1.05){
-            ctx.beginPath();ctx.ellipse(ex,ey,13,18,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-            if(phase>.68){ctx.beginPath();ctx.moveTo(ex-12,ey-3);ctx.lineTo(ex-2,ey+2);ctx.lineTo(ex+4,ey-9);ctx.moveTo(ex+4,ey-9);ctx.lineTo(ex+12,ey-1);ctx.stroke();}
-          } else {
-            const bounce=Math.abs(Math.sin((phase-1.05)*4.4))*13;
-            const x=ex+Math.sin(t*2)*5,y=ey-16-bounce;
-            ctx.fillStyle='#ffd21f';ctx.strokeStyle='#713f12';ctx.lineWidth=2.5;
-            ctx.beginPath();ctx.ellipse(x,y,12,10,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-            ctx.beginPath();ctx.ellipse(x-10,y+2,7,4,Math.sin(t*15)*.7,0,Math.PI*2);ctx.fill();ctx.stroke();
-            ctx.fillStyle='#111827';ctx.beginPath();ctx.arc(x+4,y-2,1.8,0,Math.PI*2);ctx.fill();
-            ctx.fillStyle='#f97316';ctx.beginPath();ctx.moveTo(x+10,y);ctx.lineTo(x+18,y+3);ctx.lineTo(x+10,y+5);ctx.fill();
-          }
-        } else if(id==='shachi'){
-          // A training dummy arcs through the air, spins, and lands with a dust ring.
-          const phase=t%2.8, flight=phase<2.1;
-          const u=flight?phase/2.1:1;
-          const x=cx+Math.sin(u*Math.PI)*75, y=cy+48-Math.sin(u*Math.PI)*92;
-          if(flight){
-            ctx.save();ctx.translate(x,y);ctx.rotate(u*Math.PI*4);
-            ctx.fillStyle='#b77945';ctx.strokeStyle='#422006';ctx.lineWidth=3;
-            ctx.fillRect(-9,-17,18,34);ctx.strokeRect(-9,-17,18,34);
-            ctx.beginPath();ctx.arc(0,-23,9,0,Math.PI*2);ctx.fill();ctx.stroke();
-            ctx.restore();
-          } else {
-            const ring=(phase-2.1)/.7;
-            ctx.globalAlpha=1-ring;ctx.strokeStyle='#cbd5e1';ctx.lineWidth=4;
-            ctx.beginPath();ctx.ellipse(cx+45,cy+47,8+ring*35,4+ring*12,0,0,Math.PI*2);ctx.stroke();
-          }
-          ctx.globalAlpha=.9;ctx.fillStyle='#e2e8f0';
-          for(let i=0;i<3;i++){const a=t*3+i*2.1;ctx.beginPath();ctx.arc(cx+Math.cos(a)*36,cy+40+Math.sin(a)*7,2.5,0,Math.PI*2);ctx.fill();}
-        } else if(id==='saiyan'){
-          // Rotating aura and a brief white flash sell the transformation showcase.
-          const phase=t%4.2, transform=phase>1.2&&phase<1.65;
-          ctx.globalCompositeOperation='lighter';
-          ctx.globalAlpha=.25+.2*pulse;ctx.strokeStyle=phase<1.2?'#ffd21f':phase<2.8?'#ff4040':phase<3.6?'#3bb6ff':'#ffffff';
-          ctx.lineWidth=4+pulse*4;
-          ctx.beginPath();ctx.ellipse(cx,cy+2,48+pulse*5,66+pulse*7,Math.sin(t)*.08,0,Math.PI*2);ctx.stroke();
-          for(let i=0;i<8;i++){
-            const a=t*2+i*Math.PI/4, r=55+Math.sin(t*5+i)*8;
-            ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.lineTo(cx+Math.cos(a+.12)*(r+12),cy+Math.sin(a+.12)*(r+12));ctx.lineTo(cx+Math.cos(a-.08)*(r+18),cy+Math.sin(a-.08)*(r+18));ctx.closePath();ctx.fill();
-          }
-          if(transform){ctx.globalAlpha=.55;ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);}
-        }
-        ctx.restore();
-        showcaseFrame=requestAnimationFrame(frame);
+    // One-shot character showcase choreography.
+    let showcaseFrame=0,showcaseToken=0,menuShowcaseFrame=0,menuShowcaseToken=0;
+    function drawShowcaseFrame(canvas,id,t,scale=2.6,dy=8){
+      const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height,cx=w/2,cy=h/2+dy,phase=Math.min(3.35,t);
+      let form=0,angle=id==='kuku'?.55:0,tf=0;
+      if(id==='saiyan'){if(phase<.75)form=0;else if(phase<2.45){form=1;tf=phase<1.2?1.2-phase:.35;}else form=0;}
+      rb(canvas,id,scale,dy,form,angle,tf,1);c.setTransform(1,0,0,1,0,0);c.save();
+      if(id==='kuku'){
+        const ex=cx+w*.17,ey=cy+h*.17;
+        if(phase<1){c.fillStyle='#fff';c.strokeStyle='#713f12';c.lineWidth=3;c.beginPath();c.ellipse(ex,ey,13,18,0,0,Math.PI*2);c.fill();c.stroke();if(phase>.48){c.beginPath();c.moveTo(ex-12,ey-4);c.lineTo(ex-3,ey+2);c.lineTo(ex+3,ey-8);c.lineTo(ex+12,ey-1);c.stroke();}}
+        else{const u=Math.min(1,(phase-1)/1.9),flee=Math.max(0,(phase-1.85)/1.25),x=ex+Math.sin(u*7)*4+flee*w*.62,y=ey-20-Math.abs(Math.sin((phase-1)*7))*10+flee*h*.04;
+          c.fillStyle='#ffd21f';c.strokeStyle='#713f12';c.lineWidth=2.5;c.beginPath();c.ellipse(x,y,12,10,0,0,Math.PI*2);c.fill();c.stroke();c.beginPath();c.ellipse(x-10,y+2,7,4,Math.sin(phase*24)*.8,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#111827';c.beginPath();c.arc(x+4,y-2,1.8,0,Math.PI*2);c.fill();c.fillStyle='#f97316';c.beginPath();c.moveTo(x+10,y);c.lineTo(x+18,y+3);c.lineTo(x+10,y+5);c.fill();
+          if(flee>.05){c.globalAlpha=Math.min(.7,flee);c.strokeStyle='#fef3c7';c.lineWidth=2;for(let i=0;i<3;i++){c.beginPath();c.moveTo(x-14-i*5,y+8+i*3);c.lineTo(x-23-i*5,y+8+i*3);c.stroke();}c.globalAlpha=1;}}
+      }else if(id==='shachi'){
+        const punch=Math.max(0,Math.min(1,(phase-.35)/.42)),x=cx+w*.2+Math.max(0,phase-.55)*w*.35,y=cy+(phase<.55?h*.17:h*.17-Math.sin(Math.min(1,(phase-.55)/1.45)*Math.PI)*h*.27);
+        c.save();if(phase<.78){c.strokeStyle='#e5e7eb';c.lineWidth=8;c.lineCap='round';c.beginPath();c.moveTo(cx+12,cy+4);c.lineTo(cx+w*(.13+.13*punch),cy+4);c.stroke();c.fillStyle='#f59e0b';c.strokeStyle='#111827';c.lineWidth=3;c.beginPath();c.arc(cx+w*(.14+.13*punch),cy+4,10,0,Math.PI*2);c.fill();c.stroke();if(phase>.45){c.strokeStyle='#fff';c.lineWidth=3;for(let i=0;i<7;i++){const q=i*Math.PI*2/7;c.beginPath();c.moveTo(cx+w*.29+Math.cos(q)*5,cy+4+Math.sin(q)*5);c.lineTo(cx+w*.29+Math.cos(q)*22,cy+4+Math.sin(q)*22);c.stroke();}}}
+        if(phase<.55||phase>2.3){c.fillStyle='#b77945';c.strokeStyle='#422006';c.lineWidth=3;c.fillRect(x-9,y-17,18,34);c.strokeRect(x-9,y-17,18,34);c.beginPath();c.arc(x,y-23,9,0,Math.PI*2);c.fill();c.stroke();c.lineWidth=4;c.beginPath();c.moveTo(x-8,y-3);c.lineTo(x-18,y+8);c.moveTo(x+8,y-3);c.lineTo(x+18,y+8);c.stroke();}
+        else{const u=Math.min(1,(phase-.55)/1.45);c.save();c.translate(x,y);c.rotate(u*Math.PI*3);c.fillStyle='#b77945';c.strokeStyle='#422006';c.lineWidth=3;c.fillRect(-9,-17,18,34);c.strokeRect(-9,-17,18,34);c.beginPath();c.arc(0,-23,9,0,Math.PI*2);c.fill();c.stroke();c.restore();}
+        if(phase>2.3){const ring=Math.min(1,(phase-2.3)/.65);c.globalAlpha=1-ring;c.strokeStyle='#cbd5e1';c.lineWidth=4;c.beginPath();c.ellipse(x,y+15,8+ring*30,4+ring*10,0,0,Math.PI*2);c.stroke();c.globalAlpha=1;}c.restore();
+      }else if(id==='saiyan'){
+        if(phase>.55&&phase<2.55){const power=Math.min(1,(phase-.55)/.55,(2.55-phase)/.45);c.save();c.globalCompositeOperation='lighter';c.globalAlpha=.3+.3*Math.max(0,power);c.strokeStyle='#ffd21f';c.lineWidth=5;c.shadowColor='#ffe45c';c.shadowBlur=24;const pulse=Math.sin(phase*24)*4;c.beginPath();c.ellipse(cx,cy,w*.18+pulse,h*.28+pulse,0,0,Math.PI*2);c.stroke();for(let i=0;i<10;i++){const q=phase*4+i*Math.PI/5,r=w*.2+Math.sin(phase*20+i)*7;c.fillStyle=i%2?'#fff36a':'#fbbf24';c.beginPath();c.moveTo(cx+Math.cos(q)*r,cy+Math.sin(q)*r);c.lineTo(cx+Math.cos(q+.12)*(r+14),cy+Math.sin(q+.12)*(r+14));c.lineTo(cx+Math.cos(q-.1)*(r+20),cy+Math.sin(q-.1)*(r+20));c.closePath();c.fill();}c.restore();}
+        if(phase>.72&&phase<1.08){c.globalAlpha=1-(phase-.72)/.36;c.fillStyle='#fff';c.fillRect(0,0,w,h);}
       }
-      showcaseFrame=requestAnimationFrame(frame);
+      c.restore();return phase<3.35;
     }
-
+    function startShowcaseAnimation(id){const token=++showcaseToken,canvas=$('dpv');if(showcaseFrame)cancelAnimationFrame(showcaseFrame);const started=performance.now();function frame(now){if(token!==showcaseToken||!$('det').classList.contains('on'))return;if(!drawShowcaseFrame(canvas,id,(now-started)/1000,3.2,10)){rb(canvas,id,3.2,10);showcaseFrame=0;return;}showcaseFrame=requestAnimationFrame(frame);}showcaseFrame=requestAnimationFrame(frame);}
+    function playMenuShowcase(id,broadcast=true){if(!BR[id])return;const token=++menuShowcaseToken,canvas=$('pv');if(menuShowcaseFrame)cancelAnimationFrame(menuShowcaseFrame);const started=performance.now();function frame(now){if(token!==menuShowcaseToken||!$('menu').classList.contains('on'))return;if(!drawShowcaseFrame(canvas,id,(now-started)/1000,2.6,8)){rb(canvas,selB,2.6,8);menuShowcaseFrame=0;return;}menuShowcaseFrame=requestAnimationFrame(frame);}menuShowcaseFrame=requestAnimationFrame(frame);if(broadcast)window.DaBrawlNet?.showcaseBrawler?.(id);}
     $('bk3').onclick = () => show('brs'); $('bra').onclick = () => show('brs');
     function leap(p,gd){
       K=p.k; let nd=1e9; for(const e of P) if(e!==p && e.alive && sees(p.t,e)) nd = Math.min(nd, Math.hypot(e.x-p.x, e.y-p.y));
@@ -1675,6 +1635,7 @@ function gadget(p){
         const p=P.find(q=>q.netId===id);
         if(p && p!==me){ p.netRemote=false; p.human=false; p.netId=null; }
       },
+      playShowcase(id,broadcast=false){playMenuShowcase(id,broadcast);},
       endNetworkGame(){ networkMode=false; }
     };
 
@@ -1944,6 +1905,7 @@ function gadget(p){
         .on('postgres_changes',{event:'*',schema:'public',table:'game_rooms',filter:'id=eq.'+currentRoom.id},()=>{void refreshRoom();})
         .on('presence',{event:'sync'},()=>{void refreshRoom();})
         .on('broadcast',{event:'room-refresh'},()=>{void refreshRoom();})
+        .on('broadcast',{event:'brawler-showcase'},({payload})=>{if(payload?.brawler)window.DaBrawlGame?.playShowcase?.(payload.brawler,false);})
         .on('broadcast',{event:'room-disbanded'},({payload})=>{
           if(!currentRoom||payload?.roomId!==currentRoom.id)return;
           resetLocalRoomState('The party leader disbanded the room.');
@@ -2179,7 +2141,7 @@ function gadget(p){
       if(matchChannel){const old=matchChannel;matchChannel=null;await db.removeChannel(old);}
       if(window.DaBrawlGame) window.DaBrawlGame.endNetworkGame();
     }
-    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,toggleReady:null,openRoom:null};
+    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,showcaseBrawler:brawler=>{if(roomChannel&&['kuku','shachi','saiyan'].includes(brawler))void roomChannel.send({type:'broadcast',event:'brawler-showcase',payload:{brawler}});},toggleReady:null,openRoom:null};
 
     let friendsPresenceChannel=null, friendsPresenceTimer=null;
     const friendsEscape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -2222,9 +2184,10 @@ function gadget(p){
           ...incoming.map(r=>'<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #334155"><span><b>'+friendsEscape(profileById.get(r.requester_id)||'Player')+'</b> · wants to be friends</span><span><button class="btn y" data-friend-accept="'+r.id+'" style="font-size:14px">ACCEPT</button> <button class="btn" data-friend-decline="'+r.id+'" style="font-size:14px">DECLINE</button></span></div>'),
           ...outgoing.map(r=>'<div style="padding:8px 0;color:#cbd5e1">'+friendsEscape(profileById.get(r.addressee_id)||'Player')+' · request sent</div>')
         ].join(''):'<span style="color:#94a3b8">No pending requests.</span>';
-        el('friendList').innerHTML=accepted.length?accepted.map(r=>{const id=r.requester_id===user.id?r.addressee_id:r.requester_id;const online=currentOnlineIds().has(id);return '<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #334155"><span style="width:10px;height:10px;border-radius:50%;background:'+(online?'#22c55e':'#64748b')+';display:inline-block"></span><b style="flex:1">'+friendsEscape(profileById.get(id)||'Player')+'</b><span style="color:'+(online?'#86efac':'#94a3b8')+'">'+(online?'ONLINE':'OFFLINE')+'</span></div>';}).join(''):'<span style="color:#94a3b8">No friends yet. Add someone by username above.</span>';
+        el('friendList').innerHTML=accepted.length?accepted.map(r=>{const id=r.requester_id===user.id?r.addressee_id:r.requester_id;const online=currentOnlineIds().has(id);return '<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #334155"><span style="width:10px;height:10px;border-radius:50%;background:'+(online?'#22c55e':'#64748b')+';display:inline-block"></span><b style="flex:1">'+friendsEscape(profileById.get(id)||'Player')+'</b><span style="color:'+(online?'#86efac':'#94a3b8')+'">'+(online?'ONLINE':'OFFLINE')+'</span><button class="btn r" data-friend-remove="'+r.id+'" style="font-size:13px;padding:4px 9px">REMOVE</button></div>';}).join(''):'<span style="color:#94a3b8">No friends yet. Add someone by username above.</span>';
         el('friendRequests').querySelectorAll('[data-friend-accept]').forEach(b=>b.onclick=()=>void respondFriendRequest(b.dataset.friendAccept,'accepted'));
         el('friendRequests').querySelectorAll('[data-friend-decline]').forEach(b=>b.onclick=()=>void respondFriendRequest(b.dataset.friendDecline,'declined'));
+        el('friendList').querySelectorAll('[data-friend-remove]').forEach(b=>b.onclick=()=>void removeFriend(b.dataset.friendRemove));
         friendsMsg('Friend list updated.');
       }catch(err){friendsMsg('Could not load friends: '+(err?.message||String(err))+'. If this is the first setup, apply the friends migration in Supabase.',true);}
     }
@@ -2249,6 +2212,7 @@ function gadget(p){
         el('friendUsername').value='';friendsMsg('Friend request sent to '+profile.username+'.');await loadFriendsScreen();
       }catch(err){friendsMsg('Could not send request: '+(err?.message||String(err))+'. Check that the friends migration is applied.',true);}
     }
+    async function removeFriend(id){try{const {data:{user},error:authError}=await db.auth.getUser();if(authError||!user)throw new Error('Sign in again.');const {error}=await db.from('dabrawl_friend_requests').delete().eq('id',id).or('requester_id.eq.'+user.id+',addressee_id.eq.'+user.id).eq('status','accepted');if(error)throw error;friendsMsg('Friend removed.');await loadFriendsScreen();}catch(err){friendsMsg('Could not remove friend: '+(err?.message||String(err))+'. Apply the friend-removal policy migration if needed.',true);}}
     async function respondFriendRequest(id,statusValue){
       try{
         const {data:{user}}=await db.auth.getUser();if(!user)throw new Error('Sign in again.');
@@ -2261,7 +2225,8 @@ function gadget(p){
     const openFriends = async () => { show('onlineLobby'); await updateAuthUI(); };
 
     el('prevBtn').addEventListener('click', e=>{if(!currentRoom){e.preventDefault();void openFriends();}});
-    el('nextBtn').addEventListener('click', e=>{if(!currentRoom){e.preventDefault();void loadFriendsScreen();}});
+    el('nextBtn').addEventListener('click', e=>{if(!currentRoom){e.preventDefault();void openFriends();}});
+    el('friendsBtn').addEventListener('click',e=>{e.preventDefault();void loadFriendsScreen();});
     el('onlineBack').addEventListener('click',()=>show('menu'));
     el('friendsBack').addEventListener('click',()=>{void stopFriendsPresence();show('menu');});
     el('friendsRefresh').addEventListener('click',()=>void loadFriendsScreen());
@@ -2269,6 +2234,7 @@ function gadget(p){
     el('friendUsername').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void sendFriendRequest();}});
     db.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>{if(session?.user)void startFriendsPresence(session.user);else void stopFriendsPresence();},0);});
     db.auth.getSession().then(({data})=>{if(data?.session?.user)void startFriendsPresence(data.session.user);}).catch(()=>{});
+    el('lobbyFriendsBtn').addEventListener('click',()=>void loadFriendsScreen());
     el('createRoomBtn').addEventListener('click',createRoom);
     el('joinRoomBtn').addEventListener('click',joinRoom);
     el('startRoomBtn').addEventListener('click',startRoomGame);
