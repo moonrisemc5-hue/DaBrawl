@@ -34,7 +34,7 @@ The new service instead sends `state` snapshots shaped as `{ state: { mode, phas
 
 1. **Keep existing Realtime live.** Do not redirect or remove its broadcasts as part of adapter work.
 2. **Normalize identities and roster first.** Ensure the server receives the actual authenticated user id, selected brawler id, roster order, team/mode, and a stable match id. Reject mismatches rather than silently assigning a default character.
-3. **Add a pure adapter module.** Convert server snapshots/events into game-facing data without opening a socket or mutating gameplay. Unit-test every field and event mapping.
+3. **Pure adapter module added.** `client-adapter.js` normalizes server snapshots, player fields, projectiles, lifecycle events, acknowledgements, and errors into a browser-facing schema. Its tests are included in the server checks. It intentionally does not open a socket, mutate gameplay, or turn server-confirmed hits into client-side damage. This is a mapping foundation, not full gameplay parity.
 4. **Add an opt-in development connection path.** Use a separate test match and feature flag; never let a client connect to both authorities for the same match.
 5. **Move authority one category at a time.** Server must own movement, cooldowns, damage, health, knockouts, meter, transformations, gadget effects, match clocks, and winner selection. Client must not apply duplicate local damage or allow remote clients to authoritatively report hits.
 6. **Port game rules before parity claims.** Match the browser's map bounds, obstacles/wall breaking, all brawler stats, forms, abilities, hitboxes, cooldowns, bots, and animation/effect events. Current server's simplified rules are not a full port.
