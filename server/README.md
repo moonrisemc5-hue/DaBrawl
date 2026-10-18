@@ -1,6 +1,6 @@
 # DaBrawl persistent match server (deployment foundation)
 
-This is a separate Node.js/WebSocket service intended for a persistent host (for example, a container service). It is deliberately separate from GitHub Pages and from the existing Supabase Edge Function prototype. It validates Supabase access tokens and owns room state, movement, basic projectile simulation, health, transformations, super-meter, knockouts, readiness, and match clocks in server memory. It limits rooms and per-socket message rates, validates input payloads, and does not echo the access token as the negotiated WebSocket subprotocol.
+This is a separate Node.js/WebSocket service intended for a persistent host (for example, a container service). It is deliberately separate from GitHub Pages and from the existing Supabase Edge Function prototype. It validates Supabase access tokens and owns room state, movement, basic projectile simulation, health, transformations, super-meter, knockouts, readiness, and match clocks in server memory. It limits rooms and per-socket message rates, validates input payloads, gives disconnected players a 10-second in-match reconnect grace period before forfeiting, and does not echo the access token as the negotiated WebSocket subprotocol.
 
 ## Important status
 
@@ -12,7 +12,7 @@ Deploy this directory as a Node 20+ container. Set the Dockerfile path to `serve
 
 ## Local checks
 
-Run `npm run check` and `npm test` from this directory. Unit tests cover message parsing, room-code validation, movement-axis validation, supported modes, player-name sanitization, active-match phase guards, team assignment, browser adapter mapping, Saiyan form stats and bounded progression, gadget charge/cooldown boundaries, and deterministic projectile movement, first-contact collision filtering, swept collision, range and world bounds. GitHub Actions also builds the production Docker image so missing files or invalid container build steps are caught before deployment.
+Run `npm run check` and `npm test` from this directory. Unit tests cover message parsing, room-code validation, movement-axis validation, supported modes, player-name sanitization, active-match phase guards, team assignment, disconnect grace-window and room-retention boundaries, browser adapter mapping, Saiyan form stats and bounded progression, gadget charge/cooldown boundaries, and deterministic projectile movement, first-contact collision filtering, swept collision, range and world bounds. GitHub Actions also builds the production Docker image so missing files or invalid container build steps are caught before deployment.
 
 ## Isolated browser test client
 
