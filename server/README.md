@@ -12,4 +12,4 @@ Deploy this directory as a Node 20+ container. Build from the repository root wi
 
 ## Wire protocol
 
-Authenticate with WebSocket subprotocols `jwt-<Supabase access token>` and `dabrawl-v1`. Send `join` with a player name, brawler id, and mode after connection. Then send sequenced `input` messages (`x`, `y`, `aim`) and action messages (`fire`, `super`, `transform`, `gadget`). The server sends complete `state` snapshots, `ack`, `event`, and `reconnect-required` messages. Server process restart currently ends in-memory rooms; durable room recovery is a separate task.
+Authenticate with WebSocket subprotocols `jwt-<Supabase access token>` and `dabrawl-v1`. Send `join` with a player name, brawler id, and mode after connection. Then send sequenced `input` messages (`x`, `y`, `aim`) and action messages (`fire`, `super`, `transform`, `gadget`). The server sends complete `state` snapshots, `ack`, and `event` messages. If the process restarts, clients receive a WebSocket close (code 1012); in-memory rooms are lost, so durable room recovery is still a separate task.
