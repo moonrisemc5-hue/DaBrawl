@@ -12,8 +12,13 @@ Deploy this directory as a Node 20+ container. Build from the repository root wi
 
 ## Local checks
 
-Run `npm run check` and `npm test` from this directory. The unit tests cover message parsing, room-code validation, movement-axis validation, supported modes, and player-name sanitization.
+Run `npm run check` and `npm test` from this directory. The unit tests cover message parsing, room-code validation, movement-axis validation, supported modes, player-name sanitization, active-match phase guards, and team assignment.
 
 ## Wire protocol
 
-Authenticate with WebSocket subprotocols `jwt-<Supabase access token>` and `dabrawl-v1`. Send `join` with a player name, brawler id, and mode after connection. Then send sequenced `input` messages (`x`, `y`, `aim`) and action messages (`fire`, `super`, `transform`, `gadget`). The server sends complete `state` snapshots, `ack`, and `event` messages. If the process restarts, clients receive a WebSocket close (code 1012); in-memory rooms are lost, so durable room recovery is still a separate task.
+Authenticate with WebSocket subprotocols `jwt-<Supabase access token>` and `dabrawl-v1`. Send `join` with a player name, brawler id, mode, and readiness state after connection. A match starts only after at least two players have joined and every player is ready. Knockout teams split the ordered roster into two balanced sides; duel alternates sides; showdown treats each player as a separate team. Then send sequenced `input` messages (`x`, `y`, `aim`) and action messages (`fire`, `super`, `transform`, `gadget`). Combat actions are ignored outside the active `playing` phase, and projectiles are cleared outside that phase. The server sends complete `state` snapshots, `ack`, and `event` messages. If the process restarts, clients receive a WebSocket close (code 1012); in-memory rooms are lost, so durable room recovery is still a separate task.
+
+
+## Live-client integration boundary
+
+The current browser game still uses Supabase Realtime broadcasts (`match-state`, `player-state`, `player-action`) and a game-specific state shape (`x`, `y`, `a`, `hp`, `mh`, `sc`, `am`, and other combat fields). That wire format is not compatible with this service protocol yet. Integration must use an explicit adapter, move authority for damage and abilities to the server, and stop the browser host from simulating the same match twice. Do not simply redirect the existing broadcasts to this socket: doing so would create mismatched snapshots and desynchronized combat.
