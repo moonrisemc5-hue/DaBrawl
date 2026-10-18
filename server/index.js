@@ -14,6 +14,7 @@ const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
 const WORLD = { width: 800, height: 520, margin: 28 };
 import { BRAWLERS } from "./brawlers.js";
+import { advanceProjectile, findProjectileHit, projectileStillInRange } from "./combat.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
@@ -150,19 +151,14 @@ function stepRoom(room, dt) {
   if (!isCombatPhase(room.phase)) room.projectiles = [];
   const keep = [];
   for (const b of room.projectiles) {
-    const dx = Math.cos(b.angle) * b.speed * dt, dy = Math.sin(b.angle) * b.speed * dt;
-    b.x += dx; b.y += dy; b.traveled += Math.hypot(dx,dy);
-    let hit = null;
-    for (const target of room.players.values()) {
-      if (!target.alive || target.id === b.ownerId || target.team === b.team || target.invulnerableUntil > t) continue;
-      if (Math.hypot(target.x-b.x,target.y-b.y) <= 19) { hit = target; break; }
-    }
+    advanceProjectile(b, dt);
+    const hit = findProjectileHit(b, room.players.values(), t, 19);
     if (hit) {
       hit.hp = Math.max(0, hit.hp-b.damage); hit.meter = clamp(hit.meter+12,0,100);
       const owner = room.players.get(b.ownerId); if (owner) owner.meter = clamp(owner.meter+18,0,100);
       event(room, "hit", { projectileId:b.id, attackerId:b.ownerId, targetId:hit.id, damage:b.damage, hp:hit.hp });
       if (hit.hp <= 0) { hit.alive=false; hit.input={x:0,y:0}; event(room,"knockout",{playerId:hit.id,by:b.ownerId}); }
-    } else if (b.traveled < b.range && b.x >= 0 && b.x <= WORLD.width && b.y >= 0 && b.y <= WORLD.height) keep.push(b);
+    } else if (projectileStillInRange(b, WORLD.width, WORLD.height)) keep.push(b);
   }
   room.projectiles = keep;
   if (room.phase === "ended") room.projectiles = [];
