@@ -13,6 +13,11 @@ const ROOM_TTL_MS = 120_000;
 const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
 const WORLD = { width: 800, height: 520, margin: 28 };
+const PLAYER_RADIUS = 19;
+const PLAYER_MIN_X = WORLD.margin + PLAYER_RADIUS;
+const PLAYER_MIN_Y = WORLD.margin + PLAYER_RADIUS;
+const PLAYER_MAX_X = WORLD.width - WORLD.margin - PLAYER_RADIUS;
+const PLAYER_MAX_Y = WORLD.height - WORLD.margin - PLAYER_RADIUS;
 import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "./brawlers.js";
 import { advanceProjectile, findProjectileHit, projectileStillInRange } from "./combat.js";
 import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
@@ -143,8 +148,8 @@ function stepRoom(room, dt) {
       if (t - p.lastSeen > INPUT_TIMEOUT_MS) p.input = { x: 0, y: 0 };
       const stats = getBrawlerStats(p);
       const x = p.input.x, y = p.input.y, mag = Math.hypot(x,y) || 1;
-      p.x = clamp(p.x + x / mag * stats.speed * dt, WORLD.margin, WORLD.width-WORLD.margin);
-      p.y = clamp(p.y + y / mag * stats.speed * dt, WORLD.margin, WORLD.height-WORLD.margin);
+      p.x = clamp(p.x + x / mag * stats.speed * dt, PLAYER_MIN_X, PLAYER_MAX_X);
+      p.y = clamp(p.y + y / mag * stats.speed * dt, PLAYER_MIN_Y, PLAYER_MAX_Y);
       if (p.transformUntil && t >= p.transformUntil) p.transformUntil = 0;
     }
     const survivors = [...room.players.values()].filter(p => p.alive);
@@ -256,8 +261,8 @@ wss.on("connection", (ws,_req,meta) => {
           const at=now();
           if (isCombatPhase(room.phase) && player.alive && player.transformUntil<=at && tryConsumeGadget(player,at)) {
             const a=player.aim;
-            player.x=clamp(player.x+Math.cos(a)*70,WORLD.margin,WORLD.width-WORLD.margin);
-            player.y=clamp(player.y+Math.sin(a)*70,WORLD.margin,WORLD.height-WORLD.margin);
+            player.x=clamp(player.x+Math.cos(a)*70,PLAYER_MIN_X,PLAYER_MAX_X);
+            player.y=clamp(player.y+Math.sin(a)*70,PLAYER_MIN_Y,PLAYER_MAX_Y);
             event(room,"gadget",{playerId:player.id,cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
             sendState(room);
           }
