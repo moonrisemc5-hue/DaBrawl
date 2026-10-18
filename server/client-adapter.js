@@ -75,6 +75,7 @@ export function adaptServerPacket(packet) {
         winner: state.winner ?? null,
         ownerId: text(state.ownerId),
         destroyedWalls: Array.isArray(state.destroyedWalls) ? state.destroyedWalls.filter(w => w && Number.isInteger(w.row) && Number.isInteger(w.col)).map(w => ({ row: w.row, col: w.col })) : [],
+        beams: Array.isArray(state.beams) ? state.beams.filter(b => b && Number.isSafeInteger(b.id) && typeof b.ownerId === "string" && [b.x,b.y,b.aim,b.length,b.width,b.expiresAt].every(finite)).map(b => ({ id:b.id, ownerId:b.ownerId, x:b.x, y:b.y, aim:b.aim, length:b.length, width:b.width, expiresAt:b.expiresAt })) : [],
         players,
         projectiles: Array.isArray(state.projectiles) ? state.projectiles.filter(p =>
           p && typeof p.id === "number" && typeof p.ownerId === "string" &&

@@ -106,3 +106,15 @@ test("maps terrain and charged-beam events for a future browser adapter", () => 
   }});
   assert.deepEqual(state.state.destroyedWalls, [{ row: 2, col: 4 }]);
 });
+
+test("preserves validated active beam snapshots for rendering without applying damage", () => {
+  const adapted = adaptServerPacket({ type:"state", state:{
+    players: [{ id:"p1", x:1, y:2, hp:100, maxHp:100 }],
+    beams: [
+      { id:4, ownerId:"p1", x:100, y:120, aim:0.5, length:1000, width:100, expiresAt:5000 },
+      { id:"bad", ownerId:"p1", x:0, y:0, aim:0, length:10, width:10, expiresAt:1 }
+    ]
+  }});
+  assert.equal(adapted.state.beams.length, 1);
+  assert.equal(adapted.state.beams[0].id, 4);
+});
