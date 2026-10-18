@@ -61,8 +61,8 @@ export function resolvePlayerCollisions(players, world, radius = PLAYER_RADIUS) 
         dx = Math.cos(angle); dy = Math.sin(angle); distance = 1;
       }
       const push = (diameter - distance) / 2, nx = dx / distance, ny = dy / distance;
-      positions[i] = clampPlayerPosition(a.x - nx * push, a.y - ny * push, world, radius);
-      positions[j] = clampPlayerPosition(b.x + nx * push, b.y + ny * push, world, radius);
+      positions[i] = nearestClearPosition(a.x - nx * push, a.y - ny * push, world, radius, a);
+      positions[j] = nearestClearPosition(b.x + nx * push, b.y + ny * push, world, radius, b);
       changed = true;
     }
     if (!changed) break;
