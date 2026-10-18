@@ -193,6 +193,7 @@
     const $ = i => document.getElementById(i), cv = $('c'); let g = cv.getContext('2d');
     let W, H, DPR, z = 1, scr = 'menu', isTestMode = false, gameMode = 'knockout', networkMode = false, isNetworkHost = false;
     let lastMatchWasOnline=false, lastQueueMode='knockout';
+    let networkResultApplied=false;
     function rs(){ DPR = devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; }
     addEventListener('resize', rs); rs();
     function drawHilalLogo(c, sz = 100){
@@ -722,7 +723,10 @@ function gadget(p){
       if(scr==='res') return;
       lastMatchWasOnline=!!networkMode; lastQueueMode=gameMode;
       const win = gameMode==='showdown' ? me.alive : G.w[me.t]>=2, d = win ? 8 : -4;
-      tr = Math.max(0, tr + d); bTrophies[selB] = Math.max(0, (bTrophies[selB]||0) + d); saveTrophies();
+      // Online clients wait for the host's final result before changing trophies.
+      if(!networkMode || isNetworkHost){
+        tr = Math.max(0, tr + d); bTrophies[selB] = Math.max(0, (bTrophies[selB]||0) + d); saveTrophies();
+      }
       $('rt').textContent = win ? 'VICTORY!' : 'DEFEAT'; $('rt').style.color = win ? '#ffd21f' : '#ff5a5a'; $('rd').textContent = (d>0?'+':'')+d+' 🏆';
       if(networkMode){
         $('again').style.display=isNetworkHost?'':'none'; $('home').style.display=isNetworkHost?'':'none';
@@ -1271,7 +1275,7 @@ function gadget(p){
     // Multiplayer bridge used by the Supabase Realtime layer below.
     window.DaBrawlGame = {
       startNetworkGame(roster, matchId, mode, localId, hostId=localId,startAt=Date.now()+2500){
-        networkMode = true; isTestMode = false; isNetworkHost=(localId===hostId); gameMode = mode || 'knockout';
+        networkMode = true; isTestMode = false; isNetworkHost=(localId===hostId); networkResultApplied=false; gameMode = mode || 'knockout';
         $('modeTxt').textContent = gameMode === 'showdown' ? 'SOLO SHOWDOWN' : gameMode === 'duel' ? '1v1 DUEL' : 'KNOCKOUT 3v3';
         P=[]; me=null; build(); B=[]; F=[]; MT=[]; KM=[];
         roster.forEach((entry,idx)=>{
@@ -1331,7 +1335,7 @@ function gadget(p){
       getLocalState(){
         if(!me) return null;
         const p=me;
-        return {id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my};
+        return {id:p.netId,t:p.t,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my};
       },
       getNetworkStates(){
         const pack=p=>({id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my});
@@ -1408,6 +1412,17 @@ function gadget(p){
         else if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.k.sy) sTap(p); else tryFire(p); }
         else if(msg.action==='super'){ p.sc=1; p.tf=0; sup(p); }
         else if(msg.action==='gadget'){ p.gcd=0; p.dash=0; gadget(p); }
+      },
+      applyMatchResult(payload){
+        if(!networkMode || isNetworkHost || !me || networkResultApplied || !payload || !Number.isInteger(payload.hostTeam)) return;
+        networkResultApplied=true;
+        const win = me.t===payload.hostTeam ? !!payload.win : !payload.win;
+        const d=win?8:-4;
+        tr=Math.max(0,tr+d); bTrophies[selB]=Math.max(0,(bTrophies[selB]||0)+d); saveTrophies();
+        $('rt').textContent=win?'VICTORY!':'DEFEAT'; $('rt').style.color=win?'#ffd21f':'#ff5a5a';
+        $('rd').textContent=(d>0?'+':'')+d+' 🏆';
+        $('again').style.display='none'; $('home').style.display='none'; $('mmHint').textContent='';
+        show('res');
       },
       makeRemoteBot(id){
         const p=P.find(q=>q.netId===id);
@@ -1820,7 +1835,7 @@ function gadget(p){
       matchChannel.on('broadcast',{event:'match-state'},({payload})=>{if(Array.isArray(payload?.players)) for(const player of payload.players){window.DaBrawlGame?.applyRemoteState(player);seenAt.set(player.id,Date.now());}});
       matchChannel.on('broadcast',{event:'player-state'},({payload})=>{if(payload?.player) {window.DaBrawlGame?.applyRemoteState(payload.player);seenAt.set(payload.player.id,Date.now());}});
       matchChannel.on('broadcast',{event:'player-action'},({payload})=>window.DaBrawlGame?.applyRemoteAction(payload));
-      matchChannel.on('broadcast',{event:'match-ended'},({payload})=>{ if(!payload || activeMatchId!==matchId) return; if(scr!=='res'){ $('rt').textContent='MATCH OVER'; $('rd').textContent='Waiting for the host…'; $('again').style.display='none'; $('home').style.display='none'; show('res'); } });
+      matchChannel.on('broadcast',{event:'match-ended'},({payload})=>{ if(!payload || activeMatchId!==matchId) return; window.DaBrawlGame?.applyMatchResult?.(payload); });
       matchChannel.on('broadcast',{event:'match-control'},async({payload})=>{
         if(!payload || activeMatchId!==matchId || payload.hostId!==activeMatchHostId) return;
         if(payload.action==='leave'){ await leaveMatch(); show('menu'); isTestMode=false; return; }
@@ -1846,7 +1861,7 @@ function gadget(p){
         },650);
       });
     }
-    async function announceMatchEnd(win){ if(!matchChannel || !activeMatchId || !isNetworkHost) return; await matchChannel.send({type:'broadcast',event:'match-ended',payload:{win:!!win,hostId:activeMatchHostId}}); }
+    async function announceMatchEnd(win){ if(!matchChannel || !activeMatchId || !isNetworkHost) return; const local=window.DaBrawlGame?.getLocalState?.(); await matchChannel.send({type:'broadcast',event:'match-ended',payload:{win:!!win,hostTeam:local?.t,hostId:activeMatchHostId,matchId:activeMatchId}}); }
     async function requestRematch(){
       if(!isNetworkHost || !matchChannel || !activeMatchRoster) return;
       const nextId='rematch-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6), startAt=Date.now()+3000;
