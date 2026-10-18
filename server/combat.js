@@ -2,8 +2,13 @@
 export function advanceProjectile(projectile, dt) {
   projectile.previousX = projectile.x;
   projectile.previousY = projectile.y;
-  const dx = Math.cos(projectile.angle) * projectile.speed * dt;
-  const dy = Math.sin(projectile.angle) * projectile.speed * dt;
+  const requestedDistance = Math.max(0, projectile.speed * dt);
+  const remainingRange = Number.isFinite(projectile.range)
+    ? Math.max(0, projectile.range - projectile.traveled)
+    : requestedDistance;
+  const distance = Math.min(requestedDistance, remainingRange);
+  const dx = Math.cos(projectile.angle) * distance;
+  const dy = Math.sin(projectile.angle) * distance;
   projectile.x += dx;
   projectile.y += dy;
   projectile.traveled += Math.hypot(dx, dy);
