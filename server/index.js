@@ -235,17 +235,6 @@ function stepRoom(room, dt) {
     const movers = [...room.players.values()].filter(p => p.connected && p.alive);
     const separated = resolvePlayerCollisions(movers, room.world, PLAYER_RADIUS);
     movers.forEach((p, index) => { p.x = separated[index].x; p.y = separated[index].y; });
-    const survivors = [...room.players.values()].filter(p => p.alive);
-    const survivingTeams = new Set(survivors.map(p => p.team));
-    if (survivors.length === 0) {
-      room.phase = "ended"; room.winner = null; event(room, "match-ended", { winner: null, reason: "draw" });
-    } else if (survivingTeams.size === 1) {
-      room.phase = "ended"; room.winner = survivors[0].team; event(room, "match-ended", { winner: room.winner, reason: "elimination" });
-    } else if (t >= room.endsAt) {
-      room.phase = "ended";
-      room.winner = selectWinnerByHealth(survivors);
-      event(room, "match-ended", { winner: room.winner, reason: room.winner === null ? "draw" : "timer" });
-    }
   }
   if (!isCombatPhase(room.phase)) { room.projectiles = []; room.beams = []; }
   const keep = [];
@@ -290,6 +279,21 @@ function stepRoom(room, dt) {
       activeBeams.push(beam);
     }
     room.beams = activeBeams;
+  }
+  // Resolve the outcome after this tick's projectile and beam damage, so a final-frame
+  // hit is counted before a timer winner is selected or the match is closed.
+  if (room.phase === "playing") {
+    const survivors = [...room.players.values()].filter(p => p.alive);
+    const survivingTeams = new Set(survivors.map(p => p.team));
+    if (survivors.length === 0) {
+      room.phase = "ended"; room.winner = null; event(room, "match-ended", { winner: null, reason: "draw" });
+    } else if (survivingTeams.size === 1) {
+      room.phase = "ended"; room.winner = survivors[0].team; event(room, "match-ended", { winner: room.winner, reason: "elimination" });
+    } else if (t >= room.endsAt) {
+      room.phase = "ended";
+      room.winner = selectWinnerByHealth(survivors);
+      event(room, "match-ended", { winner: room.winner, reason: room.winner === null ? "draw" : "timer" });
+    }
   }
   if (room.phase === "ended") { room.projectiles = []; room.beams = []; }
 }
