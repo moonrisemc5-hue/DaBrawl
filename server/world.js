@@ -15,7 +15,7 @@ export function resolvePlayerCollisions(players, world, radius = PLAYER_RADIUS) 
     return clampPlayerPosition(player.x, player.y, world, radius);
   });
   const diameter = radius * 2;
-  for (let pass = 0; pass < 4; pass++) {
+  for (let pass = 0; pass < 24; pass++) {
     let changed = false;
     for (let i = 0; i < positions.length; i++) for (let j = i + 1; j < positions.length; j++) {
       const a = positions[i], b = positions[j];
