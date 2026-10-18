@@ -146,6 +146,7 @@
     <button class="btn" id="friendsRefresh">REFRESH</button><button class="btn" id="friendsBack">BACK</button>
   </div>
 
+  <div id="friendRequestPopup" style="display:none;position:fixed;inset:0;z-index:10000;background:#000c;align-items:center;justify-content:center;padding:20px;box-sizing:border-box"><div style="width:min(92vw,420px);padding:22px;background:#111c35;border:3px solid #60a5fa;border-radius:18px;text-align:center;box-shadow:0 15px 55px #000"><h2 style="margin:0 0 10px;color:#93c5fd">FRIEND REQUEST</h2><p id="friendRequestPopupText" style="color:#e2e8f0;line-height:1.5">Someone wants to be your friend.</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn y" id="friendRequestPopupAccept">ACCEPT</button><button class="btn" id="friendRequestPopupDecline">DECLINE</button></div></div></div>
   <div id="roomInvitePopup" style="display:none;position:fixed;inset:0;z-index:9999;background:#000b;align-items:center;justify-content:center;padding:20px;box-sizing:border-box"><div style="width:min(92vw,420px);padding:22px;background:#111c35;border:3px solid #ffd21f;border-radius:18px;text-align:center;box-shadow:0 15px 55px #000"><h2 style="margin:0 0 10px;color:#ffd21f">ROOM INVITATION</h2><p id="roomInviteText" style="color:#e2e8f0;line-height:1.5">Your friend invited you to join.</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn y" id="roomInviteAccept">JOIN ROOM</button><button class="btn" id="roomInviteDecline">DECLINE</button></div></div></div>
   <div class="scr" id="modePicker">
     <h2>CHOOSE A GAME MODE</h2>
@@ -1778,6 +1779,8 @@ function gadget(p){
     // Bind authentication controls early so later lobby setup errors cannot leave them inert.
     el('onlineSignIn').addEventListener('click', () => { void auth('in'); });
     el('settingsSignIn').addEventListener('click',()=>{el('onlineEmail').value=el('settingsUsername').value;el('onlinePassword').value=el('settingsPassword').value;void auth('in');});el('settingsCreateAccount').addEventListener('click',()=>{el('onlineEmail').value=el('settingsUsername').value;el('onlinePassword').value=el('settingsPassword').value;void auth('up');});el('settingsPassword').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();el('onlineEmail').value=el('settingsUsername').value;el('onlinePassword').value=el('settingsPassword').value;void auth('in');}});el('settingsSignOut').addEventListener('click',async()=>{const {error}=await db.auth.signOut();if(error){el('settingsAccountStatus').textContent=error.message;return;}el('settingsAccountStatus').textContent='Signed out.';await updateAuthUI();});el('roomInviteAccept').addEventListener('click',()=>void respondRoomInvite(true));el('roomInviteDecline').addEventListener('click',()=>void respondRoomInvite(false));
+    el('friendRequestPopupAccept').addEventListener('click',()=>void respondFriendRequestPopup('accepted'));
+    el('friendRequestPopupDecline').addEventListener('click',()=>void respondFriendRequestPopup('declined'));
     el('onlineSignUp').addEventListener('click', () => { void auth('up'); });
     el('onlinePassword').addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); void auth('in'); } });
     window.__daBrawlAuthReady = true;
@@ -2161,6 +2164,43 @@ function gadget(p){
       if(friendsPresenceChannel){const old=friendsPresenceChannel;friendsPresenceChannel=null;try{await db.removeChannel(old);}catch(_){}}
     }
     let pendingRoomInvites=[],activeRoomInvite=null;
+    let activeFriendRequest=null,friendRequestPollBusy=false;
+    const shownFriendRequestIds=new Set();
+    async function pollIncomingFriendRequests(){
+      if(friendRequestPollBusy||activeFriendRequest)return;
+      friendRequestPollBusy=true;
+      try{
+        const {data:{user},error:authError}=await db.auth.getUser();
+        if(authError||!user)return;
+        const {data:rows,error}=await db.from('dabrawl_friend_requests')
+          .select('id,requester_id,addressee_id,status,created_at')
+          .eq('addressee_id',user.id).eq('status','pending')
+          .order('created_at',{ascending:true}).limit(10);
+        if(error)throw error;
+        const request=(rows||[]).find(row=>!shownFriendRequestIds.has(row.id));
+        if(!request)return;
+        const {data:profile}=await db.from('dabrawl_player_profiles').select('username').eq('user_id',request.requester_id).maybeSingle();
+        activeFriendRequest={...request,senderName:profile?.username||'A player'};
+        shownFriendRequestIds.add(request.id);
+        el('friendRequestPopupText').textContent=activeFriendRequest.senderName+' wants to be your friend.';
+        el('friendRequestPopup').style.display='flex';
+      }catch(err){console.debug('Incoming friend request polling unavailable:',err?.message||err);}
+      finally{friendRequestPollBusy=false;}
+    }
+    async function respondFriendRequestPopup(statusValue){
+      const request=activeFriendRequest;if(!request)return;
+      try{
+        const {data:{user},error:authError}=await db.auth.getUser();
+        if(authError||!user)throw new Error('Sign in again.');
+        const {error}=await db.from('dabrawl_friend_requests').update({status:statusValue})
+          .eq('id',request.id).eq('addressee_id',user.id).eq('status','pending');
+        if(error)throw error;
+        el('friendRequestPopup').style.display='none';activeFriendRequest=null;
+        friendsMsg(statusValue==='accepted'?'Friend request accepted.':'Friend request declined.');
+        if(document.getElementById('friendsScreen')?.classList.contains('on'))await loadFriendsScreen();
+        setTimeout(()=>void pollIncomingFriendRequests(),250);
+      }catch(err){friendsMsg('Could not respond to friend request: '+(err?.message||String(err)),true);}
+    }
     const shownRoomInviteIds=new Set(),queuedRoomInviteIds=new Set();
     let invitePollBusy=false;
     const screenIsGame=()=>!!document.getElementById('game')?.classList.contains('on');
@@ -2208,6 +2248,8 @@ function gadget(p){
     },500);
     setInterval(()=>void pollPendingRoomInvites(),2500);
     setTimeout(()=>void pollPendingRoomInvites(),1000);
+    setInterval(()=>void pollIncomingFriendRequests(),2500);
+    setTimeout(()=>void pollIncomingFriendRequests(),1200);
     async function startFriendsPresence(user){
       await stopFriendsPresence();
       friendsPresenceChannel=db.channel('dabrawl-friends-presence',{config:{presence:{key:user.id}}})
