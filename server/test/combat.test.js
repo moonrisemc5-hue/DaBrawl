@@ -41,6 +41,15 @@ test("swept collision catches fast projectiles that cross a player between ticks
   assert.equal(findProjectileHit(projectile, players, 1000, 19)?.id, "closer-to-path");
 });
 
+test("a projectile hits the first opponent along its path, not the closest perpendicular target", () => {
+  const projectile = { x: 100, y: 50, previousX: 0, previousY: 50, ownerId: "owner", team: 0 };
+  const players = [
+    { id: "later-but-nearer-to-line", team: 1, alive: true, x: 80, y: 50, invulnerableUntil: 0 },
+    { id: "first-contact", team: 1, alive: true, x: 25, y: 65, invulnerableUntil: 0 }
+  ];
+  assert.equal(findProjectileHit(projectile, players, 1000, 19)?.id, "first-contact");
+});
+
 test("does not hit targets outside the collision radius", () => {
   const projectile = { x: 0, y: 0, ownerId: "owner", team: 0 };
   assert.equal(findProjectileHit(projectile, [
