@@ -32,7 +32,7 @@ function makeRoom(code, mode = "knockout") {
   const normalizedMode = validMode(mode);
   return { code, mode: normalizedMode, world: createArena(normalizedMode),
     phase: "waiting", createdAt: now(), updatedAt: now(), emptySince: 0, startedAt: 0, endsAt: 0, tick: 0,
-    players: new Map(), projectiles: [], events: [], winner: null };
+    players: new Map(), projectiles: [], beams: [], events: [], winner: null };
 }
 function makePlayer(user, msg, slot) {
   const brawler = BRAWLERS[msg.brawler] ? msg.brawler : "default";
@@ -48,7 +48,7 @@ function emit(room, type, data = {}) {
 }
 function snapshot(room) {
   return { mode: room.mode, phase: room.phase, startedAt: room.startedAt, endsAt: room.endsAt,
-    winner: room.winner, ownerId: room.ownerId, tick: room.tick, destroyedWalls: room.world.destroyedWalls, players: [...room.players.values()].map(p => ({
+    winner: room.winner, ownerId: room.ownerId, tick: room.tick, destroyedWalls: room.world.destroyedWalls, beams: room.beams.map(b => ({ id:b.id, ownerId:b.ownerId, x:b.x, y:b.y, aim:b.aim, length:b.length, width:b.width, expiresAt:b.expiresAt })), players: [...room.players.values()].map(p => ({
       id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,
       hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,
       gadgetCharges:gadgetCharges(p),gadgetCooldownMs:Math.max(0,p.gadgetReadyAt-now()),
@@ -205,24 +205,10 @@ function stepRoom(room, dt) {
       p.pendingMuiBeam = null;
       if (!p.alive) continue;
       const traced = traceMasteredBeam(room.world, beam.x, beam.y, beam.aim);
-      const dx = Math.cos(beam.aim), dy = Math.sin(beam.aim);
-      let hits = 0;
-      for (const target of room.players.values()) {
-        if (!target.alive || target.id === p.id || target.team === p.team ||
-            (Number.isFinite(target.invulnerableUntil) && target.invulnerableUntil > t)) continue;
-        const rx = target.x - beam.x, ry = target.y - beam.y;
-        const along = rx * dx + ry * dy, perpendicular = Math.abs(-rx * dy + ry * dx);
-        if (along <= 0 || along >= traced.length || perpendicular > 50 + PLAYER_RADIUS) continue;
-        target.hp = Math.max(0, target.hp - 7000);
-        target.meter = clamp(target.meter + 12, 0, 100);
-        hits++;
-        event(room, "hit", { attackerId: p.id, targetId: target.id, damage: 7000, hp: target.hp, mui: true });
-        if (target.hp <= 0) {
-          target.alive = false; target.input = { x: 0, y: 0 };
-          event(room, "knockout", { playerId: target.id, by: p.id });
-        }
-      }
-      event(room, "mui-beam-fired", { playerId: p.id, x: beam.x, y: beam.y, aim: beam.aim, length: traced.length, width: 100, durationMs: 800, hits, destroyedWalls: traced.destroyedWalls });
+      const beamId = nextProjectileId++;
+      room.beams.push({ id: beamId, ownerId: p.id, team: p.team, x: beam.x, y: beam.y, aim: beam.aim,
+        length: traced.length, width: 100, damage: 7000 / 6, nextHitAt: t, expiresAt: t + 800 });
+      event(room, "mui-beam-fired", { playerId: p.id, beamId, x: beam.x, y: beam.y, aim: beam.aim, length: traced.length, width: 100, durationMs: 800, destroyedWalls: traced.destroyedWalls });
     }
     const movers = [...room.players.values()].filter(p => p.connected && p.alive);
     const separated = resolvePlayerCollisions(movers, room.world, PLAYER_RADIUS);
@@ -239,7 +225,7 @@ function stepRoom(room, dt) {
       event(room, "match-ended", { winner: room.winner, reason: room.winner === null ? "draw" : "timer" });
     }
   }
-  if (!isCombatPhase(room.phase)) room.projectiles = [];
+  if (!isCombatPhase(room.phase)) { room.projectiles = []; room.beams = []; }
   const keep = [];
   for (const b of room.projectiles) {
     advanceProjectile(b, dt);
@@ -259,7 +245,32 @@ function stepRoom(room, dt) {
     } else if (projectileStillInRange(b, room.world.width, room.world.height)) keep.push(b);
   }
   room.projectiles = keep;
-  if (room.phase === "ended") room.projectiles = [];
+  if (room.phase !== "playing") room.beams = [];
+  else {
+    const activeBeams = [];
+    for (const beam of room.beams) {
+      if (t >= beam.expiresAt) continue;
+      if (t >= beam.nextHitAt) {
+        const owner = room.players.get(beam.ownerId);
+        const dx = Math.cos(beam.aim), dy = Math.sin(beam.aim);
+        if (owner?.alive) for (const target of room.players.values()) {
+          if (!target.alive || target.id === beam.ownerId || target.team === beam.team ||
+              target.transformUntil > t || (Number.isFinite(target.invulnerableUntil) && target.invulnerableUntil > t)) continue;
+          const rx = target.x - beam.x, ry = target.y - beam.y;
+          const along = rx * dx + ry * dy, perpendicular = Math.abs(-rx * dy + ry * dx);
+          if (along <= 0 || along >= beam.length || perpendicular >= beam.width + 14) continue;
+          target.hp = Math.max(0, target.hp - beam.damage);
+          target.meter = clamp(target.meter + 12, 0, 100);
+          event(room, "hit", { attackerId: beam.ownerId, targetId: target.id, damage: beam.damage, hp: target.hp, mui: true });
+          if (target.hp <= 0) { target.alive = false; target.input = { x: 0, y: 0 }; event(room, "knockout", { playerId: target.id, by: beam.ownerId }); }
+        }
+        beam.nextHitAt = t + 100;
+      }
+      activeBeams.push(beam);
+    }
+    room.beams = activeBeams;
+  }
+  if (room.phase === "ended") { room.projectiles = []; room.beams = []; }
 }
 function cleanupRoom(room) {
   const currentTime = now();

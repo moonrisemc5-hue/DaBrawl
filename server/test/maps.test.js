@@ -56,7 +56,7 @@ import { traceMasteredBeam } from "../maps.js";
 test("Mastered Ultra Instinct beam spans the arena and removes interior walls in its path", () => {
   const arena = createArena("knockout");
   const beam = traceMasteredBeam(arena, 2.5 * TILE_SIZE, 2.5 * TILE_SIZE, 0);
-  assert.equal(beam.length, Math.hypot(arena.width, arena.height));
+  assert.equal(beam.length, arena.width);
   assert.ok(beam.destroyedWalls.length > 0);
   for (const wall of beam.destroyedWalls) assert.equal(arena.tiles[wall.row][wall.col], ".");
 });
