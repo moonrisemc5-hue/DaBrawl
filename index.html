@@ -431,7 +431,7 @@
       selB = brawlerKeys[(idx + dir + brawlerKeys.length) % brawlerKeys.length];
       try { localStorage.setItem('dabrawl_b', selB); } catch(e){}
       window.DaBrawlNet?.updateBrawler?.(selB);
-      updateMenuUI(); beep(450,.1);
+      updateMenuUI(); playMenuShowcase(selB,true); beep(450,.1);
     }
     // The + buttons add a friend / open room-code multiplayer; they must never cycle the selected brawler.
     $('prevBtn').onclick = e => { e.preventDefault(); e.stopPropagation(); show('onlineLobby'); };
@@ -1911,7 +1911,7 @@ function gadget(p){
           if(error){if(error.code==='23505')continue;status('Room creation failed: '+error.message+' ('+(error.code||'database error')+').',true);return;}
           const {error:joinError}=await db.from('game_room_players').insert({room_id:room.id,user_id:user.id,player_slot:1,character_id:localStorage.getItem('dabrawl_b')||'kuku',is_ready:false});
           if(joinError){status('Room was created, but adding you failed: '+joinError.message+' ('+(joinError.code||'database error')+'). Check game_room_players insert permissions in Supabase.',true);return;}
-          currentRoom=room; syncRoomActions(); void loadLobbyFriends(user); await refreshRoom(); setScreen('menu'); return;
+          currentRoom=room; syncRoomActions(); void loadLobbyFriends(user); subscribeRoom(); await refreshRoom(); setScreen('menu'); return;
         }
         status('Could not create a unique room code after 5 tries. Try again.',true);
       } catch(err) {
@@ -2445,6 +2445,7 @@ function gadget(p){
       if(error){status('Brawler selection sync failed: '+error.message,true);return;}
       await roomChannel?.track({userId:user.id,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler});
       await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
+      await roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler}});
       await refreshRoom();
     }
     async function changeRoomMode(){
