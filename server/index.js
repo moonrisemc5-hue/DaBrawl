@@ -2,7 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer, WebSocket } from "ws";
-import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage } from "./protocol.js";
+import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase } from "./protocol.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -71,7 +71,7 @@ function joinRoom(room, user, msg, socket) {
   return player;
 }
 function doFire(room, p, isSuper = false) {
-  if (room.phase !== "playing") return;
+  if (!isCombatPhase(room.phase)) return;
   const stats = BRAWLERS[p.brawler] || BRAWLERS.default;
   const t = now();
   if (!p.alive || p.transformUntil > t) return;
@@ -224,12 +224,12 @@ wss.on("connection", (ws,_req,meta) => {
         if (m.action==="fire") doFire(room,player,false);
         else if (m.action==="super") doFire(room,player,true);
         else if (m.action==="transform") {
-          if (room.phase==="playing" && player.alive && player.meter>=50 && player.transformUntil<=now()) {
+          if (isCombatPhase(room.phase) && player.alive && player.meter>=50 && player.transformUntil<=now()) {
             player.meter-=50; player.form=clamp(Math.floor(finite(m.form,player.form+1)),1,5); player.transformUntil=now()+1800;
             event(room,"transform",{playerId:player.id,form:player.form});
           }
         } else if (m.action==="gadget") {
-          if (room.phase==="playing" && player.alive) { const a=player.aim; player.x=clamp(player.x+Math.cos(a)*70,WORLD.margin,WORLD.width-WORLD.margin); player.y=clamp(player.y+Math.sin(a)*70,WORLD.margin,WORLD.height-WORLD.margin); event(room,"gadget",{playerId:player.id}); }
+          if (isCombatPhase(room.phase) && player.alive) { const a=player.aim; player.x=clamp(player.x+Math.cos(a)*70,WORLD.margin,WORLD.width-WORLD.margin); player.y=clamp(player.y+Math.sin(a)*70,WORLD.margin,WORLD.height-WORLD.margin); event(room,"gadget",{playerId:player.id}); }
         } else if (m.action==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
         else throw new Error("Unsupported action");
       } else if (m.type==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
