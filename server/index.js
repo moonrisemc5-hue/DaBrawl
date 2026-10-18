@@ -2,7 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer, WebSocket } from "ws";
-import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom } from "./protocol.js";
+import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations } from "./protocol.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -208,7 +208,7 @@ wss.on("connection", (ws,_req,meta) => {
   let player;
   try { player=joinRoom(room,meta.user,{name:meta.user.user_metadata?.username || meta.user.email?.split("@")[0] || "Player"},ws); }
   catch(err) { ws.close(1008,String(err.message||"Cannot join room").slice(0,120)); return; }
-  let messageWindowStart=now(), messageCount=0;
+  let messageWindowStart=now(), messageCount=0, protocolViolations=0;
   ws.on("message", raw => {
     const receivedAt=now();
     if (receivedAt-messageWindowStart>=1000) { messageWindowStart=receivedAt; messageCount=0; }
@@ -245,7 +245,14 @@ wss.on("connection", (ws,_req,meta) => {
         else throw new Error("Unsupported action");
       } else if (m.type==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
       else throw new Error("Unsupported message type");
-    } catch(err) { ws.send(JSON.stringify({type:"error",message:String(err.message||"Invalid message").slice(0,120)})); }
+    } catch(err) {
+      protocolViolations++;
+      if (shouldCloseForProtocolViolations(protocolViolations)) {
+        ws.close(1008, "Too many invalid messages");
+        return;
+      }
+      ws.send(JSON.stringify({type:"error",message:String(err.message||"Invalid message").slice(0,120)}));
+    }
   });
   ws.on("close",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); room.updatedAt=now(); cancelCountdown(room, "player-disconnected"); event(room,"player-disconnected",{playerId:player.id}); });
   ws.on("error",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); cancelCountdown(room, "connection-error"); });
