@@ -15,33 +15,33 @@ export function advanceProjectile(projectile, dt) {
   return projectile;
 }
 
-function distanceToSegmentSquared(px, py, x1, y1, x2, y2) {
+function closestPointOnSegment(px, py, x1, y1, x2, y2) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const lengthSquared = dx * dx + dy * dy;
-  if (lengthSquared === 0) return (px - x1) ** 2 + (py - y1) ** 2;
-  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lengthSquared));
-  const closestX = x1 + t * dx;
-  const closestY = y1 + t * dy;
-  return (px - closestX) ** 2 + (py - closestY) ** 2;
+  const t = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1,
+    ((px - x1) * dx + (py - y1) * dy) / lengthSquared));
+  const x = x1 + t * dx;
+  const y = y1 + t * dy;
+  return { t, distanceSquared: (px - x) ** 2 + (py - y) ** 2 };
 }
 
 export function findProjectileHit(projectile, players, atTime, radius = 19) {
   const x1 = Number.isFinite(projectile.previousX) ? projectile.previousX : projectile.x;
   const y1 = Number.isFinite(projectile.previousY) ? projectile.previousY : projectile.y;
   const radiusSquared = radius * radius;
-  let nearest = null;
-  let nearestDistance = Infinity;
+  let firstHit = null;
+  let firstHitT = Infinity;
   for (const target of players) {
     if (!target.alive || target.id === projectile.ownerId || target.team === projectile.team ||
         (Number.isFinite(target.invulnerableUntil) && target.invulnerableUntil > atTime)) continue;
-    const distance = distanceToSegmentSquared(target.x, target.y, x1, y1, projectile.x, projectile.y);
-    if (distance <= radiusSquared && distance < nearestDistance) {
-      nearest = target;
-      nearestDistance = distance;
+    const contact = closestPointOnSegment(target.x, target.y, x1, y1, projectile.x, projectile.y);
+    if (contact.distanceSquared <= radiusSquared && contact.t < firstHitT) {
+      firstHit = target;
+      firstHitT = contact.t;
     }
   }
-  return nearest;
+  return firstHit;
 }
 
 export function projectileStillInRange(projectile, worldWidth, worldHeight) {
