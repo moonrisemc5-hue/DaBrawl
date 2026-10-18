@@ -16,6 +16,14 @@ export const BRAWLERS = Object.freeze({
   default: Object.freeze({ hp: 7000, speed: 135, damage: 312.5, range: 230, cooldown: 1600, spread: 0.68, pellets: 8, bulletSpeed: 550, superDamage: 333.3, superRange: 340, superKind: "projectile" }),
 });
 
+// Client-provided form numbers are never trusted. Progression is always one form at a time.
+export function getNextSaiyanForm(player) {
+  if (player?.brawler !== "saiyan") return null;
+  const currentForm = Number.isInteger(player.form) ? player.form : 0;
+  const nextForm = currentForm + 1;
+  return SAIYAN_FORMS[nextForm] ? nextForm : null;
+}
+
 export function getBrawlerStats(player) {
   const base = BRAWLERS[player?.brawler] || BRAWLERS.default;
   const form = base.forms?.[player?.form];
