@@ -185,6 +185,26 @@ function stepRoom(room, dt) {
   if (room.phase === "countdown" && t >= room.startedAt) { room.phase = "playing"; event(room, "match-started"); }
   if (room.phase === "playing") {
     for (const p of room.players.values()) {
+      if (p.isBot && p.alive && p.connected && t >= p.botThinkAt) {
+        const decision = decideBotAction(p, [...room.players.values()], room.world, t);
+        p.input = decision.input; p.aim = decision.aim; p.lastSeen = t; p.botThinkAt = t + 180;
+        if (decision.action === "fire") doFire(room, p, false);
+        else if (decision.action === "super") doFire(room, p, true);
+        else if (decision.action === "gadget") {
+          if (p.transformUntil <= t && !(p.kameChargeStartedAt > 0) && tryConsumeGadget(p,t)) {
+            const pos = movePlayerWithObstacles(p.x,p.y,Math.cos(p.aim)*70,Math.sin(p.aim)*70,room.world,PLAYER_RADIUS); p.x=pos.x; p.y=pos.y;
+            event(room,"gadget",{playerId:p.id,cooldownMs:Math.max(0,p.gadgetReadyAt-t),charges:gadgetCharges(p,t)});
+          }
+        } else if (decision.action === "transform") {
+          const nextForm=getNextSaiyanForm(p);
+          if (p.meter>=50 && p.transformUntil<=t && nextForm!==null) {
+            p.meter-=50; const stats=BRAWLERS.saiyan.forms[nextForm]; const delta=stats.hp-p.maxHp;
+            p.maxHp=stats.hp; p.hp=clamp(p.hp+delta,0,p.maxHp); p.form=nextForm; p.transformUntil=t+1800;
+            event(room,"transform",{playerId:p.id,form:p.form});
+          }
+        }
+      }
+
       if (p.alive && shouldForfeitDisconnectedPlayer(p.connected, p.disconnectedAt, t, DISCONNECT_GRACE_MS)) {
         p.alive = false;
         cancelKameCharge(p);
@@ -382,7 +402,14 @@ wss.on("connection", (ws,_req,meta) => {
             event(room,"gadget",{playerId:player.id,cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
             sendState(room);
           }
-        } else if (m.action==="add-bot") {\n          if (!canConfigureRoom(player.id,room.ownerId,room.phase)) throw new Error("Only the room owner can add bots before the match starts");\n          if (room.players.size>=MAX_PLAYERS) throw new Error("Room is full");\n          const slot=room.players.size, id=`bot:${room.code}:${slot}`;\n          const choices=["kuku","shachi","saiyan"]; const brawler=choices[(slot-1)%choices.length];\n          const bot=makePlayer({id},{name:`Bot ${slot}`,brawler},slot); bot.isBot=true; bot.connected=true; bot.socket=null; bot.ready=true; room.players.set(id,bot);\n          event(room,"bot-joined",{playerId:id,brawler}); sendState(room);\n        } else if (m.action==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
+        } else if (m.action==="add-bot") {
+          if (!canConfigureRoom(player.id,room.ownerId,room.phase)) throw new Error("Only the room owner can add bots before the match starts");
+          if (room.players.size>=MAX_PLAYERS) throw new Error("Room is full");
+          const slot=room.players.size, id=`bot:${room.code}:${slot}`;
+          const choices=["kuku","shachi","saiyan"]; const brawler=choices[(slot-1)%choices.length];
+          const bot=makePlayer({id},{name:`Bot ${slot}`,brawler},slot); bot.isBot=true; bot.connected=true; bot.socket=null; bot.ready=true; room.players.set(id,bot);
+          event(room,"bot-joined",{playerId:id,brawler}); sendState(room);
+        } else if (m.action==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
         else throw new Error("Unsupported action");
       } else if (m.type==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
       else throw new Error("Unsupported message type");
