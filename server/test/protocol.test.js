@@ -67,3 +67,14 @@ test("validates client message schemas before game logic sees them", () => {
   assert.throws(() => parseClientMessage('{"type":"admin"}'), /Unsupported message type/);
   assert.throws(() => parseClientMessage('{"type":"join","name":"' + "x".repeat(81) + '"}'), /Invalid name/);
 });
+
+
+test("protocol violation threshold closes abusive sockets without closing on one typo", async () => {
+  const { shouldCloseForProtocolViolations, PROTOCOL_VIOLATION_LIMIT } = await import("../protocol.js");
+  assert.equal(PROTOCOL_VIOLATION_LIMIT, 8);
+  assert.equal(shouldCloseForProtocolViolations(1), false);
+  assert.equal(shouldCloseForProtocolViolations(7), false);
+  assert.equal(shouldCloseForProtocolViolations(8), true);
+  assert.equal(shouldCloseForProtocolViolations(100), true);
+  assert.equal(shouldCloseForProtocolViolations(8.5), false);
+});
