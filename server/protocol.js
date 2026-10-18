@@ -19,3 +19,12 @@ export function parseClientMessage(raw) {
 }
 
 export const isCombatPhase = phase => phase === "playing";
+
+export function assignTeams(playerCount, mode) {
+  const count = Math.max(0, Math.floor(finite(playerCount, 0)));
+  const valid = validMode(mode);
+  if (valid === "showdown") return Array.from({ length: count }, (_, index) => index);
+  if (valid === "duel") return Array.from({ length: count }, (_, index) => index % 2);
+  const split = Math.ceil(count / 2);
+  return Array.from({ length: count }, (_, index) => index < split ? 0 : 1);
+}
