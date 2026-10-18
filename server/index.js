@@ -275,4 +275,5 @@ const ticker=setInterval(()=> {
   for (const room of rooms.values()) { stepRoom(room,dt||TICK_MS/1000); sendState(room); cleanupRoom(room); }
 },TICK_MS);
 server.listen(PORT,"0.0.0.0",()=>console.log(`DaBrawl authoritative server listening on :${PORT}`));
-process.on("SIGTERM",()=>{ clearInterval(ticker); for (const room of rooms.values()) for (const p of room.players.values()) p.socket?.close(1012,"Server restarting"); server.close(()=>process.exit(0)); });
+process.on("SIGTERM",()=>{ clearInterval(ticker); for (const ws of wss.clients) ws.close(1012,"Server restarting"); server.close(()=>process.exit(0)); });
+process.on("SIGINT",()=>{ clearInterval(ticker); for (const ws of wss.clients) ws.close(1012,"Server restarting"); server.close(()=>process.exit(0)); });
