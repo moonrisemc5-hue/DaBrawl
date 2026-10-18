@@ -431,7 +431,6 @@
     // The + buttons add a friend / open room-code multiplayer; they must never cycle the selected brawler.
     $('prevBtn').onclick = e => { e.preventDefault(); e.stopPropagation(); show('onlineLobby'); };
     $('nextBtn').onclick = e => { e.preventDefault(); e.stopPropagation(); show('onlineLobby'); };
-    $('friendsBtn').onclick = e => { e.preventDefault(); e.stopPropagation(); void loadFriendsScreen(); };
     function mk(t,i,human,name,b='kuku',isDummy=false){
       let xPos, yPos;
       if(isDummy){ xPos = (MW*T)/2 + (i===0?-60:60); yPos = (MH*T)/2 + (i===0?-40:40); }
