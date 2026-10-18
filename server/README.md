@@ -14,6 +14,10 @@ Deploy this directory as a Node 20+ container. Set the Dockerfile path to `serve
 
 Run `npm run check` and `npm test` from this directory. Unit tests cover message parsing, room-code validation, movement-axis validation, supported modes, player-name sanitization, active-match phase guards, team assignment, browser adapter mapping, Saiyan form stats and bounded progression, gadget charge/cooldown boundaries, and deterministic projectile movement, first-contact collision filtering, swept collision, range and world bounds. GitHub Actions also builds the production Docker image so missing files or invalid container build steps are caught before deployment.
 
+## Isolated browser test client
+
+Open [`test-client.html`](./test-client.html) in a browser, enter a hosted WebSocket URL ending in `/match`, a test room code, and a Supabase **user access token**. Open the page in a second tab with a different authenticated user to exercise two-player join/ready/movement/action snapshots. The page keeps the token only in JavaScript memory and does not write it to browser storage. Never enter a service-role key. The test client is only a protocol/arena inspector, not the production game UI; it cannot connect until the server is hosted and configured. Use `wss://` for a real hosted environment.
+
 ## Wire protocol
 
 Authenticate with WebSocket subprotocols `jwt-<Supabase access token>` and `dabrawl-v1`. Send `join` with a player name, brawler id, mode, and readiness state after connection. A match starts only after at least two players have joined and every player is ready. Knockout teams split the ordered roster into two balanced sides; duel alternates sides; showdown treats each player as a separate team. Then send sequenced `input` messages (`x`, `y`, `aim`) and action messages (`fire`, `super`, `transform`, `gadget`). Combat actions are ignored outside the active `playing` phase, and projectiles are cleared outside that phase. The server sends complete `state` snapshots, `ack`, and `event` messages. If the process restarts, clients receive a WebSocket close (code 1012); in-memory rooms are lost, so durable room recovery is still a separate task.
