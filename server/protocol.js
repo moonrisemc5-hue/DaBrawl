@@ -1,7 +1,7 @@
 export const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 export const finite = (n, fallback = 0) => Number.isFinite(Number(n)) ? Number(n) : fallback;
 export function cleanText(value, max = 28) {
-  return String(value ?? "").replace(/[<>\\u0000-\\u001f\\u007f]/g, "").trim().slice(0, max) || "Player";
+  return Array.from(String(value ?? "")).filter(ch => { const code = ch.charCodeAt(0); return ch !== "<" && ch !== ">" && code >= 32 && code !== 127; }).join("").trim().slice(0, max) || "Player";
 }
 export function validAxes(x, y) {
   x = finite(x, Number.NaN); y = finite(y, Number.NaN);
