@@ -15,6 +15,7 @@ const MAX_ROOMS = 100;
 const WORLD = { width: 800, height: 520, margin: 28 };
 import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "./brawlers.js";
 import { advanceProjectile, findProjectileHit, projectileStillInRange } from "./combat.js";
+import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
@@ -33,7 +34,7 @@ function makePlayer(user, msg, slot) {
   return { id: user.id, name: cleanText(msg.name), brawler, team: slot % 2, slot,
     x: slot % 2 ? 620 : 180, y: 150 + Math.floor(slot / 2) * 70, aim: slot % 2 ? Math.PI : 0,
     hp: BRAWLERS[brawler].hp, maxHp: BRAWLERS[brawler].hp, alive: true, meter: 0,
-    form: 0, transformUntil: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0,
+    form: 0, transformUntil: 0, gadgetReadyAt: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0,
     connected: true, socket: null, lastSeen: now(), invulnerableUntil: 0, ready: false };
 }
 function emit(room, type, data = {}) {
@@ -45,6 +46,7 @@ function snapshot(room) {
     winner: room.winner, ownerId: room.ownerId, tick: room.tick, players: [...room.players.values()].map(p => ({
       id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,
       hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,
+      gadgetCharges:gadgetCharges(p),gadgetCooldownMs:Math.max(0,p.gadgetReadyAt-now()),
       transforming:p.transformUntil>now(),connected:p.connected,ready:p.ready
     })), projectiles: room.projectiles.map(b => ({ id:b.id,ownerId:b.ownerId,x:b.x,y:b.y,angle:b.angle,super:b.super })) };
 }
@@ -251,7 +253,14 @@ wss.on("connection", (ws,_req,meta) => {
             event(room,"transform",{playerId:player.id,form:player.form});
           }
         } else if (m.action==="gadget") {
-          if (isCombatPhase(room.phase) && player.alive) { const a=player.aim; player.x=clamp(player.x+Math.cos(a)*70,WORLD.margin,WORLD.width-WORLD.margin); player.y=clamp(player.y+Math.sin(a)*70,WORLD.margin,WORLD.height-WORLD.margin); event(room,"gadget",{playerId:player.id}); }
+          const at=now();
+          if (isCombatPhase(room.phase) && player.alive && player.transformUntil<=at && tryConsumeGadget(player,at)) {
+            const a=player.aim;
+            player.x=clamp(player.x+Math.cos(a)*70,WORLD.margin,WORLD.width-WORLD.margin);
+            player.y=clamp(player.y+Math.sin(a)*70,WORLD.margin,WORLD.height-WORLD.margin);
+            event(room,"gadget",{playerId:player.id,cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
+            sendState(room);
+          }
         } else if (m.action==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
         else throw new Error("Unsupported action");
       } else if (m.type==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
