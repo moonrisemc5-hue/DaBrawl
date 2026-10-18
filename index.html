@@ -276,16 +276,29 @@
     let bTrophies = {kuku:0, shachi:0, saiyan:0};
     try { const savedBT = localStorage.getItem('dabrawl_bt'); if(savedBT) bTrophies = Object.assign(bTrophies, JSON.parse(savedBT)); } catch(e){}
     let trophyAccountKey = 'guest';
-    function loadTrophiesForAccount(key){
+    function loadTrophiesForAccount(key,legacyKey=''){
       trophyAccountKey=key||'guest';
+      let loaded=false;
       try{
-        const saved=localStorage.getItem('dabrawl_profile_'+trophyAccountKey);
-        if(saved){const profile=JSON.parse(saved);tr=Math.max(0,Number(profile.tr)||0);bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},profile.bt||{});}
-        else if(trophyAccountKey!=='guest'){tr=0;bTrophies={kuku:0,shachi:0,saiyan:0};}
-        else{tr=+(localStorage.getItem('dabrawl_tr')||0);try{const legacy=localStorage.getItem('dabrawl_bt');if(legacy)bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},JSON.parse(legacy));}catch(_){}}
+        let saved=localStorage.getItem('dabrawl_profile_'+trophyAccountKey);
+        // Upgrade older username-keyed profiles to immutable account-ID keys without losing progress.
+        if(!saved&&trophyAccountKey!=='guest'&&legacyKey)saved=localStorage.getItem('dabrawl_profile_'+legacyKey);
+        if(saved){
+          const profile=JSON.parse(saved);
+          tr=Math.max(0,Number(profile.tr)||0);
+          bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},profile.bt||{});
+          loaded=true;
+        }
       }catch(_){}
+      if(!loaded&&trophyAccountKey==='guest'){
+        try{tr=Math.max(0,Number(localStorage.getItem('dabrawl_tr'))||0);const legacy=localStorage.getItem('dabrawl_bt');bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},legacy?JSON.parse(legacy):{});}catch(_){}
+      }else if(!loaded&&trophyAccountKey!=='guest'){
+        // One-time recovery for progress saved by the older, non-account-scoped build.
+        // Save it under this signed-in account immediately so other accounts cannot inherit it later.
+        try{tr=Math.max(0,Number(localStorage.getItem('dabrawl_tr'))||0);const legacy=localStorage.getItem('dabrawl_bt');bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},legacy?JSON.parse(legacy):{});}catch(_){tr=0;bTrophies={kuku:0,shachi:0,saiyan:0};}
+      }
       $('tro').textContent=tr;
-      try{localStorage.setItem('dabrawl_tr',tr);localStorage.setItem('dabrawl_bt',JSON.stringify(bTrophies));}catch(_){}
+      saveTrophies();
     }
     const saveTrophies = () => { try { localStorage.setItem('dabrawl_tr',tr);localStorage.setItem('dabrawl_bt',JSON.stringify(bTrophies));localStorage.setItem('dabrawl_profile_'+trophyAccountKey,JSON.stringify({tr,bt:bTrophies})); } catch(e){} $('tro').textContent=tr; };
     saveTrophies();
@@ -1826,7 +1839,7 @@ function gadget(p){
           return;
         }
         const signedUser=result.data?.user;
-        if(signedUser){const username=String(signedUser.user_metadata?.username||(signedUser.email||'').split('@')[0]||'player').toLowerCase();loadTrophiesForAccount('user_'+username);}
+        if(signedUser){const username=String(signedUser.user_metadata?.username||(signedUser.email||'').split('@')[0]||'player').toLowerCase();loadTrophiesForAccount('user_'+signedUser.id,'user_'+username);}
         await updateAuthUI();
       } catch(err) {
         status('Could not reach the login service. Check your connection and try again.',true);
@@ -2254,6 +2267,7 @@ function gadget(p){
       await stopFriendsPresence();
       friendsPresenceChannel=db.channel('dabrawl-friends-presence',{config:{presence:{key:user.id}}})
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'dabrawl_room_invites',filter:'recipient_id=eq.'+user.id},async({new:inv})=>{if(inv?.status!=='pending')return;const {data:profile}=await db.from('dabrawl_player_profiles').select('username').eq('user_id',inv.sender_id).maybeSingle();displayRoomInvite({...inv,senderName:profile?.username||'Your friend'});})
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'dabrawl_friend_requests',filter:'addressee_id=eq.'+user.id},()=>{void pollIncomingFriendRequests();})
 ;
       friendsPresenceChannel.subscribe(async state=>{
         if(state!=='SUBSCRIBED')return;
@@ -2352,8 +2366,23 @@ function gadget(p){
     el('friendsRefresh').addEventListener('click',()=>void loadFriendsScreen());
     el('sendFriendRequest').addEventListener('click',()=>void sendFriendRequest());
     el('friendUsername').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void sendFriendRequest();}});
-    db.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>{if(session?.user)void startFriendsPresence(session.user);else void stopFriendsPresence();},0);});
-    db.auth.getSession().then(({data})=>{if(data?.session?.user)void startFriendsPresence(data.session.user);}).catch(()=>{});
+    db.auth.onAuthStateChange((_event,session)=>{
+      setTimeout(()=>{
+        if(session?.user){
+          const username=String(session.user.user_metadata?.username||(session.user.email||'').split('@')[0]||'player').toLowerCase();
+          loadTrophiesForAccount('user_'+session.user.id,'user_'+username);
+          void startFriendsPresence(session.user);
+          void pollIncomingFriendRequests();
+        }else{
+          loadTrophiesForAccount('guest');
+          void stopFriendsPresence();
+          activeFriendRequest=null;
+          el('friendRequestPopup').style.display='none';
+        }
+      },0);
+    });
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void pollIncomingFriendRequests();});
+    db.auth.getSession().then(({data})=>{if(data?.session?.user){const user=data.session.user;const username=String(user.user_metadata?.username||(user.email||'').split('@')[0]||'player').toLowerCase();loadTrophiesForAccount('user_'+user.id,'user_'+username);void startFriendsPresence(user);void pollIncomingFriendRequests();}else loadTrophiesForAccount('guest');}).catch(()=>{});
     el('lobbyFriendsBtn').addEventListener('click',()=>{setScreen('friendsScreen');void loadFriendsScreen();});
     el('createRoomBtn').addEventListener('click',createRoom);
     el('joinRoomBtn').addEventListener('click',joinRoom);
