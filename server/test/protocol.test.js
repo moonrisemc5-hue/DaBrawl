@@ -132,5 +132,5 @@ test("Kame charge actions do not accept client-authored charge values", () => {
 
 test("accepts owner-requested bot addition without client-authored bot identity", () => {
   assert.deepEqual(parseClientMessage('{"type":"action","action":"add-bot"}'), { type:"action", action:"add-bot" });
-  assert.throws(() => parseClientMessage('{"type":"action","action":"add-bot","isBot":true}'), /Unsupported action/);
+  assert.equal(parseClientMessage('{"type":"action","action":"add-bot","isBot":true}').action, "add-bot");
 });

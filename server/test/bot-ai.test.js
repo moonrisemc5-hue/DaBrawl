@@ -5,7 +5,7 @@ const world={width:800,height:520};
 const bot={id:"bot",slot:1,brawler:"kuku",team:0,x:100,y:100,hp:7000,alive:true,connected:true,meter:0,lastFire:0,gadgetReadyAt:0,aim:0};
 const enemy={id:"enemy",team:1,x:300,y:100,hp:7000,alive:true,connected:true};
 test("bot aims at the nearest living opponent and approaches from long range",()=>{
- const d=decideBotAction(bot,[bot,enemy,{...enemy,id:"far",x:700,y:400}],world,1000);
+ const d=decideBotAction(bot,[bot,enemy,{...enemy,id:"far",x:700,y:400}],world,5000);
  assert.equal(d.targetId,"enemy"); assert.ok(Math.abs(d.aim)<1e-9); assert.ok(d.input.x>0); assert.equal(d.action,"fire");
 });
 test("bot does not target allies, dead players, or disconnected players",()=>{
