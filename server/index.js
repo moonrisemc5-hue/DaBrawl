@@ -267,6 +267,7 @@ wss.on("connection", (ws,_req,meta) => {
   });
   ws.on("close",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); room.updatedAt=now(); cancelCountdown(room, "player-disconnected"); event(room,"player-disconnected",{playerId:player.id}); });
   ws.on("error",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); cancelCountdown(room, "connection-error"); });
+  emit(room,"player-joined",{playerId:player.id}); sendState(room);
 });
 let lastTickAt=now();
 const ticker=setInterval(()=> {
