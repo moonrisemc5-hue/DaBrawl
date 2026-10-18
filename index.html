@@ -553,6 +553,12 @@ function gadget(p){
           F.push({k:'t',x:t.x,y:t.y-30,vx:0,vy:-60,l:.7,m:.7,tx:String(Math.round(damage)),c:'#ffe45c'});
           puff(t.x,t.y,8,'#ffe45c',.8); beep(260,.06,.05,'square',-80);
           window.DaBrawlNet.sendAction('hit-feedback',0,{targetId:t.netId,damage});
+          // Charge Super on the attacker's owning simulation as soon as a real hit
+          // is confirmed locally. Remote human targets return above before the normal
+          // damage path, which previously meant Kuku never gained Super against friends.
+          if(b?.o && (b.o===me || (isNetworkHost && b.o.isBot)) && !b.s){
+            b.o.sc=Math.min(1,(b.o.sc||0)+damage*.0004*(b.o.k?.cm||0.5));
+          }
         }
         return;
       }
@@ -610,13 +616,19 @@ function gadget(p){
         if(p.netRemote){
           const target=p.netTarget;
           if(target){
-            // Follow the newest snapshot directly. Extrapolating by a guessed velocity made
-            // remote players overshoot whenever Supabase packets arrived late or out of order.
-            const tx=target.x, ty=target.y;
-            // Track the latest authoritative position smoothly without adding network-jitter overshoot.
-            const blend=1-Math.exp(-Math.min(dt,0.05)*68);
-            p.x += (tx-p.x)*blend;
-            p.y += (ty-p.y)*blend;
+            // Lightly predict only a short distance between snapshots, then ease toward
+            // the target. The old near-direct follow made 20 Hz network updates visibly stutter;
+            // unrestricted velocity prediction caused overshoot, so prediction is tightly capped.
+            const age=Math.max(0,Math.min(0.045,(Date.now()-(p.netTargetAt||Date.now()))/1000));
+            const maxLead=42;
+            const vx=Math.max(-maxLead,Math.min(maxLead,(p.netVx||0)*age));
+            const vy=Math.max(-maxLead,Math.min(maxLead,(p.netVy||0)*age));
+            const tx=target.x+vx, ty=target.y+vy;
+            const blend=1-Math.exp(-Math.min(dt,0.05)*48);
+            const errX=tx-p.x, errY=ty-p.y;
+            // Snap only after a genuine discontinuity (respawn/teleport), not normal packet jitter.
+            if(Math.hypot(errX,errY)>190){p.x=target.x;p.y=target.y;}
+            else {p.x += errX*blend;p.y += errY*blend;}
             if(Number.isFinite(target.a)){
               const delta=Math.atan2(Math.sin(target.a-p.a),Math.cos(target.a-p.a));
               p.a += delta*blend;
