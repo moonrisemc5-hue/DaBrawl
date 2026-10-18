@@ -4,7 +4,7 @@ This is a separate Node.js/WebSocket service intended for a persistent host (for
 
 ## Important status
 
-This service is **not yet connected to live DaBrawl matches**. The server now includes explicit baseline rules for Kuku, Shachi and Saiyan, including Shachi's slam and Saiyan's transform super. This is not yet a full port: terrain, exact ability timings, form-specific stats, gadgets and bot AI still need to be reconciled with the browser game. Do not switch production matchmaking to it until the client protocol and all brawler rules are ported and verified. The existing Supabase Realtime path remains untouched.
+This service is **not yet connected to live DaBrawl matches**. The server now includes explicit baseline rules for Kuku, Shachi and Saiyan, including Shachi's slam and Saiyan's transform super. Projectile collision uses a swept segment between ticks to avoid fast shots passing through targets, and chooses the closest valid target along that segment. This is not yet a full port: terrain, exact ability timings, form-specific stats, gadgets and bot AI still need to be reconciled with the browser game. Do not switch production matchmaking to it until the client protocol and all brawler rules are ported and verified. The existing Supabase Realtime path remains untouched.
 
 ## Host
 
@@ -12,12 +12,11 @@ Deploy this directory as a Node 20+ container. Build from the repository root wi
 
 ## Local checks
 
-Run `npm run check` and `npm test` from this directory. The unit tests cover message parsing, room-code validation, movement-axis validation, supported modes, player-name sanitization, active-match phase guards, and team assignment.
+Run `npm run check` and `npm test` from this directory. Unit tests cover message parsing, room-code validation, movement-axis validation, supported modes, player-name sanitization, active-match phase guards, team assignment, browser adapter mapping, and deterministic projectile movement, collision filtering, swept collision, range and world bounds. GitHub Actions also builds the production Docker image so missing files or invalid container build steps are caught before deployment.
 
 ## Wire protocol
 
 Authenticate with WebSocket subprotocols `jwt-<Supabase access token>` and `dabrawl-v1`. Send `join` with a player name, brawler id, mode, and readiness state after connection. A match starts only after at least two players have joined and every player is ready. Knockout teams split the ordered roster into two balanced sides; duel alternates sides; showdown treats each player as a separate team. Then send sequenced `input` messages (`x`, `y`, `aim`) and action messages (`fire`, `super`, `transform`, `gadget`). Combat actions are ignored outside the active `playing` phase, and projectiles are cleared outside that phase. The server sends complete `state` snapshots, `ack`, and `event` messages. If the process restarts, clients receive a WebSocket close (code 1012); in-memory rooms are lost, so durable room recovery is still a separate task.
-
 
 ## Live-client integration boundary
 
