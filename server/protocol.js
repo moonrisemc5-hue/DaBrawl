@@ -75,3 +75,11 @@ export const shouldExpireDisconnectedPlayer = (connected, lastSeen, currentTime,
   Number.isFinite(ttlMs) &&
   ttlMs >= 0 &&
   currentTime - lastSeen >= ttlMs;
+
+export const shouldForfeitDisconnectedPlayer = (connected, disconnectedAt, currentTime, graceMs) =>
+  connected === false &&
+  Number.isFinite(disconnectedAt) &&
+  Number.isFinite(currentTime) &&
+  Number.isFinite(graceMs) &&
+  graceMs >= 0 &&
+  currentTime - disconnectedAt >= graceMs;
