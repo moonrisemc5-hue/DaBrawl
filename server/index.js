@@ -224,12 +224,12 @@ wss.on("connection", (ws,_req,meta) => {
         if (m.action==="fire") doFire(room,player,false);
         else if (m.action==="super") doFire(room,player,true);
         else if (m.action==="transform") {
-          if (player.alive && player.meter>=50 && player.transformUntil<=now()) {
+          if (room.phase==="playing" && player.alive && player.meter>=50 && player.transformUntil<=now()) {
             player.meter-=50; player.form=clamp(Math.floor(finite(m.form,player.form+1)),1,5); player.transformUntil=now()+1800;
             event(room,"transform",{playerId:player.id,form:player.form});
           }
         } else if (m.action==="gadget") {
-          if (player.alive) { const a=player.aim; player.x=clamp(player.x+Math.cos(a)*70,WORLD.margin,WORLD.width-WORLD.margin); player.y=clamp(player.y+Math.sin(a)*70,WORLD.margin,WORLD.height-WORLD.margin); event(room,"gadget",{playerId:player.id}); }
+          if (room.phase==="playing" && player.alive) { const a=player.aim; player.x=clamp(player.x+Math.cos(a)*70,WORLD.margin,WORLD.width-WORLD.margin); player.y=clamp(player.y+Math.sin(a)*70,WORLD.margin,WORLD.height-WORLD.margin); event(room,"gadget",{playerId:player.id}); }
         } else if (m.action==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
         else throw new Error("Unsupported action");
       } else if (m.type==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
