@@ -10,6 +10,7 @@ export function adaptServerPlayer(player) {
   if (!finite(player.x) || !finite(player.y) || !finite(player.hp) || !finite(player.maxHp)) return null;
   return {
     id: player.id,
+    name: text(player.name),
     x: player.x,
     y: player.y,
     a: finite(player.aim) ? player.aim : 0,
@@ -24,6 +25,9 @@ export function adaptServerPlayer(player) {
     brawler: text(player.brawler),
     team: finite(player.team) ? player.team : null,
     slot: finite(player.slot) ? player.slot : null,
+    // Preserve authoritative gadget timing without guessing the browser's units.
+    gadgetCharges: finite(player.gadgetCharges) ? Math.max(0, player.gadgetCharges) : null,
+    gadgetCooldownMs: finite(player.gadgetCooldownMs) ? Math.max(0, player.gadgetCooldownMs) : null,
     connected: player.connected === true,
     ready: player.ready === true
   };
