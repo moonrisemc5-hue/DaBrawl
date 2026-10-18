@@ -69,6 +69,14 @@ function startMatch(room) {
   room.phase = "countdown"; room.startedAt = now() + 2500; room.endsAt = room.startedAt + 180_000;
   event(room, "match-countdown", { startAt: room.startedAt });
 }
+function updateReady(room, player, ready) {
+  player.ready = ready === true;
+  if (room.phase === "countdown" && !player.ready) {
+    cancelCountdown(room, "player-unready");
+    return;
+  }
+  if (player.ready) startMatch(room);
+}
 function joinRoom(room, user, msg, socket) {
   let player = room.players.get(user.id);
   if (!player) {
@@ -244,10 +252,9 @@ wss.on("connection", (ws,_req,meta) => {
           player.hp=player.maxHp;
         }
         if (canConfigureRoom(player.id, room.ownerId, room.phase) && m.mode !== undefined) room.mode=validMode(m.mode);
-        if (typeof m.ready === "boolean") player.ready=m.ready;
-        if (m.ready===true) startMatch(room);
+        if (typeof m.ready === "boolean") updateReady(room, player, m.ready);
         emit(room,"player-joined",{playerId:player.id}); sendState(room);
-      } else if (m.type==="ready") { player.ready=m.ready===true; if (player.ready) startMatch(room); sendState(room); }
+      } else if (m.type==="ready") { updateReady(room, player, m.ready); sendState(room); }
       else if (m.type==="input") {
         const seq=Math.floor(finite(m.seq,-1)); if (seq<=player.seq) return;
         player.seq=seq; player.input=validAxes(m.x,m.y); player.aim=clamp(finite(m.aim,player.aim),-Math.PI*2,Math.PI*2);
