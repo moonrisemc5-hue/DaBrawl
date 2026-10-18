@@ -13,12 +13,13 @@ const ROOM_TTL_MS = 120_000;
 const DISCONNECT_GRACE_MS = 10_000;
 const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
-const WORLD = { width: 800, height: 520, margin: 28, obstacles: [] };
+
 import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "./brawlers.js";
 import { advanceProjectile, findProjectileHit, projectileStillInRange } from "./combat.js";
 import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
-import { clampPlayerPosition, movementDelta, movePlayerWithObstacles, resolvePlayerCollisions, PLAYER_RADIUS } from "./world.js";
+import { movementDelta, movePlayerWithObstacles, resolvePlayerCollisions, PLAYER_RADIUS } from "./world.js";
 import { selectWinnerByHealth } from "./match-results.js";
+import { createArena } from "./maps.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
@@ -28,7 +29,8 @@ let nextProjectileId = 1;
 const now = () => Date.now();
 
 function makeRoom(code, mode = "knockout") {
-  return { code, mode: validMode(mode),
+  const normalizedMode = validMode(mode);
+  return { code, mode: normalizedMode, world: createArena(normalizedMode),
     phase: "waiting", createdAt: now(), updatedAt: now(), emptySince: 0, startedAt: 0, endsAt: 0, tick: 0,
     players: new Map(), projectiles: [], events: [], winner: null };
 }
@@ -160,13 +162,13 @@ function stepRoom(room, dt) {
       if (t - p.lastSeen > INPUT_TIMEOUT_MS) p.input = { x: 0, y: 0 };
       const stats = getBrawlerStats(p);
       const { x: dx, y: dy } = movementDelta(p.input.x, p.input.y, stats.speed, dt);
-      const nextPosition = movePlayerWithObstacles(p.x, p.y, dx, dy, WORLD, PLAYER_RADIUS);
+      const nextPosition = movePlayerWithObstacles(p.x, p.y, dx, dy, room.world, PLAYER_RADIUS);
       p.x = nextPosition.x;
       p.y = nextPosition.y;
       if (p.transformUntil && t >= p.transformUntil) p.transformUntil = 0;
     }
     const movers = [...room.players.values()].filter(p => p.connected && p.alive);
-    const separated = resolvePlayerCollisions(movers, WORLD, PLAYER_RADIUS);
+    const separated = resolvePlayerCollisions(movers, room.world, PLAYER_RADIUS);
     movers.forEach((p, index) => { p.x = separated[index].x; p.y = separated[index].y; });
     const survivors = [...room.players.values()].filter(p => p.alive);
     const survivingTeams = new Set(survivors.map(p => p.team));
@@ -190,7 +192,7 @@ function stepRoom(room, dt) {
       const owner = room.players.get(b.ownerId); if (owner) owner.meter = clamp(owner.meter+18,0,100);
       event(room, "hit", { projectileId:b.id, attackerId:b.ownerId, targetId:hit.id, damage:b.damage, hp:hit.hp });
       if (hit.hp <= 0) { hit.alive=false; hit.input={x:0,y:0}; event(room,"knockout",{playerId:hit.id,by:b.ownerId}); }
-    } else if (projectileStillInRange(b, WORLD.width, WORLD.height)) keep.push(b);
+    } else if (projectileStillInRange(b, room.world.width, room.world.height)) keep.push(b);
   }
   room.projectiles = keep;
   if (room.phase === "ended") room.projectiles = [];
@@ -292,7 +294,7 @@ wss.on("connection", (ws,_req,meta) => {
           const at=now();
           if (isCombatPhase(room.phase) && player.alive && player.transformUntil<=at && tryConsumeGadget(player,at)) {
             const a=player.aim;
-            const dashPosition=movePlayerWithObstacles(player.x,player.y,Math.cos(a)*70,Math.sin(a)*70,WORLD,PLAYER_RADIUS);
+            const dashPosition=movePlayerWithObstacles(player.x,player.y,Math.cos(a)*70,Math.sin(a)*70,room.world,PLAYER_RADIUS);
             player.x=dashPosition.x; player.y=dashPosition.y;
             event(room,"gadget",{playerId:player.id,cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
             sendState(room);

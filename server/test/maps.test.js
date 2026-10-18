@@ -1,0 +1,28 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createArena, TILE_SIZE } from "../maps.js";
+
+test("builds knockout and duel maps at the browser's 28 by 16 tile size", () => {
+  for (const mode of ["knockout", "duel"]) {
+    const arena = createArena(mode);
+    assert.equal(arena.columns, 28);
+    assert.equal(arena.rows, 16);
+    assert.equal(arena.width, 28 * TILE_SIZE);
+    assert.equal(arena.height, 16 * TILE_SIZE);
+    assert.equal(arena.tiles[1][2], "#");
+    assert.ok(arena.obstacles.some(o => o.tile === "~"));
+  }
+});
+test("builds the browser's showdown map and perimeter walls", () => {
+  const arena = createArena("showdown");
+  assert.equal(arena.columns, 44);
+  assert.equal(arena.rows, 28);
+  assert.equal(arena.tiles[0].every(tile => tile === "#"), true);
+  assert.equal(arena.tiles.at(-1).every(tile => tile === "#"), true);
+  assert.ok(arena.obstacles.some(o => o.tile === "~"));
+});
+test("does not treat bushes as solid collision obstacles", () => {
+  const arena = createArena("knockout");
+  assert.ok(arena.tiles.some(row => row.includes("b")));
+  assert.ok(arena.obstacles.every(o => o.tile === "#" || o.tile === "~"));
+});
