@@ -423,7 +423,7 @@
         let valid = false, attempts = 0;
         while(!valid && attempts < 500){
           attempts++;
-          const angle = (i / 10) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+          const angle = gameMode==='duo' ? (t/5)*Math.PI*2 + (i===0?-0.045:0.045) : (i / 10) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
           xPos = (MW * T) / 2 + Math.cos(angle) * (MW * 0.42) * T;
           yPos = (MH * T) / 2 + Math.sin(angle) * (MH * 0.42) * T;
           if(tile(xPos, yPos) == '.') valid = true;
@@ -455,7 +455,8 @@
       } else if(gameMode === 'duo'){
         for(let i=1; i<10; i++) P.push(mk(Math.floor(i/2), i%2, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
         G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
-      } else if(gameMode == 'showdown')
+      } else if(gameMode == 'showdown'){
+        for(let i=1; i<10; i++) P.push(mk(i, i, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
         G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       } else {
         for(let t=0;t<2;t++)for(let i=0;i<3;i++){ if(!t&&!i) continue; P.push(mk(t,i,0,n.pop(),['kuku','shachi','saiyan'][Math.random()*3|0])); }
