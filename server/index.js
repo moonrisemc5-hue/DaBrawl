@@ -13,7 +13,7 @@ const ROOM_TTL_MS = 120_000;
 const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
 const WORLD = { width: 800, height: 520, margin: 28 };
-import { BRAWLERS, getBrawlerStats } from "./brawlers.js";
+import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "./brawlers.js";
 import { advanceProjectile, findProjectileHit, projectileStillInRange } from "./combat.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -86,19 +86,20 @@ function doFire(room, p, isSuper = false) {
   const stats = getBrawlerStats(p);
   const t = now();
   if (!p.alive || p.transformUntil > t) return;
+  // A max-form Saiyan has no next transformation; reject before consuming super meter.
+  if (isSuper && stats.superKind === "transform" && getNextSaiyanForm(p) === null) return;
   if (isSuper) {
     if (p.meter < 100 || t - p.lastSuper < 1200) return;
     p.meter = 0; p.lastSuper = t;
   } else if (t - p.lastFire < stats.cooldown) return;
   else p.lastFire = t;
   if (isSuper && stats.superKind === "transform") {
-    const nextForm = clamp(p.form + 1, 1, 5);
-    const nextStats = BRAWLERS[p.brawler]?.forms?.[nextForm];
-    if (nextStats) {
-      const healthDelta = nextStats.hp - p.maxHp;
-      p.maxHp = nextStats.hp;
-      p.hp = clamp(p.hp + healthDelta, 0, p.maxHp);
-    }
+    const nextForm = getNextSaiyanForm(p);
+    if (nextForm === null) return;
+    const nextStats = BRAWLERS.saiyan.forms[nextForm];
+    const healthDelta = nextStats.hp - p.maxHp;
+    p.maxHp = nextStats.hp;
+    p.hp = clamp(p.hp + healthDelta, 0, p.maxHp);
     p.form = nextForm;
     p.transformUntil = t + 1800;
     event(room, "transform", { playerId:p.id, form:p.form });
@@ -238,15 +239,13 @@ wss.on("connection", (ws,_req,meta) => {
         if (m.action==="fire") doFire(room,player,false);
         else if (m.action==="super") doFire(room,player,true);
         else if (m.action==="transform") {
-          if (isCombatPhase(room.phase) && player.alive && player.meter>=50 && player.transformUntil<=now() && player.brawler==="saiyan" && player.form<5) {
+          const nextForm = getNextSaiyanForm(player);
+          if (isCombatPhase(room.phase) && player.alive && player.meter>=50 && player.transformUntil<=now() && nextForm !== null) {
             player.meter-=50;
-            const nextForm=player.form+1;
             const nextStats=BRAWLERS.saiyan.forms[nextForm];
-            if (nextStats) {
-              const healthDelta=nextStats.hp-player.maxHp;
-              player.maxHp=nextStats.hp;
-              player.hp=clamp(player.hp+healthDelta,0,player.maxHp);
-            }
+            const healthDelta=nextStats.hp-player.maxHp;
+            player.maxHp=nextStats.hp;
+            player.hp=clamp(player.hp+healthDelta,0,player.maxHp);
             player.form=nextForm;
             player.transformUntil=now()+1800;
             event(room,"transform",{playerId:player.id,form:player.form});
@@ -268,13 +267,11 @@ wss.on("connection", (ws,_req,meta) => {
   });
   ws.on("close",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); room.updatedAt=now(); cancelCountdown(room, "player-disconnected"); event(room,"player-disconnected",{playerId:player.id}); });
   ws.on("error",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); cancelCountdown(room, "connection-error"); });
-  emit(room,"player-joined",{playerId:player.id}); sendState(room);
 });
 let lastTickAt=now();
 const ticker=setInterval(()=> {
   const tickAt=now(); const dt=Math.min(.1,Math.max(0,(tickAt-lastTickAt)/1000)); lastTickAt=tickAt;
   for (const room of rooms.values()) { stepRoom(room,dt||TICK_MS/1000); sendState(room); cleanupRoom(room); }
 },TICK_MS);
-server.listen(PORT,"0.0.0.0",()=>console.log("DaBrawl authoritative server listening on",PORT));
-process.on("SIGTERM",()=>{clearInterval(ticker);for(const ws of wss.clients)ws.close(1012,"Server restarting");server.close(()=>process.exit(0));});
-process.on("SIGINT",()=>{clearInterval(ticker);for(const ws of wss.clients)ws.close(1012,"Server restarting");server.close(()=>process.exit(0));});
+server.listen(PORT,"0.0.0.0",()=>console.log(`DaBrawl authoritative server listening on :${PORT}`));
+process.on("SIGTERM",()=>{ clearInterval(ticker); for (const room of rooms.values()) for (const p of room.players.values()) p.socket?.close(1012,"Server restarting"); server.close(()=>process.exit(0)); });
