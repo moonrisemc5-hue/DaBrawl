@@ -309,14 +309,19 @@
     function startMenuMusic(){
       initAudio(); if(!AC || menuGain) return;
       menuGain = AC.createGain(); menuGain.gain.value = 0.08; menuGain.connect(AC.destination);
-      const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 349.23]; let step = 0;
+      const notes = [261.63, 329.63, 392.00, 440.00, 392.00, 329.63, 293.66, 349.23]; let step = 0;
+      const note=(freq,type,volume,duration)=>{
+        const now=AC.currentTime,osc=AC.createOscillator(),gain=AC.createGain();
+        osc.type=type;osc.frequency.setValueAtTime(freq,now);gain.gain.setValueAtTime(volume,now);
+        gain.gain.exponentialRampToValueAtTime(0.001,now+duration);osc.connect(gain);gain.connect(menuGain);osc.start(now);osc.stop(now+duration);
+      };
       musicInterval = setInterval(() => {
         if(scr !== 'menu') return;
-        const now = AC.currentTime, osc = AC.createOscillator(), g = AC.createGain();
-        osc.type = 'sine'; osc.frequency.setValueAtTime(notes[step % notes.length], now);
-        g.gain.setValueAtTime(0.06, now); g.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
-        osc.connect(g); g.connect(menuGain); osc.start(now); osc.stop(now + 1.8); step++;
-      }, 1200);
+        const freq=notes[step%notes.length];note(freq,'triangle',0.035,0.52);
+        if(step%2===0)note(notes[(step+2)%notes.length]/2,'sine',0.025,1.05);
+        if(step%4===3)note(freq*1.5,'sine',0.012,0.38);
+        step++;
+      }, 600);
     }
     function stopMenuMusic(){ if(musicInterval){ clearInterval(musicInterval); musicInterval = null; } if(menuGain){ menuGain.disconnect(); menuGain = null; } }
     addEventListener('pointerdown', () => initAudio(), {once:true});
@@ -368,17 +373,23 @@
     function beep(f,d,v=.1,ty='square',sl=0){ try { initAudio(); const o=AC.createOscillator(), gn=AC.createGain(); o.type=ty; o.frequency.setValueAtTime(f,AC.currentTime); o.frequency.exponentialRampToValueAtTime(Math.max(30,f+sl),AC.currentTime+d); gn.gain.setValueAtTime(v,AC.currentTime); gn.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d); o.connect(gn); gn.connect(AC.destination); o.start(); o.stop(AC.currentTime+d); } catch(e){} }
     const T=48; let MW=28, MH=16;
     const Q=["..............","..#...bb......","..#...bb..~~..","......bb..~~..","..bb......#...","..bb..##..#...","......##......","...~~.....#..."];
-    let M, gasDist=0;
+    let M, gasDist=0, mapVariant=0;
     function build(){
       gasDist = 0;
       if(gameMode == 'showdown' || gameMode === 'duo'){
         MW=44; MH=28;
         M = Array.from({length:MH}, (_,j) => Array.from({length:MW}, (_,i) => {
           if(i==0||j==0||i==MW-1||j==MH-1) return '#';
-          // Scatter larger wall clusters with no isolated one-tile choke gaps.
-          if(((i>=7&&i<=10)&&(j>=5&&j<=8)) || ((i>=32&&i<=36)&&(j>=18&&j<=21))) return '#';
-          if(((i>=15&&i<=18)&&(j>=4&&j<=8)) || ((i>=25&&i<=28)&&(j>=19&&j<=23))) return '#';
-          if(i>19&&i<25&&j>10&&j<17) return 'b';
+          // Three symmetric arena layouts; mapVariant is seeded from the match ID online.
+          if(mapVariant===0 && ((((i>=7&&i<=10)&&(j>=5&&j<=8)) || ((i>=32&&i<=36)&&(j>=18&&j<=21))))) return '#';
+          if(mapVariant===0 && ((((i>=15&&i<=18)&&(j>=4&&j<=8)) || ((i>=25&&i<=28)&&(j>=19&&j<=23))))) return '#';
+          if(mapVariant===1 && ((((i>=7&&i<=11)&&(j>=12&&j<=15)) || ((i>=32&&i<=36)&&(j>=9&&j<=13))))) return '#';
+          if(mapVariant===1 && ((((i>=15&&i<=18)&&(j>=18&&j<=22)) || ((i>=25&&i<=28)&&(j>=4&&j<=8))))) return '#';
+          if(mapVariant===2 && ((((i>=11&&i<=14)&&(j>=5&&j<=9)) || ((i>=29&&i<=33)&&(j>=17&&j<=21))))) return '#';
+          if(mapVariant===2 && ((((i>=19&&i<=22)&&(j>=3&&j<=7)) || ((i>=21&&i<=24)&&(j>=20&&j<=24))))) return '#';
+          if(mapVariant===0 && i>19&&i<25&&j>10&&j<17) return 'b';
+          if(mapVariant===1 && i>18&&i<26&&j>12&&j<16) return 'b';
+          if(mapVariant===2 && ((i>12&&i<17&&j>10&&j<17)||(i>27&&i<32&&j>10&&j<17))) return 'b';
           return '.';
         }));
       } else {
@@ -443,7 +454,7 @@
       }, 120);
     }
     function startGame(test=false){
-      isTestMode = test; const n = [...NM].sort(() => Math.random()-.5);
+      isTestMode = test; mapVariant=Math.floor(Math.random()*3); const n = [...NM].sort(() => Math.random()-.5);
       P = []; me = mk(0,0,1,'You',selB); P.push(me); build();
       if(test){
         P.push(mk(1,0,0,'Dummy Kuku','kuku',true)); P.push(mk(1,1,0,'Dummy Shachi','shachi',true));
@@ -1498,6 +1509,7 @@ function gadget(p){
       startNetworkGame(roster, matchId, mode, localId, hostId=localId,startAt=Date.now()+2500){
         networkMode = true; isTestMode = false; isNetworkHost=(localId===hostId); networkResultApplied=false; gameMode = mode || 'knockout';
         $('modeTxt').textContent = gameMode === 'showdown' ? 'SOLO SHOWDOWN' : gameMode === 'duo' ? 'DUO SHOWDOWN' : gameMode === 'duel' ? '1v1 DUEL' : 'KNOCKOUT 3v3';
+        mapVariant=0; for(const ch of String(matchId)) mapVariant=(mapVariant*31+ch.charCodeAt(0))%3;
         P=[]; me=null; build(); B=[]; F=[]; MT=[]; KM=[];
         roster.forEach((entry,idx)=>{
           const team = entry.team!==undefined ? entry.team : gameMode === 'showdown' ? idx : gameMode === 'duo' ? Math.floor(idx/2) : gameMode === 'duel' ? idx % 2 : (idx < 3 ? 0 : 1);
