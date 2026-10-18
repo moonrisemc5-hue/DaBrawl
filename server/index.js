@@ -17,7 +17,7 @@ const WORLD = { width: 800, height: 520, margin: 28 };
 import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "./brawlers.js";
 import { advanceProjectile, findProjectileHit, projectileStillInRange } from "./combat.js";
 import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
-import { clampPlayerPosition, movementDelta, PLAYER_RADIUS } from "./world.js";
+import { clampPlayerPosition, movementDelta, resolvePlayerCollisions, PLAYER_RADIUS } from "./world.js";
 import { selectWinnerByHealth } from "./match-results.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -165,6 +165,9 @@ function stepRoom(room, dt) {
       p.y = nextPosition.y;
       if (p.transformUntil && t >= p.transformUntil) p.transformUntil = 0;
     }
+    const movers = [...room.players.values()].filter(p => p.connected && p.alive);
+    const separated = resolvePlayerCollisions(movers, WORLD, PLAYER_RADIUS);
+    movers.forEach((p, index) => { p.x = separated[index].x; p.y = separated[index].y; });
     const survivors = [...room.players.values()].filter(p => p.alive);
     const survivingTeams = new Set(survivors.map(p => p.team));
     if (survivors.length === 0) {

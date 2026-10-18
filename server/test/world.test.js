@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { clampPlayerPosition, movementDelta, PLAYER_RADIUS } from "../world.js";
+import { clampPlayerPosition, movementDelta, resolvePlayerCollisions, PLAYER_RADIUS } from "../world.js";
 
 const world = { width: 800, height: 520, margin: 28 };
 
@@ -30,4 +30,26 @@ test("rejects invalid movement delta inputs", () => {
   assert.throws(() => movementDelta(NaN, 0, 100, 1), /Invalid movement input/);
   assert.throws(() => movementDelta(0, 0, -1, 1), /Invalid movement input/);
   assert.throws(() => movementDelta(0, 0, 100, -1), /Invalid movement input/);
+});
+
+test("separates overlapping players and keeps them inside the arena", () => {
+  const resolved = resolvePlayerCollisions([{x:200,y:200},{x:210,y:200}], world);
+  assert.ok(Math.hypot(resolved[1].x-resolved[0].x,resolved[1].y-resolved[0].y) >= PLAYER_RADIUS*2-1e-8);
+  for (const p of resolved) {
+    assert.ok(p.x >= world.margin + PLAYER_RADIUS && p.x <= world.width-world.margin-PLAYER_RADIUS);
+    assert.ok(p.y >= world.margin + PLAYER_RADIUS && p.y <= world.height-world.margin-PLAYER_RADIUS);
+  }
+});
+
+test("separates multiple players deterministically, including coincident spawn points", () => {
+  const players = [{x:400,y:260},{x:400,y:260},{x:400,y:260}];
+  const first = resolvePlayerCollisions(players, world);
+  assert.deepEqual(first, resolvePlayerCollisions(players, world));
+  for (let i=0;i<first.length;i++) for (let j=i+1;j<first.length;j++)
+    assert.ok(Math.hypot(first[j].x-first[i].x,first[j].y-first[i].y) >= PLAYER_RADIUS*2-0.01);
+});
+
+test("rejects invalid collision inputs", () => {
+  assert.throws(() => resolvePlayerCollisions(null, world), /Invalid player collision inputs/);
+  assert.throws(() => resolvePlayerCollisions([{x:NaN,y:0}], world), /Invalid player position/);
 });
