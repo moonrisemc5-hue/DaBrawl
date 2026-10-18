@@ -2,7 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer, WebSocket } from "ws";
-import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations } from "./protocol.js";
+import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations, shouldCancelCountdown } from "./protocol.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -71,7 +71,7 @@ function startMatch(room) {
 }
 function updateReady(room, player, ready) {
   player.ready = ready === true;
-  if (room.phase === "countdown" && !player.ready) {
+  if (shouldCancelCountdown(room.phase, player.ready)) {
     cancelCountdown(room, "player-unready");
     return;
   }
