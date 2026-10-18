@@ -1842,7 +1842,7 @@ function gadget(p){
             if(players.length) void matchChannel.send({type:'broadcast',event:'match-state',payload:{sentAt:Date.now(),players}});
             // Do not replace a temporarily silent player with a bot: browsers throttle background tabs.
             // The player's next state packet will resynchronize them when their tab becomes active again.
-          },25);
+          },50);
         },650);
       });
     }
