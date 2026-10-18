@@ -108,8 +108,11 @@ function stepRoom(room, dt) {
       if (p.transformUntil && t >= p.transformUntil) p.transformUntil = 0;
     }
     const survivors = [...room.players.values()].filter(p => p.alive);
-    if (room.mode !== "showdown" && survivors.length && new Set(survivors.map(p => p.team)).size <= 1) {
-      room.phase = "ended"; room.winner = survivors[0]?.team ?? null; event(room, "match-ended", { winner: room.winner });
+    const survivingTeams = new Set(survivors.map(p => p.team));
+    if (survivors.length === 0) {
+      room.phase = "ended"; room.winner = null; event(room, "match-ended", { winner: null, reason: "draw" });
+    } else if (survivingTeams.size === 1) {
+      room.phase = "ended"; room.winner = survivors[0].team; event(room, "match-ended", { winner: room.winner, reason: "elimination" });
     } else if (t >= room.endsAt) {
       room.phase = "ended"; const scores = new Map(); for (const p of survivors) scores.set(p.team,(scores.get(p.team)||0)+p.hp);
       room.winner = [...scores].sort((a,b)=>b[1]-a[1])[0]?.[0] ?? null; event(room, "match-ended", { winner: room.winner, reason:"timer" });
