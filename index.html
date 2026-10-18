@@ -1886,7 +1886,7 @@ function gadget(p){
           if(error){if(error.code==='23505')continue;status('Room creation failed: '+error.message+' ('+(error.code||'database error')+').',true);return;}
           const {error:joinError}=await db.from('game_room_players').insert({room_id:room.id,user_id:user.id,player_slot:1,character_id:localStorage.getItem('dabrawl_b')||'kuku',is_ready:false});
           if(joinError){status('Room was created, but adding you failed: '+joinError.message+' ('+(joinError.code||'database error')+'). Check game_room_players insert permissions in Supabase.',true);return;}
-          currentRoom=room; syncRoomActions(); await refreshRoom(); setScreen('menu'); return;
+          currentRoom=room; syncRoomActions(); void loadLobbyFriends(user); await refreshRoom(); setScreen('menu'); return;
         }
         status('Could not create a unique room code after 5 tries. Try again.',true);
       } catch(err) {
@@ -1903,7 +1903,7 @@ function gadget(p){
       if(error){status(error.message,true);return;}
       const {data:room,error:re}=await db.from('game_rooms').select('*').eq('id',roomId).single();
       if(re){status(re.message,true);return;}
-      currentRoom=room;syncRoomActions();subscribeRoom();await refreshRoom();setScreen('menu');
+      currentRoom=room;syncRoomActions();void loadLobbyFriends((await db.auth.getUser()).data.user);subscribeRoom();await refreshRoom();show('menu');
     }
     function subscribeRoom(){
       if(roomChannel)db.removeChannel(roomChannel);
@@ -2162,13 +2162,13 @@ function gadget(p){
     function setScreen(id){document.querySelectorAll('.scr').forEach(node=>node.classList.toggle('on',node.id===id));}
     function displayRoomInvite(inv){if(!inv)return;if(screenIsGame()){pendingRoomInvites.push(inv);return;}activeRoomInvite=inv;el('roomInviteText').textContent=(inv.senderName||'Your friend')+' invited you to join room '+inv.room_code+'. Join or decline?';el('roomInvitePopup').style.display='flex';}
     function closeRoomInvite(){el('roomInvitePopup').style.display='none';activeRoomInvite=null;}
-    async function respondRoomInvite(accept){const inv=activeRoomInvite;if(!inv)return;try{const {data:{user}}=await db.auth.getUser();if(!user)throw new Error('Sign in first.');const {error}=await db.from('dabrawl_room_invites').update({status:accept?'accepted':'declined'}).eq('id',inv.id).eq('recipient_id',user.id);if(error)throw error;closeRoomInvite();if(accept){setScreen('onlineLobby');await updateAuthUI();el('roomCodeInput').value=inv.room_code;await joinRoom();}}catch(err){status('Could not respond to invitation: '+(err?.message||String(err)),true);}}
+    async function respondRoomInvite(accept){const inv=activeRoomInvite;if(!inv)return;try{const {data:{user}}=await db.auth.getUser();if(!user)throw new Error('Sign in first.');const {error}=await db.from('dabrawl_room_invites').update({status:accept?'accepted':'declined'}).eq('id',inv.id).eq('recipient_id',user.id);if(error)throw error;closeRoomInvite();if(accept){show('onlineLobby');await updateAuthUI();el('roomCodeInput').value=inv.room_code;await joinRoom();}}catch(err){status('Could not respond to invitation: '+(err?.message||String(err)),true);}}
     setInterval(()=>{if(!screenIsGame()&&!activeRoomInvite&&pendingRoomInvites.length)displayRoomInvite(pendingRoomInvites.shift());},500);
     async function startFriendsPresence(user){
       await stopFriendsPresence();
       friendsPresenceChannel=db.channel('dabrawl-friends-presence',{config:{presence:{key:user.id}}})
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'dabrawl_room_invites',filter:'recipient_id=eq.'+user.id},async({new:inv})=>{if(inv?.status!=='pending')return;const {data:profile}=await db.from('dabrawl_player_profiles').select('username').eq('user_id',inv.sender_id).maybeSingle();displayRoomInvite({...inv,senderName:profile?.username||'Your friend'});})
-        .on('postgres_changes',{event:'INSERT',schema:'public',table:'dabrawl_friend_requests',filter:'addressee_id=eq.'+user.id},()=>{if(!screenIsGame())void loadFriendsScreen();});
+;
       friendsPresenceChannel.subscribe(async state=>{
         if(state!=='SUBSCRIBED')return;
         const name=String(user.user_metadata?.username||(user.email||'').split('@')[0]||'Player');
