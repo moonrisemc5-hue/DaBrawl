@@ -218,7 +218,19 @@
     let tr = 0; try { tr = +localStorage.getItem('dabrawl_tr') || 0; } catch(e){}
     let bTrophies = {kuku:0, shachi:0, saiyan:0};
     try { const savedBT = localStorage.getItem('dabrawl_bt'); if(savedBT) bTrophies = Object.assign(bTrophies, JSON.parse(savedBT)); } catch(e){}
-    const saveTrophies = () => { try { localStorage.setItem('dabrawl_tr', tr); localStorage.setItem('dabrawl_bt', JSON.stringify(bTrophies)); } catch(e){} $('tro').textContent = tr; };
+    let trophyAccountKey = 'guest';
+    function loadTrophiesForAccount(key){
+      trophyAccountKey=key||'guest';
+      try{
+        const saved=localStorage.getItem('dabrawl_profile_'+trophyAccountKey);
+        if(saved){const profile=JSON.parse(saved);tr=Math.max(0,Number(profile.tr)||0);bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},profile.bt||{});}
+        else if(trophyAccountKey!=='guest'){tr=0;bTrophies={kuku:0,shachi:0,saiyan:0};}
+        else{tr=+(localStorage.getItem('dabrawl_tr')||0);try{const legacy=localStorage.getItem('dabrawl_bt');if(legacy)bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},JSON.parse(legacy));}catch(_){}}
+      }catch(_){}
+      $('tro').textContent=tr;
+      try{localStorage.setItem('dabrawl_tr',tr);localStorage.setItem('dabrawl_bt',JSON.stringify(bTrophies));}catch(_){}
+    }
+    const saveTrophies = () => { try { localStorage.setItem('dabrawl_tr',tr);localStorage.setItem('dabrawl_bt',JSON.stringify(bTrophies));localStorage.setItem('dabrawl_profile_'+trophyAccountKey,JSON.stringify({tr,bt:bTrophies})); } catch(e){} $('tro').textContent=tr; };
     saveTrophies();
     function getRank(trophies){ return trophies >= 1000 ? 35 : Math.min(35, Math.floor(trophies / 29) + 1); }
     function getRankBadgeColor(rank){
@@ -1655,6 +1667,8 @@ function gadget(p){
           status('The account was created, but the server is requiring email confirmation. Username-only accounts need Confirm email turned OFF in the Supabase Auth settings.',true);
           return;
         }
+        const signedUser=result.data?.user;
+        if(signedUser){const username=String(signedUser.user_metadata?.username||(signedUser.email||'').split('@')[0]||'player').toLowerCase();loadTrophiesForAccount('user_'+username);}
         await updateAuthUI();
       } catch(err) {
         status('Could not reach the login service. Check your connection and try again.',true);
