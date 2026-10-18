@@ -67,3 +67,11 @@ export const PROTOCOL_VIOLATION_LIMIT = 8;
 export const shouldCloseForProtocolViolations = count => Number.isSafeInteger(count) && count >= PROTOCOL_VIOLATION_LIMIT;
 
 export const shouldCancelCountdown = (phase, ready) => phase === "countdown" && ready === false;
+
+export const shouldExpireDisconnectedPlayer = (connected, lastSeen, currentTime, ttlMs) =>
+  connected === false &&
+  Number.isFinite(lastSeen) &&
+  Number.isFinite(currentTime) &&
+  Number.isFinite(ttlMs) &&
+  ttlMs >= 0 &&
+  currentTime - lastSeen >= ttlMs;
