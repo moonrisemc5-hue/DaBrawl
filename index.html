@@ -86,16 +86,17 @@
     <div style="position:absolute;top:10px;right:14px;display:flex;align-items:center;gap:8px;z-index:300">
       <canvas id="logoCv" width="44" height="44"></canvas>
       <div style="font-size:30px;color:var(--y);-webkit-text-stroke:1px #000">DaBrawl</div>
+      <button class="btn" id="settingsBtn" aria-label="Settings and account" title="Settings / Account" style="width:44px;height:44px;padding:4px;font-size:23px">⚙</button>
     </div>
     <button class="btn purple" id="bra" aria-label="Brawlers" title="Brawlers" style="width:76px;height:76px;padding:8px;border-radius:16px;font-size:38px">⚔</button>
     <div id="roomMenuBar"><button class="btn purple" id="roomMenuCode">ROOM CODE</button><button class="btn" id="roomLeaveBtn">LEAVE PARTY</button><button class="btn y" id="roomMenuStart" style="display:none">START MATCH</button></div>
     <div class="mid">
       <button class="plus" id="prevBtn" aria-label="Add a friend by code" title="Friends / room code" style="margin-bottom:0">+</button>
-      <div style="pointer-events:auto">
+      <div id="featuredBrawler" style="pointer-events:auto;cursor:pointer" title="Choose brawler">
         <div id="bn">KUKU</div>
         <canvas id="pv" width="300" height="300"></canvas>
       </div>
-      <button class="plus" id="nextBtn" aria-label="Add a friend by code" title="Friends / room code" style="margin-bottom:0">+</button>
+      <button class="plus" id="nextBtn" aria-label="Friends" title="Friends" style="margin-bottom:0;font-size:30px">♟</button>
     </div>
     <div style="position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:flex-end;gap:10px;z-index:300">
       <div style="display:flex;align-items:center;gap:12px">
@@ -442,8 +443,21 @@
     $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ if(isNetworkHost) void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
     $('home').onclick = () => { beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
     $('play').onclick = () => { if(window.DaBrawlNet?.isInParty()){window.DaBrawlNet.toggleReady?.();return;} beep(500,.1); if(gameMode==='duel'){alert('1v1 is only available from solo PLAY, not while you are in a room/party.');return;} matchmake(); };
-    $('testPlay').onclick = () => { beep(500,.1); startLoadingScreen(true); };
-    $('bra').onclick = () => show('brs');
+     $('bra').onclick = () => show('brs');
+    $('featuredBrawler').onclick = () => show('brs');
+    $('settingsBtn').onclick = () => { beep(450,.08); show('onlineLobby'); };
+    $('nextBtn').onclick = async () => {
+      beep(450,.08);
+      const {data:{user}} = await db.auth.getUser();
+      if(!user){ show('onlineLobby'); status('SIGN IN TO ACCESS MULTIPLAYER'); return; }
+      show('onlineLobby'); status('Friends are the next multiplayer upgrade. You are signed in; room creation and joining are available here.');
+    };
+    $('prevBtn').onclick = async () => {
+      beep(450,.08);
+      const {data:{user}} = await db.auth.getUser();
+      if(!user){ show('onlineLobby'); status('SIGN IN TO ACCESS MULTIPLAYER'); return; }
+      show('onlineLobby');
+    };
     $('bk1').onclick = () => show('menu');
     $('modeBtn').onclick = () => {
       if(window.DaBrawlNet?.isInParty?.()){ window.DaBrawlNet.changeRoomMode?.(); return; }
