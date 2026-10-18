@@ -19,6 +19,7 @@ import { advanceProjectile, findProjectileContact, findProjectileObstacleHit, pr
 import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
 import { movementDelta, movePlayerWithObstacles, resolvePlayerCollisions, PLAYER_RADIUS } from "./world.js";
 import { selectWinnerByHealth } from "./match-results.js";
+import { decideBotAction } from "./bot-ai.js";
 import { createArena, removeArenaWall, traceKameBeam, traceMasteredBeam } from "./maps.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -40,7 +41,7 @@ function makePlayer(user, msg, slot) {
     x: slot % 2 ? 620 : 180, y: 150 + Math.floor(slot / 2) * 70, aim: slot % 2 ? Math.PI : 0,
     hp: BRAWLERS[brawler].hp, maxHp: BRAWLERS[brawler].hp, alive: true, meter: 0,
     form: 0, transformUntil: 0, gadgetReadyAt: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0, kameReadyAt: 0, kameChargeStartedAt: 0,
-    connected: true, socket: null, lastSeen: now(), disconnectedAt: 0, invulnerableUntil: 0, ready: false };
+    connected: true, socket: null, lastSeen: now(), disconnectedAt: 0, invulnerableUntil: 0, ready: false, isBot: Boolean(user.isBot), botThinkAt: 0 };
 }
 function emit(room, type, data = {}) {
   const packet = JSON.stringify({ type, room: room.code, tick: room.tick, serverTime: now(), ...data });
@@ -381,7 +382,7 @@ wss.on("connection", (ws,_req,meta) => {
             event(room,"gadget",{playerId:player.id,cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
             sendState(room);
           }
-        } else if (m.action==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
+        } else if (m.action==="add-bot") {\n          if (!canConfigureRoom(player.id,room.ownerId,room.phase)) throw new Error("Only the room owner can add bots before the match starts");\n          if (room.players.size>=MAX_PLAYERS) throw new Error("Room is full");\n          const slot=room.players.size, id=`bot:${room.code}:${slot}`;\n          const choices=["kuku","shachi","saiyan"]; const brawler=choices[(slot-1)%choices.length];\n          const bot=makePlayer({id},{name:`Bot ${slot}`,brawler},slot); bot.isBot=true; bot.connected=true; bot.socket=null; bot.ready=false; room.players.set(id,bot);\n          event(room,"bot-joined",{playerId:id,brawler}); sendState(room);\n        } else if (m.action==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
         else throw new Error("Unsupported action");
       } else if (m.type==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
       else throw new Error("Unsupported message type");

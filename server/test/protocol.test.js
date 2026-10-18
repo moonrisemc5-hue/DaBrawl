@@ -128,3 +128,6 @@ test("Kame charge actions do not accept client-authored charge values", () => {
   assert.deepEqual(parseClientMessage('{"type":"action","action":"kame-release","angle":1.2}'), { type:"action", action:"kame-release", angle:1.2 });
   assert.throws(() => parseClientMessage('{"type":"action","action":"kame"}'), /Unsupported action/);
 });
+
+
+test("accepts owner-requested bot addition without client-authored bot identity", () => {\n  assert.deepEqual(parseClientMessage('{"type":"action","action":"add-bot"}'), { type:"action", action:"add-bot" });\n  assert.throws(() => parseClientMessage('{"type":"action","action":"add-bot","isBot":true}'), /Unsupported action/);\n});\n
