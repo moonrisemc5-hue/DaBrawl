@@ -146,7 +146,7 @@ const server = http.createServer((req,res) => {
   if (path === "/health") { res.writeHead(200,{"content-type":"application/json","cache-control":"no-store"}); res.end(JSON.stringify({ok:true,service:"dabrawl-authoritative-server",uptimeSeconds:Math.floor(process.uptime()),rooms:rooms.size})); return; }
   res.writeHead(404,{"content-type":"application/json"}); res.end(JSON.stringify({error:"not found"}));
 });
-const wss = new WebSocketServer({ noServer:true, maxPayload:4096, perMessageDeflate:false });
+const wss = new WebSocketServer({ noServer:true, maxPayload:4096, perMessageDeflate:false, handleProtocols: protocols => protocols.has("dabrawl-v1") ? "dabrawl-v1" : false });
 server.on("upgrade", async (req,socket,head) => {
   try {
     const u = new URL(req.url || "/", "http://localhost");
