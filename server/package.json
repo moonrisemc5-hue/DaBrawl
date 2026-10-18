@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js && node --check protocol.js && node --check brawlers.js && node --check client-adapter.js && node --check combat.js && node --check abilities.js && node --check charge.js && node --check bot-ai.js && node --check world.js && node --check match-results.js",
+    "check": "node --check index.js && node --check protocol.js && node --check brawlers.js && node --check client-adapter.js && node --check combat.js && node --check abilities.js && node --check charge.js && node --check bot-ai.js && node --check maps.js && node --check world.js && node --check match-results.js",
     "test": "node --test"
   },
   "engines": {
