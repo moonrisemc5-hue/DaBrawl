@@ -965,7 +965,6 @@ function gadget(p){
         c.strokeStyle='#f1c7a5';c.lineWidth=10;c.beginPath();c.moveTo(shoulderX,shoulderY);c.lineTo(elbowX,elbowY);c.lineTo(handX,handY);c.stroke();
         c.fillStyle='#f5c9a5';c.strokeStyle='#111827';c.lineWidth=2.5;c.beginPath();c.arc(handX,handY,8.5,0,Math.PI*2);c.fill();c.stroke();
         c.strokeStyle='#f5c9a5';c.lineWidth=3;
-        const fingerFan=lift>.35?1:0;
         for(let j=0;j<3;j++){const a=handAngle-.55+j*.42,fx=handX+Math.cos(a)*9,fy=handY+Math.sin(a)*9;c.beginPath();c.moveTo(handX+Math.cos(a)*4,handY+Math.sin(a)*4);c.lineTo(fx,fy);c.stroke();}
         if(lift>.72){
           const sparkleAlpha=Math.min(1,(lift-.72)*3);
@@ -996,7 +995,8 @@ function gadget(p){
           if(phase<1.35){const ring=Math.max(0,(phase-.68)/.67);c.globalAlpha=.8*(1-ring);c.strokeStyle='#fff';c.lineWidth=4;c.beginPath();c.ellipse(cx,cy+12,10+ring*w*.28,6+ring*h*.16,0,0,Math.PI*2);c.stroke();}
         }
         if(phase>.72&&phase<1.08){c.globalAlpha=1-(phase-.72)/.36;c.fillStyle='#fff';c.fillRect(0,0,w,h);}
-      }      c.restore();return phase<3.35;
+      }
+      c.restore();return phase<3.35;
     }
     function startShowcaseAnimation(id){const token=++showcaseToken,canvas=$('dpv');if(showcaseFrame)cancelAnimationFrame(showcaseFrame);const started=performance.now();function frame(now){if(token!==showcaseToken||!$('det').classList.contains('on'))return;if(!drawShowcaseFrame(canvas,id,(now-started)/1000,3.2,10)){rb(canvas,id,3.2,10);showcaseFrame=0;return;}showcaseFrame=requestAnimationFrame(frame);}showcaseFrame=requestAnimationFrame(frame);}
     function playMenuShowcase(id,broadcast=true){if(!BR[id])return;const token=++menuShowcaseToken,canvas=$('pv');if(menuShowcaseFrame)cancelAnimationFrame(menuShowcaseFrame);const started=performance.now();function frame(now){if(token!==menuShowcaseToken||!$('menu').classList.contains('on'))return;if(!drawShowcaseFrame(canvas,id,(now-started)/1000,2.6,8)){rb(canvas,selB,2.6,8);menuShowcaseFrame=0;return;}menuShowcaseFrame=requestAnimationFrame(frame);}menuShowcaseFrame=requestAnimationFrame(frame);if(broadcast)window.DaBrawlNet?.showcaseBrawler?.(id);}
@@ -1736,59 +1736,6 @@ function gadget(p){
     const el = id => document.getElementById(id);
     function status(msg, bad=false){ const n=el('onlineStatus'); n.textContent=msg; n.style.color=bad?'#fca5a5':'#cbd5e1'; }
     const PROTOTYPE_WS_URL = 'wss://xqbfjpjdweibdbpeefze.supabase.co/functions/v1/dabrawl-match-prototype';
-    let prototypeSocket = null, prototypePingTimer = null, prototypeTicks = 0;
-    function stopPrototypeServer(reason='Disconnected'){
-      if(prototypePingTimer){clearInterval(prototypePingTimer);prototypePingTimer=null;}
-      const old=prototypeSocket;prototypeSocket=null;
-      if(old && old.readyState < WebSocket.CLOSING){old.close(1000,'Client stopped');}
-      const n=el('prototypeServerStatus'); if(n)n.textContent=reason;
-      const b=el('prototypeServerBtn'); if(b)b.textContent='CONNECT TO TEST SERVER';
-    }
-    async function startPrototypeServer(){
-      const btn=el('prototypeServerBtn'), line=el('prototypeServerStatus');
-      if(prototypeSocket && (prototypeSocket.readyState===WebSocket.OPEN || prototypeSocket.readyState===WebSocket.CONNECTING)){
-        stopPrototypeServer('Disconnected by you'); return;
-      }
-      btn.disabled=true; line.textContent='Getting your signed-in session…';
-      try{
-        const {data:{session},error}=await db.auth.getSession();
-        if(error || !session?.access_token) throw new Error('Please sign in again before connecting.');
-        prototypeTicks=0;
-        line.textContent='Connecting to the experimental server…';
-        const ws=new WebSocket(PROTOTYPE_WS_URL+'?room=dabrawl-lobby-check',['jwt-'+session.access_token,'dabrawl-prototype']);
-        prototypeSocket=ws;
-        ws.onopen=()=>{
-          if(prototypeSocket!==ws)return;
-          btn.disabled=false;btn.textContent='DISCONNECT TEST SERVER';
-          line.textContent='Connected · waiting for server ticks…';
-          prototypePingTimer=setInterval(()=>{
-            if(ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({type:'ping',clientSentAt:Date.now()}));
-          },1000);
-        };
-        ws.onmessage=e=>{
-          let m;try{m=JSON.parse(e.data)}catch{return}
-          if(m.type==='server-tick'){
-            prototypeTicks=m.tick;
-            line.textContent='Online · tick '+m.tick+' · server elapsed '+Math.round(m.elapsedMs/1000)+'s'+(line.dataset.ping?' · ping '+line.dataset.ping:'');
-          }else if(m.type==='pong'){
-            const ms=Math.max(0,Date.now()-Number(m.clientSentAt||Date.now()));
-            line.dataset.ping=ms+' ms';
-            line.textContent='Online · tick '+prototypeTicks+' · ping '+ms+' ms';
-          }else if(m.type==='reconnect-required'){
-            line.textContent='Server session limit reached; reconnect to continue testing.';
-          }else if(m.type==='error'){
-            line.textContent='Server error: '+String(m.message||'unknown error');
-          }
-        };
-        ws.onerror=()=>{if(prototypeSocket===ws)line.textContent='Connection error. Try again in a moment.';};
-        ws.onclose=e=>{
-          if(prototypeSocket!==ws)return;
-          if(prototypePingTimer){clearInterval(prototypePingTimer);prototypePingTimer=null;}
-          prototypeSocket=null;btn.disabled=false;btn.textContent='CONNECT TO TEST SERVER';
-          line.textContent='Disconnected (code '+e.code+'). '+(e.code===1012?'The prototype session reached its planned time limit.':'You can reconnect when ready.');
-        };
-      }catch(err){line.textContent=err?.message||'Could not connect to the test server.';btn.disabled=false;}
-    }
     async function updateAuthUI(){
       const {data:{user}} = await db.auth.getUser();
       el('roomControls').style.display = user ? 'flex' : 'none';
@@ -1828,11 +1775,12 @@ function gadget(p){
     }
     async function sendRoomInvite(recipientId){
       if(Date.now()<roomInviteCooldownUntil){status('Please wait '+Math.ceil((roomInviteCooldownUntil-Date.now())/1000)+' seconds before sending another invite.',true);return;}
+      if(!currentRoom){status('Create a room first, then invite a friend.',true);return;}
+      if(!recipientId){status('Choose a friend to invite.',true);return;}
+      startRoomInviteCooldown();
       const {data:{user}}=await db.auth.getUser();
       if(!user){status('Sign in first.',true);return;}
-      if(!currentRoom){status('Create a room first, then invite a friend.',true);return;}
-      if(!recipientId||recipientId===user.id){status('Choose a different friend to invite.',true);return;}
-      startRoomInviteCooldown();
+      if(recipientId===user.id){status('Choose a different friend to invite.',true);return;}
       const {error}=await db.from('dabrawl_room_invites').insert({sender_id:user.id,recipient_id:recipientId,room_code:currentRoom.room_code,status:'pending'});
       if(error){status('Could not send room invite: '+error.message,true);return;}
       status('Room invitation sent. You can send another in 5 seconds.');
@@ -2330,12 +2278,12 @@ function gadget(p){
       tick();friendRequestCooldownTimer=setInterval(tick,200);
     }
     async function sendFriendRequest(){
-      const {data:{user}}=await db.auth.getUser();
-      if(!user){friendsMsg('Sign in first to send friend requests.',true);return;}
       const username=el('friendUsername').value.trim().toLowerCase();
       if(!/^[a-z0-9_]{3,20}$/.test(username)){friendsMsg('Enter a username with 3–20 letters, numbers or underscores.',true);return;}
       if(Date.now()<friendRequestCooldownUntil){friendsMsg('Please wait '+Math.ceil((friendRequestCooldownUntil-Date.now())/1000)+' seconds before adding another friend.',true);return;}
       startFriendRequestCooldown();
+      const {data:{user}}=await db.auth.getUser();
+      if(!user){friendsMsg('Sign in first to send friend requests.',true);return;}
       try{
         const {data:profile,error}=await db.from('dabrawl_player_profiles').select('user_id,username').eq('username',username).maybeSingle();
         if(error)throw error;
