@@ -1926,6 +1926,10 @@ function gadget(p){
         .on('postgres_changes',{event:'*',schema:'public',table:'game_rooms',filter:'id=eq.'+currentRoom.id},()=>{void refreshRoom();})
         .on('presence',{event:'sync'},()=>{void refreshRoom();})
         .on('broadcast',{event:'room-refresh'},()=>{void refreshRoom();})
+        .on('broadcast',{event:'room-disbanded'},({payload})=>{
+          if(!currentRoom||payload?.roomId!==currentRoom.id)return;
+          resetLocalRoomState('The party leader disbanded the room.');
+        })
         .on('broadcast',{event:'party-kicked'},async({payload})=>{
           const {data:{user}}=await db.auth.getUser();
           if(!user||payload?.userId!==user.id)return;
