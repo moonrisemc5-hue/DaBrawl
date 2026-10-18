@@ -19,7 +19,7 @@ import { advanceProjectile, findProjectileContact, findProjectileObstacleHit, pr
 import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
 import { movementDelta, movePlayerWithObstacles, resolvePlayerCollisions, PLAYER_RADIUS } from "./world.js";
 import { selectWinnerByHealth } from "./match-results.js";
-import { createArena, removeArenaWall } from "./maps.js";
+import { createArena, removeArenaWall, traceKameBeam } from "./maps.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
@@ -39,7 +39,7 @@ function makePlayer(user, msg, slot) {
   return { id: user.id, name: cleanText(msg.name), brawler, team: slot % 2, slot,
     x: slot % 2 ? 620 : 180, y: 150 + Math.floor(slot / 2) * 70, aim: slot % 2 ? Math.PI : 0,
     hp: BRAWLERS[brawler].hp, maxHp: BRAWLERS[brawler].hp, alive: true, meter: 0,
-    form: 0, transformUntil: 0, gadgetReadyAt: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0,
+    form: 0, transformUntil: 0, gadgetReadyAt: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0, kameReadyAt: 0,
     connected: true, socket: null, lastSeen: now(), disconnectedAt: 0, invulnerableUntil: 0, ready: false };
 }
 function emit(room, type, data = {}) {
@@ -146,6 +146,32 @@ function doFire(room, p, isSuper = false) {
   }
   p.meter = clamp(p.meter + (isSuper ? 0 : 8), 0, 100);
   event(room, isSuper ? "super-fired" : "attack-fired", { playerId:p.id, aim:p.aim });
+}
+
+function doKame(room, player, charge, angle) {
+  if (!isCombatPhase(room.phase) || !player.alive || player.brawler !== "saiyan" || player.transformUntil > now()) return;
+  const at = now();
+  if ((player.kameReadyAt || 0) > at) return;
+  const stats = getBrawlerStats(player), power = Math.max(0, Math.min(1, Number.isFinite(charge) ? charge : 0));
+  const aim = clamp(finite(angle, player.aim), -Math.PI * 2, Math.PI * 2);
+  player.aim = aim; player.kameReadyAt = at + (player.form <= 1 ? 3000 : 5000);
+  const traced = traceKameBeam(room.world, player.x, player.y, aim, power);
+  const dx = Math.cos(aim), dy = Math.sin(aim), width = 14 + power * 40;
+  const startDamage = stats.beamDamageStart ?? 700, maxDamage = stats.beamDamageMax ?? 2200;
+  const damage = (startDamage + power * (maxDamage - startDamage)) / 6;
+  let hits = 0;
+  for (const target of room.players.values()) {
+    if (!target.alive || target.id === player.id || target.team === player.team ||
+        (Number.isFinite(target.invulnerableUntil) && target.invulnerableUntil > at)) continue;
+    const rx = target.x - player.x, ry = target.y - player.y;
+    const along = rx * dx + ry * dy, perpendicular = Math.abs(-rx * dy + ry * dx);
+    if (along <= 0 || along >= traced.length || perpendicular >= width + PLAYER_RADIUS) continue;
+    target.hp = Math.max(0, target.hp - damage); target.meter = clamp(target.meter + 12, 0, 100); hits++;
+    event(room, "hit", { attackerId: player.id, targetId: target.id, damage, hp: target.hp, kame: true });
+    if (target.hp <= 0) { target.alive = false; target.input = { x: 0, y: 0 }; event(room, "knockout", { playerId: target.id, by: player.id }); }
+  }
+  if (power >= 0.95 && hits > 0) player.meter = clamp(player.meter + 20, 0, 100);
+  event(room, "kame-fired", { playerId: player.id, charge: power, length: traced.length, hits, destroyedWalls: room.world.destroyedWalls });
 }
 function stepRoom(room, dt) {
   const t = now(); room.tick++; room.updatedAt = t;
@@ -297,6 +323,7 @@ wss.on("connection", (ws,_req,meta) => {
             player.transformUntil=now()+1800;
             event(room,"transform",{playerId:player.id,form:player.form});
           }
+        } else if (m.action==="kame") { doKame(room, player, m.charge, m.angle); sendState(room);
         } else if (m.action==="gadget") {
           const at=now();
           if (isCombatPhase(room.phase) && player.alive && player.transformUntil<=at && tryConsumeGadget(player,at)) {

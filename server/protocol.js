@@ -37,7 +37,9 @@ export function parseClientMessage(raw) {
       if (message.aim !== undefined && !Number.isFinite(message.aim)) throw new Error("Invalid aim");
       break;
     case "action":
-      if (!["fire", "super", "transform", "gadget", "ping"].includes(message.action)) throw new Error("Unsupported action");
+      if (!["fire", "super", "transform", "gadget", "kame", "ping"].includes(message.action)) throw new Error("Unsupported action");
+      if (message.charge !== undefined && (!Number.isFinite(message.charge) || message.charge < 0 || message.charge > 1)) throw new Error("Invalid charge");
+      if (message.angle !== undefined && !Number.isFinite(message.angle)) throw new Error("Invalid angle");
       if (message.form !== undefined && !Number.isFinite(message.form)) throw new Error("Invalid form");
       if (message.clientSentAt !== undefined && !Number.isFinite(message.clientSentAt)) throw new Error("Invalid ping timestamp");
       break;

@@ -32,3 +32,20 @@ export function removeArenaWall(arena, row, col) {
   if (!arena.destroyedWalls.some(w => w.row === row && w.col === col)) arena.destroyedWalls.push({ row, col });
   return true;
 }
+
+/** Trace a Saiyan beam using the browser's 8-unit terrain sampling and wall-break rule. */
+export function traceKameBeam(arena, x, y, angle, charge) {
+  const maxLength = 300 + Math.max(0, Math.min(1, charge)) * 260;
+  const destroysWalls = charge >= 0.95;
+  const dx = Math.cos(angle), dy = Math.sin(angle);
+  let length = 0;
+  for (; length < maxLength; length += 8) {
+    const col = Math.floor((x + dx * length) / arena.tileSize);
+    const row = Math.floor((y + dy * length) / arena.tileSize);
+    const tile = arena.tiles[row]?.[col] ?? "#";
+    if (tile !== "#") continue;
+    if (!destroysWalls) return { length, destroyedWalls: [] };
+    removeArenaWall(arena, row, col);
+  }
+  return { length: maxLength, destroyedWalls: [...arena.destroyedWalls] };
+}
