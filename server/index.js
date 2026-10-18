@@ -101,7 +101,7 @@ function doFire(room, p, isSuper = false) {
   if (!isCombatPhase(room.phase)) return;
   const stats = getBrawlerStats(p);
   const t = now();
-  if (!p.alive || p.transformUntil > t) return;
+  if (!p.alive || p.transformUntil > t || p.kameChargeStartedAt > 0) return;
   // A max-form Saiyan has no next transformation; reject before consuming super meter.
   if (isSuper && stats.superKind === "transform" && getNextSaiyanForm(p) === null && !(p.form >= 5)) return;
   if (isSuper) {
@@ -136,7 +136,7 @@ function doFire(room, p, isSuper = false) {
       target.meter = clamp(target.meter+12,0,100);
       hits++;
       event(room,"hit",{attackerId:p.id,targetId:target.id,damage:stats.superDamage,hp:target.hp,super:true});
-      if (target.hp<=0) { target.alive=false; target.input={x:0,y:0}; event(room,"knockout",{playerId:target.id,by:p.id}); }
+      if (target.hp<=0) { target.alive=false; cancelKameCharge(target); target.input={x:0,y:0}; event(room,"knockout",{playerId:target.id,by:p.id}); }
     }
     event(room,"super-slam",{playerId:p.id,hits});
     return;
@@ -174,7 +174,7 @@ function doKame(room, player, angle) {
     if (along <= 0 || along >= traced.length || perpendicular >= width + PLAYER_RADIUS) continue;
     target.hp = Math.max(0, target.hp - damage); target.meter = clamp(target.meter + 12, 0, 100); hits++;
     event(room, "hit", { attackerId: player.id, targetId: target.id, damage, hp: target.hp, kame: true });
-    if (target.hp <= 0) { target.alive = false; target.input = { x: 0, y: 0 }; event(room, "knockout", { playerId: target.id, by: player.id }); }
+    if (target.hp <= 0) { target.alive = false; cancelKameCharge(target); target.input = { x: 0, y: 0 }; event(room, "knockout", { playerId: target.id, by: player.id }); }
   }
   if (power >= 0.95 && hits > 0) player.meter = clamp(player.meter + 20, 0, 100);
   event(room, "kame-fired", { playerId: player.id, charge: power, length: traced.length, hits, destroyedWalls: room.world.destroyedWalls });
@@ -355,7 +355,7 @@ wss.on("connection", (ws,_req,meta) => {
         else if (m.action==="super") doFire(room,player,true);
         else if (m.action==="transform") {
           const nextForm = getNextSaiyanForm(player);
-          if (isCombatPhase(room.phase) && player.alive && player.meter>=50 && player.transformUntil<=now() && nextForm !== null) {
+          if (isCombatPhase(room.phase) && player.alive && player.meter>=50 && player.transformUntil<=now() && !(player.kameChargeStartedAt>0) && nextForm !== null) {
             player.meter-=50;
             const nextStats=BRAWLERS.saiyan.forms[nextForm];
             const healthDelta=nextStats.hp-player.maxHp;
@@ -367,12 +367,12 @@ wss.on("connection", (ws,_req,meta) => {
           }
         } else if (m.action==="kame-start") {
           const at=now();
-          if (isCombatPhase(room.phase) && player.alive && player.brawler==="saiyan" && player.transformUntil<=at && (player.kameReadyAt||0)<=at) beginKameCharge(player,at);
+          if (isCombatPhase(room.phase) && player.alive && player.brawler==="saiyan" && player.transformUntil<=at && (player.kameReadyAt||0)<=at && player.gadgetReadyAt<=at) beginKameCharge(player,at);
           sendState(room);
         } else if (m.action==="kame-release") { player.aim=clamp(finite(m.angle,player.aim),-Math.PI*2,Math.PI*2); doKame(room, player, player.aim); sendState(room);
         } else if (m.action==="gadget") {
           const at=now();
-          if (isCombatPhase(room.phase) && player.alive && player.transformUntil<=at && tryConsumeGadget(player,at)) {
+          if (isCombatPhase(room.phase) && player.alive && player.transformUntil<=at && !(player.kameChargeStartedAt>0) && tryConsumeGadget(player,at)) {
             const a=player.aim;
             const dashPosition=movePlayerWithObstacles(player.x,player.y,Math.cos(a)*70,Math.sin(a)*70,room.world,PLAYER_RADIUS);
             player.x=dashPosition.x; player.y=dashPosition.y;
@@ -392,8 +392,8 @@ wss.on("connection", (ws,_req,meta) => {
       ws.send(JSON.stringify({type:"error",message:String(err.message||"Invalid message").slice(0,120)}));
     }
   });
-  ws.on("close",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); player.disconnectedAt=player.lastSeen; room.updatedAt=now(); cancelCountdown(room, "player-disconnected"); event(room,"player-disconnected",{playerId:player.id}); });
-  ws.on("error",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); player.disconnectedAt=player.lastSeen; cancelCountdown(room, "connection-error"); });
+  ws.on("close",()=>{ if (player.socket !== ws) return; cancelKameCharge(player); player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); player.disconnectedAt=player.lastSeen; room.updatedAt=now(); cancelCountdown(room, "player-disconnected"); event(room,"player-disconnected",{playerId:player.id}); });
+  ws.on("error",()=>{ if (player.socket !== ws) return; cancelKameCharge(player); player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); player.disconnectedAt=player.lastSeen; cancelCountdown(room, "connection-error"); });
   emit(room,"player-joined",{playerId:player.id}); sendState(room);
 });
 let lastTickAt=now();

@@ -21,3 +21,11 @@ test("short or invalid Kame holds do not produce a beam", () => {
   assert.equal(kameChargePower(1000, 900), 0);
   assert.equal(beginKameCharge(player, NaN), false);
 });
+
+test("cancels a held charge when its owner is interrupted", async () => {
+  const { cancelKameCharge } = await import("../charge.js");
+  const player = { kameChargeStartedAt: 1200 };
+  assert.equal(cancelKameCharge(player), true);
+  assert.equal(player.kameChargeStartedAt, 0);
+  assert.equal(cancelKameCharge(player), false);
+});

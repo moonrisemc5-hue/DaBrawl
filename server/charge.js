@@ -21,3 +21,9 @@ export function finishKameCharge(player, at = Date.now()) {
   if (held < KAME_MIN_HOLD_MS) return null;
   return kameChargePower(startedAt, at);
 }
+
+export function cancelKameCharge(player) {
+  if (!player || !Number.isFinite(player.kameChargeStartedAt) || player.kameChargeStartedAt <= 0) return false;
+  player.kameChargeStartedAt = 0;
+  return true;
+}
