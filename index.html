@@ -696,7 +696,7 @@ function gadget(p){
             const a0 = P.filter(p=>p.alive&&p.t==0).length, a1 = P.filter(p=>p.alive&&p.t==1).length;
             if(!a0||!a1){
               let w=-1; if(!a1&&a0) w=0; else if(!a0&&a1) w=1; else if(a0&&a1){ const h0=P.filter(p=>p.t==0).reduce((s,p)=>s+p.hp,0), h1=P.filter(p=>p.t==1).reduce((s,p)=>s+p.hp,0); w = h0>h1?0:h1>h0?1:-1; }
-              if(w>=0) G.w[w]++; G.res = w<0?'DRAW':w==0?'ROUND WON!':'ROUND LOST'; G.ph='end'; G.t=2.6; beep(w==0?600:200,.5,.15,'triangle',w==0?300:-100);
+              if(w>=0) G.w[w]++; G.res = w<0?'DRAW':w===me.t?'ROUND WON!':'ROUND LOST'; G.ph='end'; G.t=2.6; beep(w==0?600:200,.5,.15,'triangle',w==0?300:-100);
             }
           }
         }
@@ -721,7 +721,7 @@ function gadget(p){
     function finish(){
       if(scr==='res') return;
       lastMatchWasOnline=!!networkMode; lastQueueMode=gameMode;
-      const win = gameMode==='duel' ? G.w[me.t]>=2 : gameMode==='showdown' ? me.alive : G.w[0]>=2, d = win ? 8 : -4;
+      const win = gameMode==='showdown' ? me.alive : G.w[me.t]>=2, d = win ? 8 : -4;
       tr = Math.max(0, tr + d); bTrophies[selB] = Math.max(0, (bTrophies[selB]||0) + d); saveTrophies();
       $('rt').textContent = win ? 'VICTORY!' : 'DEFEAT'; $('rt').style.color = win ? '#ffd21f' : '#ff5a5a'; $('rd').textContent = (d>0?'+':'')+d+' 🏆';
       if(networkMode){
