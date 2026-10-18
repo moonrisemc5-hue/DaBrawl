@@ -10,6 +10,7 @@ const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
 const TICK_MS = 50;
 const ROOM_TTL_MS = 120_000;
 const MAX_PLAYERS = 6;
+const MAX_ROOMS = 1000;
 const WORLD = { width: 800, height: 520, margin: 28 };
 const BRAWLERS = {
   kuku: { hp: 3000, speed: 205, damage: 260, range: 230, cooldown: 380, spread: 0.68, pellets: 8, superDamage: 650, superRange: 340 },
@@ -165,7 +166,7 @@ server.on("upgrade", async (req,socket,head) => {
 });
 wss.on("connection", (ws,_req,meta) => {
   let room=rooms.get(meta.roomCode);
-  if (!room) { room=makeRoom(meta.roomCode); rooms.set(meta.roomCode,room); }
+  if (!room) { if (rooms.size >= MAX_ROOMS) { ws.close(1013,"Server is at room capacity"); return; } room=makeRoom(meta.roomCode); rooms.set(meta.roomCode,room); }
   let player;
   try { player=joinRoom(room,meta.user,{name:meta.user.user_metadata?.username || meta.user.email?.split("@")[0] || "Player"},ws); }
   catch(err) { ws.close(1008,String(err.message||"Cannot join room").slice(0,120)); return; }
