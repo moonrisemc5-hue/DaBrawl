@@ -41,10 +41,15 @@ jobs:
           docker run -d --name dabrawl-server-smoke -p 8080:8080 dabrawl-server:ci
           trap 'docker logs dabrawl-server-smoke; docker rm -f dabrawl-server-smoke >/dev/null 2>&1 || true' EXIT
           for attempt in $(seq 1 20); do
-            if curl --fail --silent http://127.0.0.1:8080/health; then
-              exit 0
+            if curl --fail --silent http://127.0.0.1:8080/health > /tmp/dabrawl-health.json; then
+              break
             fi
             sleep 1
           done
-          docker logs dabrawl-server-smoke
-          exit 1
+          cat /tmp/dabrawl-health.json
+          grep -q '"ok":true' /tmp/dabrawl-health.json
+          grep -q '"authConfigured":false' /tmp/dabrawl-health.json
+          readiness_code=$(curl --silent --output /tmp/dabrawl-ready.json --write-out '%{http_code}' http://127.0.0.1:8080/ready)
+          cat /tmp/dabrawl-ready.json
+          test "$readiness_code" = "503"
+          grep -q 'Missing SUPABASE_URL or SUPABASE_ANON_KEY' /tmp/dabrawl-ready.json
