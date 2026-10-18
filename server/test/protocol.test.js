@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage } from "../protocol.js";
+import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase } from "../protocol.js";
 
 test("sanitizes names and limits their length", () => {
   assert.equal(cleanText("  Ivor<script>\n  "), "Ivorscript");
@@ -34,4 +34,11 @@ test("rejects malformed client messages", () => {
   assert.throws(() => parseClientMessage("{"), /Invalid JSON message/);
   assert.throws(() => parseClientMessage("[]"), /Invalid message/);
   assert.throws(() => parseClientMessage('{"x":1}'), /Invalid message/);
+});
+
+test("combat is allowed only after the match enters playing phase", () => {
+  assert.equal(isCombatPhase("waiting"), false);
+  assert.equal(isCombatPhase("countdown"), false);
+  assert.equal(isCombatPhase("playing"), true);
+  assert.equal(isCombatPhase("ended"), false);
 });
