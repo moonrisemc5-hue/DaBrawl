@@ -17,6 +17,7 @@ const MAX_ROOMS = 100;
 import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "./brawlers.js";
 import { advanceProjectile, findProjectileContact, findProjectileObstacleHit, projectileStillInRange } from "./combat.js";
 import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
+import { beginKameCharge, finishKameCharge, cancelKameCharge, kameChargePower } from "./charge.js";
 import { movementDelta, movePlayerWithObstacles, resolvePlayerCollisions, PLAYER_RADIUS } from "./world.js";
 import { selectWinnerByHealth } from "./match-results.js";
 import { decideBotAction } from "./bot-ai.js";

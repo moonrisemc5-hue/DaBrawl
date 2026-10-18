@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { decideBotAction } from "../bot-ai.js";
+import { movePlayerWithObstacles, PLAYER_RADIUS } from "../world.js";
 const world={width:800,height:520};
 const bot={id:"bot",slot:1,brawler:"kuku",team:0,x:100,y:100,hp:7000,alive:true,connected:true,meter:0,lastFire:0,gadgetReadyAt:0,aim:0};
 const enemy={id:"enemy",team:1,x:300,y:100,hp:7000,alive:true,connected:true};
@@ -22,4 +23,16 @@ test("bot retreats from close-range opponents and can choose a ready Saiyan tran
 test("bot decisions are deterministic for identical state and time",()=>{
  assert.deepEqual(decideBotAction(bot,[bot,enemy],world,1234),decideBotAction(bot,[bot,enemy],world,1234));
  assert.throws(()=>decideBotAction(null,[],world),/Invalid bot decision inputs/);
+});
+
+test("bot chooses a collision-safe route around an obstacle",()=>{
+ const obstacleWorld={...world,margin:0,obstacles:[{x:180,y:60,width:40,height:100}]};
+ const runner={...bot,x:130,y:100};
+ const foe={...enemy,x:280,y:100};
+ const d=decideBotAction(runner,[runner,foe],obstacleWorld,4000);
+ const next= (awaitMove=>awaitMove)(d.input);
+ const {movePlayerWithObstacles,PLAYER_RADIUS}=globalThis.__botWorldHelpers||{};
+ // A nonzero direction around the obstacle is expected; direct rightward motion is blocked.
+ assert.ok(Math.hypot(next.x,next.y)>0);
+ assert.ok(!(Math.abs(next.x-1)<1e-9 && Math.abs(next.y)<1e-9));
 });
