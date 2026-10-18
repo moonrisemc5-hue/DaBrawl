@@ -36,6 +36,11 @@ function makeRoom(code, mode = "knockout") {
     phase: "waiting", createdAt: now(), updatedAt: now(), emptySince: 0, startedAt: 0, endsAt: 0, tick: 0,
     players: new Map(), projectiles: [], beams: [], events: [], winner: null };
 }
+function nextAvailableSlot(room) {
+  const occupied = new Set([...room.players.values()].map(player => player.slot));
+  for (let slot = 0; slot < MAX_PLAYERS; slot++) if (!occupied.has(slot)) return slot;
+  return -1;
+}
 function makePlayer(user, msg, slot) {
   const brawler = BRAWLERS[msg.brawler] ? msg.brawler : "default";
   return { id: user.id, name: cleanText(msg.name), brawler, team: slot % 2, slot,
@@ -89,7 +94,9 @@ function joinRoom(room, user, msg, socket) {
   if (!player) {
     if (room.players.size >= MAX_PLAYERS) throw new Error("Room is full");
     if (room.phase !== "waiting") throw new Error("Match already started");
-    player = makePlayer(user, msg, room.players.size);
+    const slot = nextAvailableSlot(room);
+    if (slot < 0) throw new Error("Room is full");
+    player = makePlayer(user, msg, slot);
     room.players.set(user.id, player);
   }
   if (player.socket && player.socket !== socket) player.socket.close(4001, "Reconnected from another session");
@@ -408,9 +415,11 @@ wss.on("connection", (ws,_req,meta) => {
         } else if (m.action==="add-bot") {
           if (!canConfigureRoom(player.id,room.ownerId,room.phase)) throw new Error("Only the room owner can add bots before the match starts");
           if (room.players.size>=MAX_PLAYERS) throw new Error("Room is full");
-          const slot=room.players.size, id=`bot:${room.code}:${slot}`;
-          const choices=["kuku","shachi","saiyan"]; const brawler=choices[(slot-1)%choices.length];
-          const bot=makePlayer({id},{name:`Bot ${slot}`,brawler},slot); bot.isBot=true; bot.connected=true; bot.socket=null; bot.ready=true; room.players.set(id,bot);
+          const slot=nextAvailableSlot(room);
+          if (slot < 0) throw new Error("Room is full");
+          const id=`bot:${room.code}:${slot}`;
+          const choices=["kuku","shachi","saiyan"]; const brawler=choices[slot%choices.length];
+          const bot=makePlayer({id},{name:`Bot ${slot+1}`,brawler},slot); bot.isBot=true; bot.connected=true; bot.socket=null; bot.ready=true; room.players.set(id,bot);
           startMatch(room); event(room,"bot-joined",{playerId:id,brawler}); sendState(room);
         } else if (m.action==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
         else throw new Error("Unsupported action");
