@@ -21,4 +21,6 @@ Authenticate with WebSocket subprotocols `jwt-<Supabase access token>` and `dabr
 
 ## Live-client integration boundary
 
+See [CLIENT-INTEGRATION.md](./CLIENT-INTEGRATION.md) for the field/event mapping and safe rollout checklist.
+
 The current browser game still uses Supabase Realtime broadcasts (`match-state`, `player-state`, `player-action`) and a game-specific state shape (`x`, `y`, `a`, `hp`, `mh`, `sc`, `am`, and other combat fields). That wire format is not compatible with this service protocol yet. Integration must use an explicit adapter, move authority for damage and abilities to the server, and stop the browser host from simulating the same match twice. Do not simply redirect the existing broadcasts to this socket: doing so would create mismatched snapshots and desynchronized combat.
