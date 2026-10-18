@@ -21,7 +21,7 @@ import { beginKameCharge, finishKameCharge, cancelKameCharge, kameChargePower } 
 import { movementDelta, movePlayerWithObstacles, resolvePlayerCollisions, PLAYER_RADIUS } from "./world.js";
 import { selectWinnerByHealth } from "./match-results.js";
 import { decideBotAction } from "./bot-ai.js";
-import { createArena, removeArenaWall, traceKameBeam, traceMasteredBeam } from "./maps.js";
+import { createArena, applyRoomMode, removeArenaWall, traceKameBeam, traceMasteredBeam } from "./maps.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
@@ -371,8 +371,7 @@ wss.on("connection", (ws,_req,meta) => {
           player.hp=player.maxHp;
         }
         if (canConfigureRoom(player.id, room.ownerId, room.phase) && m.mode !== undefined) {
-          room.mode = validMode(m.mode);
-          room.world = createArena(room.mode);
+          applyRoomMode(room, m.mode);
         }
         if (typeof m.ready === "boolean") updateReady(room, player, m.ready);
         emit(room,"player-joined",{playerId:player.id}); sendState(room);

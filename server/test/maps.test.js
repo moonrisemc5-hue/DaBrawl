@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createArena, TILE_SIZE } from "../maps.js";
+import { createArena, applyRoomMode, TILE_SIZE } from "../maps.js";
 
 test("builds knockout and duel maps at the browser's 28 by 16 tile size", () => {
   for (const mode of ["knockout", "duel"]) {
@@ -59,4 +59,20 @@ test("Mastered Ultra Instinct beam spans the arena and removes interior walls in
   assert.equal(beam.length, arena.width);
   assert.ok(beam.destroyedWalls.length > 0);
   for (const wall of beam.destroyedWalls) assert.equal(arena.tiles[wall.row][wall.col], ".");
+});
+
+
+test("applying a room mode rebuilds the actual arena and clears prior map damage", () => {
+  const room = { mode: "knockout", world: createArena("knockout") };
+  assert.equal(room.world.columns, 28);
+  assert.equal(room.world.rows, 16);
+  room.world.tiles[1][2] = ".";
+  room.world.destroyedWalls.push({ row: 1, col: 2 });
+  assert.equal(applyRoomMode(room, "showdown"), "showdown");
+  assert.equal(room.mode, "showdown");
+  assert.equal(room.world.columns, 44);
+  assert.equal(room.world.rows, 28);
+  assert.deepEqual(room.world.destroyedWalls, []);
+  assert.equal(applyRoomMode(room, "invalid-mode"), "knockout");
+  assert.equal(room.world.columns, 28);
 });

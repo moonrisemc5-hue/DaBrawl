@@ -1,3 +1,5 @@
+import { validMode } from "./protocol.js";
+
 export const TILE_SIZE = 48;
 const KNOCKOUT_HALF = ["..............","..#...bb......","..#...bb..~~..","......bb..~~..","..bb......#...","..bb..##..#...","......##......","...~~.....#..."];
 function mirrorRows(rows) {
@@ -62,4 +64,13 @@ export function traceMasteredBeam(arena, x, y, angle) {
     if (tile === "#" && removeArenaWall(arena, row, col)) destroyed.push({ row, col });
   }
   return { length: maxLength, destroyedWalls: destroyed };
+}
+
+/** Replace a waiting room's arena when its owner selects a mode. */
+export function applyRoomMode(room, mode) {
+  if (!room || typeof room !== "object") throw new TypeError("Room is required");
+  const normalizedMode = validMode(mode);
+  room.mode = normalizedMode;
+  room.world = createArena(normalizedMode);
+  return normalizedMode;
 }
