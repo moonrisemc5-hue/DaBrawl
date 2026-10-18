@@ -28,6 +28,8 @@ export function adaptServerPlayer(player) {
     // Preserve authoritative gadget timing without guessing the browser's units.
     gadgetCharges: finite(player.gadgetCharges) ? Math.max(0, player.gadgetCharges) : null,
     gadgetCooldownMs: finite(player.gadgetCooldownMs) ? Math.max(0, player.gadgetCooldownMs) : null,
+    kameCooldownMs: finite(player.kameCooldownMs) ? Math.max(0, player.kameCooldownMs) : null,
+    muiCharging: player.muiCharging === true,
     connected: player.connected === true,
     ready: player.ready === true
   };
@@ -44,6 +46,10 @@ const EVENT_KINDS = Object.freeze({
   "knockout": "knockout",
   "transform": "transform",
   "gadget": "gadget",
+  "wall-break": "wall-break",
+  "kame-fired": "kame-fired",
+  "mui-charging": "mui-charging",
+  "mui-beam-fired": "mui-beam-fired",
   "match-ended": "match-ended",
   "player-joined": "player-joined",
   "player-disconnected": "player-disconnected"
@@ -68,6 +74,7 @@ export function adaptServerPacket(packet) {
         endsAt: finite(state.endsAt) ? state.endsAt : 0,
         winner: state.winner ?? null,
         ownerId: text(state.ownerId),
+        destroyedWalls: Array.isArray(state.destroyedWalls) ? state.destroyedWalls.filter(w => w && Number.isInteger(w.row) && Number.isInteger(w.col)).map(w => ({ row: w.row, col: w.col })) : [],
         players,
         projectiles: Array.isArray(state.projectiles) ? state.projectiles.filter(p =>
           p && typeof p.id === "number" && typeof p.ownerId === "string" &&

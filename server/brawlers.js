@@ -1,6 +1,6 @@
 // Baseline values are aligned with BR in the browser game's index.html.
 // Saiyan's persistent form overrides are copied from the browser FM table.
-// Terrain, charged attacks, and form-specific animation timing remain client-only for now.
+// Terrain and charged attacks have server-owned rules; exact form-specific animation timing remains client-side.
 const SAIYAN_FORMS = Object.freeze({
   1: Object.freeze({ hp: 7500, damage: 500, beamDamageStart: 800, beamDamageMax: 3200 }),
   2: Object.freeze({ hp: 8500, damage: 1500, range: 420, bulletSpeed: 650, beamDamageStart: 1600, beamDamageMax: 2600 }),

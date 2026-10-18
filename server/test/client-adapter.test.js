@@ -5,13 +5,13 @@ import { adaptServerPlayer, adaptServerPacket } from "../client-adapter.js";
 test("maps a valid authoritative player to the browser-facing field names", () => {
   assert.deepEqual(adaptServerPlayer({
     id: "user-1", name: "Ivor", brawler: "kuku", team: 1, slot: 3,
-    gadgetCharges: 1, gadgetCooldownMs: 450,
+    gadgetCharges: 1, gadgetCooldownMs: 450, kameCooldownMs: 2500, muiCharging: true,
     x: 123, y: 234, aim: 1.25, hp: 4500, maxHp: 7000, alive: true,
     meter: 48, form: 2, transforming: true, connected: true, ready: false
   }), {
     id: "user-1", name: "Ivor", x: 123, y: 234, a: 1.25, hp: 4500, mh: 7000, alive: true,
     sc: 48, form: 2, tfn: 2, tf: 1, brawler: "kuku", team: 1, slot: 3,
-    gadgetCharges: 1, gadgetCooldownMs: 450, connected: true, ready: false
+    gadgetCharges: 1, gadgetCooldownMs: 450, kameCooldownMs: 2500, muiCharging: true, connected: true, ready: false
   });
 });
 
@@ -26,7 +26,7 @@ test("adapts a state packet while filtering malformed projectiles", () => {
     type: "state", room: "ROOM1", tick: 42, serverTime: 1234,
     state: {
       mode: "knockout", phase: "playing", startedAt: 1000, endsAt: 181000,
-      winner: null, ownerId: "host",
+      winner: null, ownerId: "host", destroyedWalls: [{ row: 2, col: 4 }, { row: "bad", col: 1 }],
       players: [{ id:"p1", x:10, y:20, hp:90, maxHp:100, aim:0.5, meter:12 }],
       projectiles: [
         { id:1, ownerId:"p1", x:20, y:20, angle:0, super:false },
@@ -94,4 +94,15 @@ test("clamps malformed negative gadget timing to zero", () => {
   });
   assert.equal(player.gadgetCharges, 0);
   assert.equal(player.gadgetCooldownMs, 0);
+});
+
+test("maps terrain and charged-beam events for a future browser adapter", () => {
+  const event = adaptServerPacket({ type: "event", room: "ROOM1", tick: 8, event: "mui-beam-fired", playerId: "p1", hits: 2 });
+  assert.equal(event.name, "mui-beam-fired");
+  assert.equal(event.data.playerId, "p1");
+  const state = adaptServerPacket({ type: "state", room: "ROOM1", state: {
+    players: [{ id:"p1", x:1, y:2, hp:3, maxHp:4 }],
+    destroyedWalls: [{ row: 2, col: 4 }, { row: "bad", col: 1 }]
+  }});
+  assert.deepEqual(state.state.destroyedWalls, [{ row: 2, col: 4 }]);
 });

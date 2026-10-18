@@ -52,6 +52,7 @@ function snapshot(room) {
       id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,
       hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,
       gadgetCharges:gadgetCharges(p),gadgetCooldownMs:Math.max(0,p.gadgetReadyAt-now()),
+      kameCooldownMs:Math.max(0,(p.kameReadyAt||0)-now()),muiCharging:Boolean(p.pendingMuiBeam),
       transforming:p.transformUntil>now(),connected:p.connected,ready:p.ready
     })), projectiles: room.projectiles.map(b => ({ id:b.id,ownerId:b.ownerId,x:b.x,y:b.y,angle:b.angle,super:b.super })) };
 }
