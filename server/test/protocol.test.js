@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCancelCountdown } from "../protocol.js";
+import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCancelCountdown, shouldExpireDisconnectedPlayer } from "../protocol.js";
 
 test("sanitizes names and limits their length", () => {
   assert.equal(cleanText("  Ivor<script>\n  "), "Ivorscript");
@@ -85,4 +85,14 @@ test("cancels a countdown if any player becomes unready", () => {
   assert.equal(shouldCancelCountdown("countdown", true), false);
   assert.equal(shouldCancelCountdown("waiting", false), false);
   assert.equal(shouldCancelCountdown("playing", false), false);
+});
+
+
+test("expires only disconnected players after the room retention window", () => {
+  const ttl = 120_000;
+  assert.equal(shouldExpireDisconnectedPlayer(false, 1_000, 120_999, ttl), false);
+  assert.equal(shouldExpireDisconnectedPlayer(false, 1_000, 121_000, ttl), true);
+  assert.equal(shouldExpireDisconnectedPlayer(true, 1_000, 500_000, ttl), false);
+  assert.equal(shouldExpireDisconnectedPlayer(false, NaN, 500_000, ttl), false);
+  assert.equal(shouldExpireDisconnectedPlayer(false, 1_000, 500_000, -1), false);
 });
