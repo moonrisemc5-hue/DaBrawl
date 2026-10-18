@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams } from "../protocol.js";
+import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom } from "../protocol.js";
 
 test("sanitizes names and limits their length", () => {
   assert.equal(cleanText("  Ivor<script>\n  "), "Ivorscript");
@@ -48,4 +48,11 @@ test("teams are balanced for knockout, alternating for duel, and unique for show
   assert.deepEqual(assignTeams(2, "knockout"), [0, 1]);
   assert.deepEqual(assignTeams(4, "duel"), [0, 1, 0, 1]);
   assert.deepEqual(assignTeams(3, "showdown"), [0, 1, 2]);
+});
+
+test("only the room owner can configure a room before the match starts", () => {
+  assert.equal(canConfigureRoom("owner", "owner", "waiting"), true);
+  assert.equal(canConfigureRoom("guest", "owner", "waiting"), false);
+  assert.equal(canConfigureRoom("owner", "owner", "playing"), false);
+  assert.equal(canConfigureRoom("", "owner", "waiting"), false);
 });
