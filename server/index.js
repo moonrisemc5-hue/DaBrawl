@@ -50,6 +50,14 @@ function snapshot(room) {
 function sendState(room) { emit(room, "state", { state: snapshot(room) }); }
 function event(room, name, data = {}) { room.events.push({ name, at: now(), ...data }); if (room.events.length > 80) room.events.shift(); emit(room, "event", { event: name, ...data }); }
 
+function cancelCountdown(room, reason) {
+  if (room.phase !== "countdown") return;
+  room.phase = "waiting";
+  room.startedAt = 0;
+  room.endsAt = 0;
+  for (const p of room.players.values()) p.ready = false;
+  event(room, "match-countdown-cancelled", { reason });
+}
 function startMatch(room) {
   if (room.phase !== "waiting" || room.players.size < 2 || ![...room.players.values()].every(p => p.connected && p.ready)) return;
   const roster = [...room.players.values()].sort((a, b) => a.slot - b.slot);
@@ -239,8 +247,8 @@ wss.on("connection", (ws,_req,meta) => {
       else throw new Error("Unsupported message type");
     } catch(err) { ws.send(JSON.stringify({type:"error",message:String(err.message||"Invalid message").slice(0,120)})); }
   });
-  ws.on("close",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); room.updatedAt=now(); event(room,"player-disconnected",{playerId:player.id}); });
-  ws.on("error",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); });
+  ws.on("close",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); room.updatedAt=now(); cancelCountdown(room, "player-disconnected"); event(room,"player-disconnected",{playerId:player.id}); });
+  ws.on("error",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); cancelCountdown(room, "connection-error"); });
   emit(room,"player-joined",{playerId:player.id}); sendState(room);
 });
 let lastTickAt=now();
