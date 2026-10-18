@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCancelCountdown, shouldExpireDisconnectedPlayer } from "../protocol.js";
+import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer } from "../protocol.js";
 
 test("sanitizes names and limits their length", () => {
   assert.equal(cleanText("  Ivor<script>\n  "), "Ivorscript");
@@ -95,4 +95,14 @@ test("expires only disconnected players after the room retention window", () => 
   assert.equal(shouldExpireDisconnectedPlayer(true, 1_000, 500_000, ttl), false);
   assert.equal(shouldExpireDisconnectedPlayer(false, NaN, 500_000, ttl), false);
   assert.equal(shouldExpireDisconnectedPlayer(false, 1_000, 500_000, -1), false);
+});
+
+ 
+test("forfeits a disconnected player only after the in-match reconnect grace window", () => {
+  const grace = 10_000;
+  assert.equal(shouldForfeitDisconnectedPlayer(false, 5_000, 14_999, grace), false);
+  assert.equal(shouldForfeitDisconnectedPlayer(false, 5_000, 15_000, grace), true);
+  assert.equal(shouldForfeitDisconnectedPlayer(true, 5_000, 50_000, grace), false);
+  assert.equal(shouldForfeitDisconnectedPlayer(false, NaN, 50_000, grace), false);
+  assert.equal(shouldForfeitDisconnectedPlayer(false, 5_000, 50_000, -1), false);
 });
