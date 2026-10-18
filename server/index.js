@@ -238,8 +238,17 @@ wss.on("connection", (ws,_req,meta) => {
         if (m.action==="fire") doFire(room,player,false);
         else if (m.action==="super") doFire(room,player,true);
         else if (m.action==="transform") {
-          if (isCombatPhase(room.phase) && player.alive && player.meter>=50 && player.transformUntil<=now()) {
-            player.meter-=50; player.form=clamp(Math.floor(finite(m.form,player.form+1)),1,5); player.transformUntil=now()+1800;
+          if (isCombatPhase(room.phase) && player.alive && player.meter>=50 && player.transformUntil<=now() && player.brawler==="saiyan" && player.form<5) {
+            player.meter-=50;
+            const nextForm=player.form+1;
+            const nextStats=BRAWLERS.saiyan.forms[nextForm];
+            if (nextStats) {
+              const healthDelta=nextStats.hp-player.maxHp;
+              player.maxHp=nextStats.hp;
+              player.hp=clamp(player.hp+healthDelta,0,player.maxHp);
+            }
+            player.form=nextForm;
+            player.transformUntil=now()+1800;
             event(room,"transform",{playerId:player.id,form:player.form});
           }
         } else if (m.action==="gadget") {
