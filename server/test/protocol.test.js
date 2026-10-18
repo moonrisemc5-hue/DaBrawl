@@ -120,3 +120,10 @@ test("accepts valid Saiyan Kame actions and rejects out-of-range charge", () => 
   assert.throws(() => parseClientMessage(JSON.stringify({ type: "action", action: "kame", charge: 1.1 })), /Invalid charge/);
   assert.throws(() => parseClientMessage(JSON.stringify({ type: "action", action: "kame", angle: "east" })), /Invalid angle/);
 });
+
+
+test("Kame charge actions do not accept client-authored charge values", () => {
+  assert.deepEqual(parseClientMessage('{"type":"action","action":"kame-start"}'), { type:"action", action:"kame-start" });
+  assert.deepEqual(parseClientMessage('{"type":"action","action":"kame-release","angle":1.2}'), { type:"action", action:"kame-release", angle:1.2 });
+  assert.throws(() => parseClientMessage('{"type":"action","action":"kame"}'), /Unsupported action/);
+});

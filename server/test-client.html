@@ -108,7 +108,7 @@
   if(me){send({type:"input",seq:seq++,x,y,aim});}
  }
  $("connect").addEventListener("click",connect);$("disconnect").addEventListener("click",disconnect);$("ready").addEventListener("click",sendReady);
- $("fire").addEventListener("click",()=>action("fire"));$("super").addEventListener("click",()=>action("super"));$("transform").addEventListener("click",()=>action("transform"));$("gadget").addEventListener("click",()=>action("gadget"));$("kame").addEventListener("click",()=>action("kame",{charge:1,angle:aim}));$("ping").addEventListener("click",ping);
+ $("fire").addEventListener("click",()=>action("fire"));$("super").addEventListener("click",()=>action("super"));$("transform").addEventListener("click",()=>action("transform"));$("gadget").addEventListener("click",()=>action("gadget"));$("kame").addEventListener("click",()=>{kameHeld=!kameHeld;action(kameHeld?"kame-start":"kame-release",{angle});$("kame").textContent=kameHeld?"Release Kame":"Charge Kame";});$("ping").addEventListener("click",ping);
  $("arena").addEventListener("mousemove",ev=>{const r=ev.currentTarget.getBoundingClientRect();const x=(ev.clientX-r.left)/r.width*800,y=(ev.clientY-r.top)/r.height*520;const me=state?.players?.find(p=>p.id===currentUserId);if(me)aim=Math.atan2(y-me.y,x-me.x);});
  $("arena").addEventListener("click",()=>action("fire"));
  window.addEventListener("keydown",ev=>{if(["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName))return;const k=ev.key;if([" ","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(k))ev.preventDefault();held.add(k);if(ev.repeat)return;if(k===" ")action("fire");if(k.toLowerCase()==="e")action("super");if(k.toLowerCase()==="t")action("transform");if(k.toLowerCase()==="q")action("gadget");});

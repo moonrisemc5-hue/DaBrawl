@@ -39,7 +39,7 @@ function makePlayer(user, msg, slot) {
   return { id: user.id, name: cleanText(msg.name), brawler, team: slot % 2, slot,
     x: slot % 2 ? 620 : 180, y: 150 + Math.floor(slot / 2) * 70, aim: slot % 2 ? Math.PI : 0,
     hp: BRAWLERS[brawler].hp, maxHp: BRAWLERS[brawler].hp, alive: true, meter: 0,
-    form: 0, transformUntil: 0, gadgetReadyAt: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0, kameReadyAt: 0,
+    form: 0, transformUntil: 0, gadgetReadyAt: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0, kameReadyAt: 0, kameChargeStartedAt: 0,
     connected: true, socket: null, lastSeen: now(), disconnectedAt: 0, invulnerableUntil: 0, ready: false };
 }
 function emit(room, type, data = {}) {
@@ -52,7 +52,7 @@ function snapshot(room) {
       id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,
       hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,
       gadgetCharges:gadgetCharges(p),gadgetCooldownMs:Math.max(0,p.gadgetReadyAt-now()),
-      kameCooldownMs:Math.max(0,(p.kameReadyAt||0)-now()),muiCharging:Boolean(p.pendingMuiBeam),
+      kameCooldownMs:Math.max(0,(p.kameReadyAt||0)-now()),kameCharging:Boolean(p.kameChargeStartedAt),kameCharge:kameChargePower(p.kameChargeStartedAt,now()),muiCharging:Boolean(p.pendingMuiBeam),
       transforming:p.transformUntil>now(),connected:p.connected,ready:p.ready
     })), projectiles: room.projectiles.map(b => ({ id:b.id,ownerId:b.ownerId,x:b.x,y:b.y,angle:b.angle,super:b.super })) };
 }
@@ -154,11 +154,11 @@ function doFire(room, p, isSuper = false) {
   event(room, isSuper ? "super-fired" : "attack-fired", { playerId:p.id, aim:p.aim });
 }
 
-function doKame(room, player, charge, angle) {
-  if (!isCombatPhase(room.phase) || !player.alive || player.brawler !== "saiyan" || player.transformUntil > now()) return;
+function doKame(room, player, angle) {
   const at = now();
-  if ((player.kameReadyAt || 0) > at) return;
-  const stats = getBrawlerStats(player), power = Math.max(0, Math.min(1, Number.isFinite(charge) ? charge : 0));
+  const power = finishKameCharge(player, at);
+  if (power === null || !isCombatPhase(room.phase) || !player.alive || player.brawler !== "saiyan" || player.transformUntil > at || (player.kameReadyAt || 0) > at) return;
+  const stats = getBrawlerStats(player);
   const aim = clamp(finite(angle, player.aim), -Math.PI * 2, Math.PI * 2);
   player.aim = aim; player.kameReadyAt = at + (player.form <= 1 ? 3000 : 5000);
   const traced = traceKameBeam(room.world, player.x, player.y, aim, power);
@@ -365,7 +365,11 @@ wss.on("connection", (ws,_req,meta) => {
             player.transformUntil=now()+1800;
             event(room,"transform",{playerId:player.id,form:player.form});
           }
-        } else if (m.action==="kame") { doKame(room, player, m.charge, m.angle); sendState(room);
+        } else if (m.action==="kame-start") {
+          const at=now();
+          if (isCombatPhase(room.phase) && player.alive && player.brawler==="saiyan" && player.transformUntil<=at && (player.kameReadyAt||0)<=at) beginKameCharge(player,at);
+          sendState(room);
+        } else if (m.action==="kame-release") { player.aim=clamp(finite(m.angle,player.aim),-Math.PI*2,Math.PI*2); doKame(room, player, player.aim); sendState(room);
         } else if (m.action==="gadget") {
           const at=now();
           if (isCombatPhase(room.phase) && player.alive && player.transformUntil<=at && tryConsumeGadget(player,at)) {
