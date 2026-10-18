@@ -53,3 +53,14 @@ test("rejects invalid collision inputs", () => {
   assert.throws(() => resolvePlayerCollisions(null, world), /Invalid player collision inputs/);
   assert.throws(() => resolvePlayerCollisions([{x:NaN,y:0}], world), /Invalid player position/);
 });
+
+test("falls back to non-overlapping deterministic cells for a crowded edge spawn", () => {
+  const crowded = Array.from({ length: 6 }, () => ({ x: world.margin + PLAYER_RADIUS, y: world.margin + PLAYER_RADIUS }));
+  const first = resolvePlayerCollisions(crowded, world);
+  assert.deepEqual(first, resolvePlayerCollisions(crowded, world));
+  for (let i = 0; i < first.length; i++) {
+    assert.ok(first[i].x >= world.margin + PLAYER_RADIUS && first[i].x <= world.width - world.margin - PLAYER_RADIUS);
+    assert.ok(first[i].y >= world.margin + PLAYER_RADIUS && first[i].y <= world.height - world.margin - PLAYER_RADIUS);
+    for (let j = i + 1; j < first.length; j++) assert.ok(Math.hypot(first[j].x - first[i].x, first[j].y - first[i].y) >= PLAYER_RADIUS * 2 - 1e-7);
+  }
+});

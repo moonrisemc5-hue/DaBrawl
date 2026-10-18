@@ -33,6 +33,32 @@ export function resolvePlayerCollisions(players, world, radius = PLAYER_RADIUS) 
     }
     if (!changed) break;
   }
+  const stillOverlapping = () => {
+    for (let i = 0; i < positions.length; i++) for (let j = i + 1; j < positions.length; j++) {
+      if (Math.hypot(positions[j].x - positions[i].x, positions[j].y - positions[i].y) < diameter - 1e-7) return true;
+    }
+    return false;
+  };
+  // Pairwise relaxation is smooth for ordinary movement. If a crowded cluster
+  // cannot be separated near a boundary, use a deterministic free-cell fallback
+  // rather than allowing persistent overlaps after the final pass.
+  if (stillOverlapping() && diameter > 0) {
+    const minX = world.margin + radius, minY = world.margin + radius;
+    const maxX = world.width - world.margin - radius, maxY = world.height - world.margin - radius;
+    const cells = [];
+    for (let y = minY; y <= maxY + 1e-7; y += diameter) {
+      for (let x = minX; x <= maxX + 1e-7; x += diameter) cells.push({ x, y });
+    }
+    const placed = [];
+    for (let i = 0; i < positions.length; i++) {
+      const desired = positions[i];
+      const candidates = cells.filter(cell => placed.every(other => Math.hypot(cell.x - other.x, cell.y - other.y) >= diameter - 1e-7));
+      candidates.sort((a, b) => Math.hypot(a.x - desired.x, a.y - desired.y) - Math.hypot(b.x - desired.x, b.y - desired.y));
+      if (!candidates.length) break;
+      placed.push(candidates[0]);
+    }
+    if (placed.length === positions.length) return placed;
+  }
   return positions;
 }
 export function movementDelta(x, y, speed, dt) {
