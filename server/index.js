@@ -2,7 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer, WebSocket } from "ws";
-import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations, shouldCancelCountdown } from "./protocol.js";
+import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations, shouldCancelCountdown, shouldExpireDisconnectedPlayer } from "./protocol.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -184,8 +184,9 @@ function stepRoom(room, dt) {
   if (room.phase === "ended") room.projectiles = [];
 }
 function cleanupRoom(room) {
+  const currentTime = now();
   for (const [id,p] of room.players) {
-    if (p.connected || now()-p.lastSeen < ROOM_TTL_MS) continue;
+    if (!shouldExpireDisconnectedPlayer(p.connected, p.lastSeen, currentTime, ROOM_TTL_MS)) continue;
     room.players.delete(id);
   }
   if (!room.players.size) {
