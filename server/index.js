@@ -2,7 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer, WebSocket } from "ws";
-import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams } from "./protocol.js";
+import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom } from "./protocol.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -51,7 +51,7 @@ function sendState(room) { emit(room, "state", { state: snapshot(room) }); }
 function event(room, name, data = {}) { room.events.push({ name, at: now(), ...data }); if (room.events.length > 80) room.events.shift(); emit(room, "event", { event: name, ...data }); }
 
 function startMatch(room) {
-  if (room.phase !== "waiting" || room.players.size < 2 || ![...room.players.values()].every(p => p.ready)) return;
+  if (room.phase !== "waiting" || room.players.size < 2 || ![...room.players.values()].every(p => p.connected && p.ready)) return;
   const roster = [...room.players.values()].sort((a, b) => a.slot - b.slot);
   assignTeams(roster.length, room.mode).forEach((team, index) => { roster[index].team = team; });
   room.phase = "countdown"; room.startedAt = now() + 2500; room.endsAt = room.startedAt + 180_000;
@@ -196,7 +196,7 @@ server.on("upgrade", async (req,socket,head) => {
 });
 wss.on("connection", (ws,_req,meta) => {
   let room=rooms.get(meta.roomCode);
-  if (!room) { if (rooms.size >= MAX_ROOMS) { ws.close(1013,"Server is at room capacity"); return; } room=makeRoom(meta.roomCode); rooms.set(meta.roomCode,room); }
+  if (!room) { if (rooms.size >= MAX_ROOMS) { ws.close(1013,"Server is at room capacity"); return; } room=makeRoom(meta.roomCode); room.ownerId=meta.user.id; rooms.set(meta.roomCode,room); }
   let player;
   try { player=joinRoom(room,meta.user,{name:meta.user.user_metadata?.username || meta.user.email?.split("@")[0] || "Player"},ws); }
   catch(err) { ws.close(1008,String(err.message||"Cannot join room").slice(0,120)); return; }
@@ -214,7 +214,7 @@ wss.on("connection", (ws,_req,meta) => {
           player.maxHp=BRAWLERS[player.brawler].hp;
           player.hp=player.maxHp;
         }
-        if (room.phase==="waiting") room.mode=validMode(m.mode);
+        if (canConfigureRoom(player.id, room.ownerId, room.phase) && m.mode !== undefined) room.mode=validMode(m.mode);
         if (typeof m.ready === "boolean") player.ready=m.ready;
         if (m.ready===true) startMatch(room);
         emit(room,"player-joined",{playerId:player.id}); sendState(room);
