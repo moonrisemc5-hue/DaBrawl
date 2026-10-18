@@ -4,7 +4,7 @@ This is a separate Node.js/WebSocket service intended for a persistent host (for
 
 ## Important status
 
-This service is **not yet connected to live DaBrawl matches**. The server now includes explicit baseline rules for Kuku, Shachi and Saiyan, including Shachi's slam and Saiyan's transform super. Projectile collision uses a swept segment between ticks to avoid fast shots passing through targets, and chooses the closest valid target along that segment. This is not yet a full port: terrain, exact ability timings, form-specific stats, gadgets and bot AI still need to be reconciled with the browser game. Do not switch production matchmaking to it until the client protocol and all brawler rules are ported and verified. The existing Supabase Realtime path remains untouched.
+This service is **not yet connected to live DaBrawl matches**. The server now includes explicit baseline rules for Kuku, Shachi and Saiyan, including Shachi's slam and sequential Saiyan form progression with form-specific health, damage, range and projectile speed. Projectile collision uses a swept segment between ticks to avoid fast shots passing through targets, and registers the first valid opponent along that segment. Saiyan's full charged beam/wall-breaking move and form-specific dodge/charge mechanics are not ported yet. This is not yet a full port: terrain, exact ability timings, form-specific stats, gadgets and bot AI still need to be reconciled with the browser game. Do not switch production matchmaking to it until the client protocol and all brawler rules are ported and verified. The existing Supabase Realtime path remains untouched.
 
 ## Host
 
@@ -12,7 +12,7 @@ Deploy this directory as a Node 20+ container. Build from the repository root wi
 
 ## Local checks
 
-Run `npm run check` and `npm test` from this directory. Unit tests cover message parsing, room-code validation, movement-axis validation, supported modes, player-name sanitization, active-match phase guards, team assignment, browser adapter mapping, and deterministic projectile movement, collision filtering, swept collision, range and world bounds. GitHub Actions also builds the production Docker image so missing files or invalid container build steps are caught before deployment.
+Run `npm run check` and `npm test` from this directory. Unit tests cover message parsing, room-code validation, movement-axis validation, supported modes, player-name sanitization, active-match phase guards, team assignment, browser adapter mapping, Saiyan form stats, and deterministic projectile movement, first-contact collision filtering, swept collision, range and world bounds. GitHub Actions also builds the production Docker image so missing files or invalid container build steps are caught before deployment.
 
 ## Wire protocol
 
