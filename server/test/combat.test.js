@@ -63,3 +63,24 @@ test("projectile expires on range or world bounds", () => {
   assert.equal(projectileStillInRange({ traveled: 10, range: 100, x: -1, y: 50 }, 100, 520), false);
   assert.equal(projectileStillInRange({ traveled: 10, range: 100, x: 50, y: 521 }, 800, 520), false);
 });
+
+import { findProjectileObstacleHit, findProjectileContact } from "../combat.js";
+
+test("projectiles stop at the first wall along their swept path", () => {
+  const projectile = { previousX: 0, previousY: 50, x: 100, y: 50 };
+  const hit = findProjectileObstacleHit(projectile, [
+    { x: 70, y: 30, width: 10, height: 40, tile: "#" },
+    { x: 30, y: 30, width: 10, height: 40, tile: "~" }
+  ]);
+  assert.equal(hit.obstacle.tile, "~");
+  assert.ok(hit.t < 0.5);
+});
+
+test("reports player contact order so a wall behind a target does not block the earlier hit", () => {
+  const projectile = { previousX: 0, previousY: 50, x: 100, y: 50, ownerId: "owner", team: 0 };
+  const contact = findProjectileContact(projectile, [
+    { id: "target", team: 1, alive: true, x: 25, y: 50, invulnerableUntil: 0 }
+  ], 1000, 19);
+  const wall = findProjectileObstacleHit(projectile, [{ x: 70, y: 30, width: 10, height: 40 }]);
+  assert.ok(contact.t < wall.t);
+});

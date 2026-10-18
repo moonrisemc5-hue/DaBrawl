@@ -15,11 +15,11 @@ const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
 
 import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "./brawlers.js";
-import { advanceProjectile, findProjectileHit, projectileStillInRange } from "./combat.js";
+import { advanceProjectile, findProjectileContact, findProjectileObstacleHit, projectileStillInRange } from "./combat.js";
 import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
 import { movementDelta, movePlayerWithObstacles, resolvePlayerCollisions, PLAYER_RADIUS } from "./world.js";
 import { selectWinnerByHealth } from "./match-results.js";
-import { createArena } from "./maps.js";
+import { createArena, removeArenaWall } from "./maps.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
@@ -48,7 +48,7 @@ function emit(room, type, data = {}) {
 }
 function snapshot(room) {
   return { mode: room.mode, phase: room.phase, startedAt: room.startedAt, endsAt: room.endsAt,
-    winner: room.winner, ownerId: room.ownerId, tick: room.tick, players: [...room.players.values()].map(p => ({
+    winner: room.winner, ownerId: room.ownerId, tick: room.tick, destroyedWalls: room.world.destroyedWalls, players: [...room.players.values()].map(p => ({
       id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,
       hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,
       gadgetCharges:gadgetCharges(p),gadgetCooldownMs:Math.max(0,p.gadgetReadyAt-now()),
@@ -186,8 +186,15 @@ function stepRoom(room, dt) {
   const keep = [];
   for (const b of room.projectiles) {
     advanceProjectile(b, dt);
-    const hit = findProjectileHit(b, room.players.values(), t, 19);
-    if (hit) {
+    const wallHit = findProjectileObstacleHit(b, room.world.obstacles, 2);
+    const contact = findProjectileContact(b, room.players.values(), t, 19);
+    if (wallHit && (!contact || wallHit.t <= contact.t)) {
+      const wall = wallHit.obstacle;
+      if (b.super && wall.tile === "#" && removeArenaWall(room.world, wall.row, wall.col)) {
+        event(room, "wall-break", { playerId: b.ownerId, row: wall.row, col: wall.col });
+      }
+    } else if (contact) {
+      const hit = contact.player;
       hit.hp = Math.max(0, hit.hp-b.damage); hit.meter = clamp(hit.meter+12,0,100);
       const owner = room.players.get(b.ownerId); if (owner) owner.meter = clamp(owner.meter+18,0,100);
       event(room, "hit", { projectileId:b.id, attackerId:b.ownerId, targetId:hit.id, damage:b.damage, hp:hit.hp });

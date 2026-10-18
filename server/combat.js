@@ -26,22 +26,56 @@ function closestPointOnSegment(px, py, x1, y1, x2, y2) {
   return { t, distanceSquared: (px - x) ** 2 + (py - y) ** 2 };
 }
 
-export function findProjectileHit(projectile, players, atTime, radius = 19) {
+export function findProjectileContact(projectile, players, atTime, radius = 19) {
   const x1 = Number.isFinite(projectile.previousX) ? projectile.previousX : projectile.x;
   const y1 = Number.isFinite(projectile.previousY) ? projectile.previousY : projectile.y;
   const radiusSquared = radius * radius;
-  let firstHit = null;
+  let firstContact = null;
   let firstHitT = Infinity;
   for (const target of players) {
     if (!target.alive || target.id === projectile.ownerId || target.team === projectile.team ||
         (Number.isFinite(target.invulnerableUntil) && target.invulnerableUntil > atTime)) continue;
     const contact = closestPointOnSegment(target.x, target.y, x1, y1, projectile.x, projectile.y);
     if (contact.distanceSquared <= radiusSquared && contact.t < firstHitT) {
-      firstHit = target;
+      firstContact = { player: target, t: contact.t };
       firstHitT = contact.t;
     }
   }
-  return firstHit;
+  return firstContact;
+}
+export function findProjectileHit(projectile, players, atTime, radius = 19) {
+  return findProjectileContact(projectile, players, atTime, radius)?.player ?? null;
+}
+
+function segmentRectEntry(x1, y1, x2, y2, rect, padding = 0) {
+  const left = rect.x - padding, right = rect.x + rect.width + padding;
+  const top = rect.y - padding, bottom = rect.y + rect.height + padding;
+  const dx = x2 - x1, dy = y2 - y1;
+  let enter = 0, exit = 1;
+  for (const [origin, delta, min, max] of [[x1, dx, left, right], [y1, dy, top, bottom]]) {
+    if (Math.abs(delta) < 1e-12) {
+      if (origin < min || origin > max) return null;
+      continue;
+    }
+    let a = (min - origin) / delta, b = (max - origin) / delta;
+    if (a > b) [a, b] = [b, a];
+    enter = Math.max(enter, a);
+    exit = Math.min(exit, b);
+    if (enter > exit) return null;
+  }
+  return enter >= 0 && enter <= 1 ? enter : null;
+}
+
+/** Returns the first solid tile crossed by a projectile during this tick. */
+export function findProjectileObstacleHit(projectile, obstacles, radius = 2) {
+  const x1 = Number.isFinite(projectile.previousX) ? projectile.previousX : projectile.x;
+  const y1 = Number.isFinite(projectile.previousY) ? projectile.previousY : projectile.y;
+  let first = null;
+  for (const obstacle of obstacles ?? []) {
+    const t = segmentRectEntry(x1, y1, projectile.x, projectile.y, obstacle, radius);
+    if (t !== null && (!first || t < first.t)) first = { obstacle, t };
+  }
+  return first;
 }
 
 export function projectileStillInRange(projectile, worldWidth, worldHeight) {

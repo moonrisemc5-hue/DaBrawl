@@ -20,5 +20,15 @@ export function createArena(mode = "knockout") {
     const tile = tiles[row][col];
     if (tile === "#" || tile === "~") obstacles.push({ x: col*TILE_SIZE, y: row*TILE_SIZE, width: TILE_SIZE, height: TILE_SIZE, tile, row, col });
   }
-  return { width: width*TILE_SIZE, height: height*TILE_SIZE, margin: 0, tileSize: TILE_SIZE, columns: width, rows: height, tiles, obstacles };
+  return { width: width*TILE_SIZE, height: height*TILE_SIZE, margin: 0, tileSize: TILE_SIZE, columns: width, rows: height, tiles, obstacles, destroyedWalls: [] };
+}
+
+export function removeArenaWall(arena, row, col) {
+  if (!arena || !Number.isInteger(row) || !Number.isInteger(col) ||
+      row <= 0 || col <= 0 || row >= arena.rows - 1 || col >= arena.columns - 1 ||
+      arena.tiles[row]?.[col] !== "#") return false;
+  arena.tiles[row][col] = ".";
+  arena.obstacles = arena.obstacles.filter(o => !(o.row === row && o.col === col && o.tile === "#"));
+  if (!arena.destroyedWalls.some(w => w.row === row && w.col === col)) arena.destroyedWalls.push({ row, col });
+  return true;
 }

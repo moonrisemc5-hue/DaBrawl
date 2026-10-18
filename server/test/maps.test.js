@@ -26,3 +26,15 @@ test("does not treat bushes as solid collision obstacles", () => {
   assert.ok(arena.tiles.some(row => row.includes("b")));
   assert.ok(arena.obstacles.every(o => o.tile === "#" || o.tile === "~"));
 });
+
+import { removeArenaWall } from "../maps.js";
+
+test("only interior solid wall tiles can be destroyed and snapshots can replay the changes", () => {
+  const arena = createArena("knockout");
+  assert.equal(removeArenaWall(arena, 1, 2), true);
+  assert.equal(arena.tiles[1][2], ".");
+  assert.equal(arena.destroyedWalls.some(w => w.row === 1 && w.col === 2), true);
+  assert.equal(arena.obstacles.some(o => o.row === 1 && o.col === 2), false);
+  assert.equal(removeArenaWall(arena, 0, 0), false);
+  assert.equal(removeArenaWall(arena, 2, 11), false);
+});
