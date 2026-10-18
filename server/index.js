@@ -13,7 +13,7 @@ const ROOM_TTL_MS = 120_000;
 const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
 const WORLD = { width: 800, height: 520, margin: 28 };
-import { BRAWLERS } from "./brawlers.js";
+import { BRAWLERS, getBrawlerStats } from "./brawlers.js";
 import { advanceProjectile, findProjectileHit, projectileStillInRange } from "./combat.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -83,7 +83,7 @@ function joinRoom(room, user, msg, socket) {
 }
 function doFire(room, p, isSuper = false) {
   if (!isCombatPhase(room.phase)) return;
-  const stats = BRAWLERS[p.brawler] || BRAWLERS.default;
+  const stats = getBrawlerStats(p);
   const t = now();
   if (!p.alive || p.transformUntil > t) return;
   if (isSuper) {
@@ -92,7 +92,14 @@ function doFire(room, p, isSuper = false) {
   } else if (t - p.lastFire < stats.cooldown) return;
   else p.lastFire = t;
   if (isSuper && stats.superKind === "transform") {
-    p.form = clamp(p.form + 1, 1, 5);
+    const nextForm = clamp(p.form + 1, 1, 5);
+    const nextStats = BRAWLERS[p.brawler]?.forms?.[nextForm];
+    if (nextStats) {
+      const healthDelta = nextStats.hp - p.maxHp;
+      p.maxHp = nextStats.hp;
+      p.hp = clamp(p.hp + healthDelta, 0, p.maxHp);
+    }
+    p.form = nextForm;
     p.transformUntil = t + 1800;
     event(room, "transform", { playerId:p.id, form:p.form });
     sendState(room);
@@ -131,7 +138,7 @@ function stepRoom(room, dt) {
     for (const p of room.players.values()) {
       if (!p.connected || !p.alive) continue;
       if (t - p.lastSeen > INPUT_TIMEOUT_MS) p.input = { x: 0, y: 0 };
-      const stats = BRAWLERS[p.brawler] || BRAWLERS.default;
+      const stats = getBrawlerStats(p);
       const x = p.input.x, y = p.input.y, mag = Math.hypot(x,y) || 1;
       p.x = clamp(p.x + x / mag * stats.speed * dt, WORLD.margin, WORLD.width-WORLD.margin);
       p.y = clamp(p.y + y / mag * stats.speed * dt, WORLD.margin, WORLD.height-WORLD.margin);
