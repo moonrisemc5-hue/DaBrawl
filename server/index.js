@@ -370,7 +370,10 @@ wss.on("connection", (ws,_req,meta) => {
           player.maxHp=BRAWLERS[player.brawler].hp;
           player.hp=player.maxHp;
         }
-        if (canConfigureRoom(player.id, room.ownerId, room.phase) && m.mode !== undefined) room.mode=validMode(m.mode);
+        if (canConfigureRoom(player.id, room.ownerId, room.phase) && m.mode !== undefined) {
+          room.mode = validMode(m.mode);
+          room.world = createArena(room.mode);
+        }
         if (typeof m.ready === "boolean") updateReady(room, player, m.ready);
         emit(room,"player-joined",{playerId:player.id}); sendState(room);
       } else if (m.type==="ready") { updateReady(room, player, m.ready); sendState(room); }
