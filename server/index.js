@@ -2,7 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer, WebSocket } from "ws";
-import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations, shouldCancelCountdown, shouldExpireDisconnectedPlayer } from "./protocol.js";
+import { clamp, finite, cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCloseForProtocolViolations, shouldCancelCountdown, shouldExpireDisconnectedPlayer, shouldForfeitDisconnectedPlayer } from "./protocol.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -10,6 +10,7 @@ const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
 const TICK_MS = 50;
 const INPUT_TIMEOUT_MS = 250;
 const ROOM_TTL_MS = 120_000;
+const DISCONNECT_GRACE_MS = 10_000;
 const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
 const WORLD = { width: 800, height: 520, margin: 28 };
@@ -36,7 +37,7 @@ function makePlayer(user, msg, slot) {
     x: slot % 2 ? 620 : 180, y: 150 + Math.floor(slot / 2) * 70, aim: slot % 2 ? Math.PI : 0,
     hp: BRAWLERS[brawler].hp, maxHp: BRAWLERS[brawler].hp, alive: true, meter: 0,
     form: 0, transformUntil: 0, gadgetReadyAt: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0,
-    connected: true, socket: null, lastSeen: now(), invulnerableUntil: 0, ready: false };
+    connected: true, socket: null, lastSeen: now(), disconnectedAt: 0, invulnerableUntil: 0, ready: false };
 }
 function emit(room, type, data = {}) {
   const packet = JSON.stringify({ type, room: room.code, tick: room.tick, serverTime: now(), ...data });
@@ -89,7 +90,7 @@ function joinRoom(room, user, msg, socket) {
   player.name = cleanText(msg.name || player.name);
   if (BRAWLERS[msg.brawler]) player.brawler = msg.brawler;
   room.emptySince = 0;
-  player.socket = socket; player.connected = true; player.lastSeen = now(); room.updatedAt = now();
+  player.socket = socket; player.connected = true; player.lastSeen = now(); player.disconnectedAt = 0; room.updatedAt = now();
   return player;
 }
 function doFire(room, p, isSuper = false) {
@@ -148,6 +149,12 @@ function stepRoom(room, dt) {
   if (room.phase === "countdown" && t >= room.startedAt) { room.phase = "playing"; event(room, "match-started"); }
   if (room.phase === "playing") {
     for (const p of room.players.values()) {
+      if (p.alive && shouldForfeitDisconnectedPlayer(p.connected, p.disconnectedAt, t, DISCONNECT_GRACE_MS)) {
+        p.alive = false;
+        p.input = { x: 0, y: 0 };
+        p.disconnectedAt = 0;
+        event(room, "player-forfeit", { playerId: p.id, reason: "disconnect" });
+      }
       if (!p.connected || !p.alive) continue;
       if (t - p.lastSeen > INPUT_TIMEOUT_MS) p.input = { x: 0, y: 0 };
       const stats = getBrawlerStats(p);
@@ -297,8 +304,8 @@ wss.on("connection", (ws,_req,meta) => {
       ws.send(JSON.stringify({type:"error",message:String(err.message||"Invalid message").slice(0,120)}));
     }
   });
-  ws.on("close",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); room.updatedAt=now(); cancelCountdown(room, "player-disconnected"); event(room,"player-disconnected",{playerId:player.id}); });
-  ws.on("error",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); cancelCountdown(room, "connection-error"); });
+  ws.on("close",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); player.disconnectedAt=player.lastSeen; room.updatedAt=now(); cancelCountdown(room, "player-disconnected"); event(room,"player-disconnected",{playerId:player.id}); });
+  ws.on("error",()=>{ if (player.socket !== ws) return; player.connected=false; player.input={x:0,y:0}; player.socket=null; player.lastSeen=now(); player.disconnectedAt=player.lastSeen; cancelCountdown(room, "connection-error"); });
   emit(room,"player-joined",{playerId:player.id}); sendState(room);
 });
 let lastTickAt=now();
