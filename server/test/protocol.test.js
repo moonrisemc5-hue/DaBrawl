@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase } from "../protocol.js";
+import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams } from "../protocol.js";
 
 test("sanitizes names and limits their length", () => {
   assert.equal(cleanText("  Ivor<script>\n  "), "Ivorscript");
@@ -41,4 +41,11 @@ test("combat is allowed only after the match enters playing phase", () => {
   assert.equal(isCombatPhase("countdown"), false);
   assert.equal(isCombatPhase("playing"), true);
   assert.equal(isCombatPhase("ended"), false);
+});
+
+test("teams are balanced for knockout, alternating for duel, and unique for showdown", () => {
+  assert.deepEqual(assignTeams(6, "knockout"), [0, 0, 0, 1, 1, 1]);
+  assert.deepEqual(assignTeams(2, "knockout"), [0, 1]);
+  assert.deepEqual(assignTeams(4, "duel"), [0, 1, 0, 1]);
+  assert.deepEqual(assignTeams(3, "showdown"), [0, 1, 2]);
 });
