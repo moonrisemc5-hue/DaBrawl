@@ -87,7 +87,7 @@
       <canvas id="logoCv" width="44" height="44"></canvas>
       <div style="font-size:30px;color:var(--y);-webkit-text-stroke:1px #000">DaBrawl</div>
     </div>
-    <button class="btn purple" id="bra">BRAWLERS</button>
+    <button class="btn purple" id="bra" aria-label="Brawlers" title="Brawlers" style="width:76px;height:76px;padding:8px;border-radius:16px;font-size:38px">⚔</button>
     <div id="roomMenuBar"><button class="btn purple" id="roomMenuCode">ROOM CODE</button><button class="btn" id="roomLeaveBtn">LEAVE PARTY</button><button class="btn y" id="roomMenuStart" style="display:none">START MATCH</button></div>
     <div class="mid">
       <button class="plus" id="prevBtn" aria-label="Add a friend by code" title="Friends / room code" style="margin-bottom:0">+</button>
@@ -98,13 +98,12 @@
       <button class="plus" id="nextBtn" aria-label="Add a friend by code" title="Friends / room code" style="margin-bottom:0">+</button>
     </div>
     <div style="position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:flex-end;gap:10px;z-index:300">
-      <button class="mode-sel" id="modeBtn">🎮 <span id="modeTxt">KNOCKOUT 3v3</span> ▾</button>
-      <div style="display:flex;gap:12px">
-        <button class="btn" id="testPlay" style="background:linear-gradient(#3a0ca3,#4cc9f0);font-size:32px;padding:8px 24px">TEST PLAY</button>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="mode-sel" id="modeBtn">🎮 <span id="modeTxt">KNOCKOUT 3v3</span> ▾</button>
         <button class="btn y" id="play">PLAY</button>
       </div>
     </div>
-    <small style="position:absolute;left:12px;bottom:10px;text-align:left;z-index:300">WASD move · mouse aim · F Auto-Aim Shot · Space Super · E/Shift Gadget</small>
+     
   </div>
 
   <div class="scr" id="onlineLobby" style="z-index:500;background:radial-gradient(circle at 50% 20%,#26365d,#080d1d 82%);">
@@ -302,8 +301,10 @@
         MW=44; MH=28;
         M = Array.from({length:MH}, (_,j) => Array.from({length:MW}, (_,i) => {
           if(i==0||j==0||i==MW-1||j==MH-1) return '#';
-          if((i%6==0 && j%5==0) || (i%7==3 && j%6==2)) return '#';
-          if((i>15&&i<28 && j>10&&j<18)) return '~';
+          // Scatter larger wall clusters with no isolated one-tile choke gaps.
+          if(((i>=7&&i<=10)&&(j>=5&&j<=8)) || ((i>=32&&i<=36)&&(j>=18&&j<=21))) return '#';
+          if(((i>=15&&i<=18)&&(j>=4&&j<=8)) || ((i>=25&&i<=28)&&(j>=19&&j<=23))) return '#';
+          if(i>19&&i<25&&j>10&&j<17) return 'b';
           return '.';
         }));
       } else {
@@ -1078,7 +1079,7 @@ function gadget(p){
       if(!p.alive){ const u=p.dt/.9; if(u>1){ g.restore(); return; } g.translate(0,-Math.sin(u*Math.PI)*34); g.rotate(u*14); g.scale(1-u*.6, 1-u*.6); g.globalAlpha=1-u; }
       else { g.fillStyle='#0004'; g.beginPath(); g.ellipse(0,14,18,8,0,0,6.283); g.fill(); }
       g.save();
-      g.beginPath(); g.arc(0, 10, 24, 0, Math.PI*2); g.fillStyle = '#22c55e33'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#22c55e'; g.stroke();
+      // Removed the extra green outer circle; keep the Super-ready ring and team indicator.
       if(p.sc >= 1){
         const spinAngle = Date.now() * 0.0012, segments = 4, arcLen = (Math.PI * 2) / segments;
         g.lineWidth = 5.5;
