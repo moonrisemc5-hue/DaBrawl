@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom } from "../protocol.js";
+import { cleanText, validAxes, validRoomCode, validMode, parseClientMessage, isCombatPhase, assignTeams, canConfigureRoom, shouldCancelCountdown } from "../protocol.js";
 
 test("sanitizes names and limits their length", () => {
   assert.equal(cleanText("  Ivor<script>\n  "), "Ivorscript");
@@ -77,4 +77,12 @@ test("protocol violation threshold closes abusive sockets without closing on one
   assert.equal(shouldCloseForProtocolViolations(8), true);
   assert.equal(shouldCloseForProtocolViolations(100), true);
   assert.equal(shouldCloseForProtocolViolations(8.5), false);
+});
+
+
+test("cancels a countdown if any player becomes unready", () => {
+  assert.equal(shouldCancelCountdown("countdown", false), true);
+  assert.equal(shouldCancelCountdown("countdown", true), false);
+  assert.equal(shouldCancelCountdown("waiting", false), false);
+  assert.equal(shouldCancelCountdown("playing", false), false);
 });
