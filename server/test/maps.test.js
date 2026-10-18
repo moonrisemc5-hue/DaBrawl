@@ -38,3 +38,15 @@ test("only interior solid wall tiles can be destroyed and snapshots can replay t
   assert.equal(removeArenaWall(arena, 0, 0), false);
   assert.equal(removeArenaWall(arena, 2, 11), false);
 });
+
+import { traceKameBeam } from "../maps.js";
+test("a charged beam stops at walls unless fully charged, then breaks interior walls", () => {
+  const arena = createArena("knockout");
+  const x = 1.5 * TILE_SIZE, y = 1.5 * TILE_SIZE;
+  const normal = traceKameBeam(arena, x, y, 0, 0.5);
+  assert.ok(normal.length < 300 + 0.5 * 260);
+  const fullArena = createArena("knockout");
+  const full = traceKameBeam(fullArena, x, y, 0, 1);
+  assert.equal(full.length, 560);
+  assert.ok(fullArena.destroyedWalls.length > 0);
+});

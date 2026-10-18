@@ -66,3 +66,9 @@ test("non-Saiyan players cannot request Saiyan form progression", () => {
   assert.equal(getNextSaiyanForm({ brawler: "shachi", form: 0 }), null);
   assert.equal(getNextSaiyanForm(null), null);
 });
+
+test("Saiyan form stats include browser-aligned Kame beam damage scaling", () => {
+  assert.equal(getBrawlerStats({ brawler: "saiyan", form: 0 }).beamDamageStart, 700);
+  assert.equal(getBrawlerStats({ brawler: "saiyan", form: 1 }).beamDamageMax, 3200);
+  assert.equal(getBrawlerStats({ brawler: "saiyan", form: 5 }).beamDamageMax, 5700);
+});
