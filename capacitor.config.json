@@ -1,0 +1,11 @@
+{
+  "appId": "com.moonrise.dabrawl",
+  "appName": "DaBrawl",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
