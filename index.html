@@ -990,7 +990,7 @@ function gadget(p){
         p.dodgeFx = Math.max(0, p.dodgeFx-dt); p.autoAimTimer = Math.max(0, (p.autoAimTimer||0)-dt);
         if(p.muiCharging>0) p.muiCharging-=dt;
         if(!p.alive) p.dt+=dt;
-        if(gameMode==='duo'&&!isTestMode&&!networkMode&&!p.alive&&p.respawnPending&&p.dt>=10){
+        if(gameMode==='duo'&&!isTestMode&&p===me&&!p.alive&&p.respawnPending&&p.dt>=10){
           const mate=P.find(q=>q!==p&&q.t===p.t&&q.alive);
           if(mate){
             const spots=[[0,-76],[76,0],[0,76],[-76,0]];let pos=null;
@@ -1093,7 +1093,7 @@ function gadget(p){
           if(gameMode == 'showdown' || gameMode == 'duel' || gameMode === 'duo'){
             const aliveCount = P.filter(p=>p.alive).length;
             const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
-            if(gameMode==='duo' ? aliveTeams.filter(team=>P.some(p=>p.t===team&&p.alive)).length<=1 && !(!networkMode&&P.some(p=>!p.alive&&p.respawnPending&&P.some(q=>q!==p&&q.t===p.t&&q.alive))) : (gameMode==='showdown' ? aliveCount<=1 : (aliveCount<=1 || !me.alive))){
+            if(gameMode==='duo' ? aliveTeams.filter(team=>P.some(p=>p.t===team&&p.alive)).length<=1 && !(P.some(p=>!p.alive&&p.respawnPending&&P.some(q=>q!==p&&q.t===p.t&&q.alive))) : (gameMode==='showdown' ? aliveCount<=1 : (aliveCount<=1 || !me.alive))){
               const win = gameMode==='duo' ? aliveTeams[0]===me.t : me.alive && aliveCount==1;
               if(gameMode==='duel'){
                 const winnerTeam=win?me.t:(me.t===0?1:0);
@@ -1864,7 +1864,7 @@ function gadget(p){
       getLocalState(){
         if(!me) return null;
         const p=me;
-        return {id:p.netId,t:p.t,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my};
+        return {id:p.netId,t:p.t,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my,shieldTimer:p.shieldTimer||0};
       },
       getNetworkStates(){
         const pack=p=>({id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my});
@@ -1884,7 +1884,7 @@ function gadget(p){
         const maxSpeed=900, speed=Math.hypot(p.netVx,p.netVy);
         if(speed>maxSpeed){p.netVx=p.netVx/speed*maxSpeed;p.netVy=p.netVy/speed*maxSpeed;}
         p.netTarget = {x:nx,y:ny,a:state.a ?? p.a}; p.netTargetAt=now;
-        for(const k of ['hp','mh','alive','sc','am','cd','gcd','kcd','tf','tfn','form','chg','holdT','hw','muiCharging','burst','bt','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my']) if(state[k]!==undefined) p[k]=state[k];
+        for(const k of ['hp','mh','alive','sc','am','cd','gcd','kcd','tf','tfn','form','chg','holdT','hw','muiCharging','burst','bt','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my','shieldTimer']) if(state[k]!==undefined) p[k]=state[k];
         if(p.b==='saiyan' && Number.isFinite(state.form)) p.k=Object.assign({},BR.saiyan,FM[state.form]||{});
         p.netLast=now;
       },
@@ -2203,7 +2203,7 @@ function gadget(p){
       $('modeBtn').title=room.host_id===user?.id?'Choose the party game mode':'Only the party leader chooses the game mode';
       el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready) ? 'inline-block':'none';
       status('Lobby connected · '+players.length+'/3 players · '+roomMode.toUpperCase()+'. Everyone must be ready to start.');
-      if(user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
+      if(user && room.host_id===user.id && players.length===3 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
         roomStartRequestedFor=room.id;
         void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
         setTimeout(()=>{if(!activeMatchId&&roomStartRequestedFor===room.id)roomStartRequestedFor=null;},5000);
