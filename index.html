@@ -634,7 +634,7 @@
       kuku: {nm:'KUKU', rarity:'COMMON', rarityCol:'#00c0ff', hp:7000, spd:135, pel:8, dmg:312.5, spr:.68, rng:230, bs:550, rel:1.6, sd:333.3, sp:12, ss:.72, sr:340, w:140, z:2.5, cm:0.6, cls:'DAMAGE DEALER', atkNm:'2500 DMG', supNm:'WALL BREAKER', info:'Kuku fires 8 rapid buckshot pellets!'},
       shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:8000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2000, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
       saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'FIGHTER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'},
-      deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b86b3d', hp:7600, spd:138, pel:1, dmg:2125, spr:0, rng:300, bs:430, rel:1.25, sd:2750, sr:110, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'LOBbed BEER', supNm:'BEER BARRAGE', info:'Lobs beer that leaves a damaging and healing puddle!'}
+      deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b86b3d', hp:7600, spd:138, pel:1, dmg:708, spr:0, rng:300, bs:430, rel:1.6, sd:917, sr:110, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'LOBbed BEER', supNm:'BEER BARRAGE', info:'Lobs beer that leaves a damaging and healing puddle!'}
     };
     const FM = [
       {},
@@ -988,7 +988,7 @@
       if(G.ph!='play'||!p.alive||p.am<1||p.cd>0||p.lp||p.k.sy||p.tf>0) return;
       if(p.b==='deges'){const target=degesAimTarget(p,300);p.a=target.angle;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',target.angle,{targetX:target.x,targetY:target.y,beerRange:target.range});}
       else if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',p.a);
-      fire(p,0);p.cd=p.b==='deges'?.55:.38;
+      fire(p,0);p.cd=p.b==='deges'? .75:.38;
     }
     function sup(p){
       if(G.ph!='play'||!p.alive||p.sc<1||p.tf>0) return;
@@ -1010,7 +1010,7 @@
       K=p.k; if(s&&K.lg){ leap(p,0); return; }
       if(p.b==='deges'){
         const big=!!s,maxRange=big?330:300,speed=big?300:430,target=degesAimTarget(p,maxRange),a=target.angle,range=target.range;
-        B.push({x:p.x+Math.cos(a)*24,y:p.y+Math.sin(a)*24,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,r:range,flightRange:range,flightT:0,flightDuration:range/speed,arcHeight:big?105:82,targetX:target.x,targetY:target.y,d:big?2750:2125,t:p.t,o:p,s:big,z:big?15:9,col:'#d99a42',beer:true,heal:big?3750:2250,splashRadius:big?110:72,superBeer:big,remoteVisual:networkMode&&p!==me});
+        B.push({x:p.x+Math.cos(a)*24,y:p.y+Math.sin(a)*24,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,r:range,flightRange:range,flightT:0,flightDuration:range/speed,arcHeight:big?105:82,targetX:target.x,targetY:target.y,d:big?917:708,t:p.t,o:p,s:big,z:big?15:9,col:'#d99a42',beer:true,heal:big?3750:2250,splashRadius:big?110:72,superBeer:big,remoteVisual:networkMode&&p!==me});
         p.remoteBeerTarget=null;
         if(!big)p.am--; else p.sc=0;
         p.rec=.14; puff(p.x+Math.cos(a)*30,p.y+Math.sin(a)*30,5,'#d99a42',.5); beep(big?180:320,.12,.08,'triangle',120); return;
@@ -1062,7 +1062,7 @@ function gadget(p){
         return;
       }
       if(p.b==='deges'){
-        const a=p.a; B.push({x:p.x+Math.cos(a)*24,y:p.y+Math.sin(a)*24,vx:Math.cos(a)*560,vy:Math.sin(a)*560,r:330,d:3125,t:p.t,o:p,s:false,z:5,col:'#b88758',cigar:true,splashRadius:34});
+        const a=p.a; B.push({x:p.x+Math.cos(a)*24,y:p.y+Math.sin(a)*24,vx:Math.cos(a)*560,vy:Math.sin(a)*560,r:330,d:2000,t:p.t,o:p,s:false,z:5,col:'#b88758',cigar:true,splashRadius:34});
         p.gcd=10; shake=Math.max(shake,3); puff(p.x+Math.cos(a)*26,p.y+Math.sin(a)*26,3,'#c6a27a',.45); beep(220,.14,.06,'triangle',-50); return;
       }
       if(p.k.lg){ if(asteroid(p)) p.gcd=10; return; }
@@ -1848,6 +1848,11 @@ function gadget(p){
         g.fillStyle='#fff7df';g.strokeStyle='#713c2b';g.lineWidth=1.8;g.beginPath();g.moveTo(-7,0);g.quadraticCurveTo(0,8,7,0);g.quadraticCurveTo(0,3,-7,0);g.fill();g.stroke();
         g.fillStyle='#f19b84';g.globalAlpha=.65;g.beginPath();g.ellipse(-10,-4,3,2,0,0,Math.PI*2);g.ellipse(10,-4,3,2,0,0,Math.PI*2);g.fill();g.globalAlpha=1;
         g.fillStyle='#143b30';g.strokeStyle='#0a211b';g.lineWidth=2;g.beginPath();g.moveTo(-16,12);g.lineTo(-10,6);g.lineTo(0,13);g.lineTo(10,6);g.lineTo(16,12);g.lineTo(17,23);g.lineTo(-17,23);g.closePath();g.fill();g.stroke();
+        // Glossy beer drips hanging from the brim and armor for a deliberately drippy silhouette.
+        g.fillStyle='#f3c85b';g.strokeStyle='#9a6826';g.lineWidth=1.2;g.beginPath();g.moveTo(-13,-19);g.lineTo(-8,-19);g.lineTo(-8,-14);g.quadraticCurveTo(-8,-11,-10.5,-11);g.quadraticCurveTo(-13,-11,-13,-14);g.closePath();g.fill();g.stroke();
+        g.beginPath();g.moveTo(5,-19);g.lineTo(10,-19);g.lineTo(10,-12);g.quadraticCurveTo(10,-9,7.5,-9);g.quadraticCurveTo(5,-9,5,-12);g.closePath();g.fill();g.stroke();
+        g.beginPath();g.moveTo(-15,13);g.lineTo(-10,13);g.lineTo(-10,18);g.quadraticCurveTo(-10,21,-12.5,21);g.quadraticCurveTo(-15,21,-15,18);g.closePath();g.fill();g.stroke();
+        g.beginPath();g.moveTo(10,13);g.lineTo(15,13);g.lineTo(15,17);g.quadraticCurveTo(15,20,12.5,20);g.quadraticCurveTo(10,20,10,17);g.closePath();g.fill();g.stroke();
         circ(-5,17,1.8,'#f6c453');circ(5,17,1.8,'#f6c453');
         g.save();g.translate(Math.cos(p.a)*17,Math.sin(p.a)*15+4);g.rotate(p.a);g.fillStyle='#b9782f';g.strokeStyle='#4b2d19';g.lineWidth=2.2;g.beginPath();g.roundRect(-4,-7,9,18,3);g.fill();g.stroke();g.fillStyle='#e6d7a4';g.fillRect(-2.5,-11,6,5);g.fillStyle='#f7d46c';g.fillRect(-2.5,0,6,5);g.restore();
       }
