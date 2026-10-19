@@ -614,7 +614,7 @@
           const side=editKey==='m'?'m':'a';
           const k=editKey, nx=Math.max(.04,Math.min(.96,pos.x/W)), ny=Math.max(.08,Math.min(.92,pos.y/H));
           stickPositions[k]={x:nx,y:ny};saveStickPositions();applyControlPositions();
-          ts[k].ox=pos.x;ts[k].oy=pos.y;ts[k].x=pos.x;ts[k].y=pos.y;continue;
+          if(k==='m'||k==='a'){ts[k].ox=pos.x;ts[k].oy=pos.y;ts[k].x=pos.x;ts[k].y=pos.y;}continue;
         }
         if(!ts[side].active){
           const origin=stickOrigin(side),ox=origin.x,oy=origin.y;
