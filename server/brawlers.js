@@ -13,6 +13,7 @@ export const BRAWLERS = Object.freeze({
   kuku: Object.freeze({ hp: 7000, speed: 135, damage: 312.5, range: 230, cooldown: 1600, spread: 0.68, pellets: 8, bulletSpeed: 550, superDamage: 333.3, superRange: 340, superKind: "projectile" }),
   shachi: Object.freeze({ hp: 8000, speed: 145, damage: 1000, range: 160, cooldown: 1200, spread: 0.20, pellets: 2, bulletSpeed: 480, superDamage: 2500, superRange: 120, superKind: "slam" }),
   saiyan: Object.freeze({ hp: 6500, speed: 150, damage: 400, range: 65, cooldown: 1200, spread: 0, pellets: 1, bulletSpeed: 600, superDamage: 0, superRange: 0, superKind: "transform", beamDamageStart: 700, beamDamageMax: 2200, forms: SAIYAN_FORMS }),
+  deges: Object.freeze({ hp: 7600, speed: 138, damage: 850, range: 300, cooldown: 1050, spread: 0, pellets: 1, bulletSpeed: 430, superDamage: 1100, superRange: 330, superKind: "projectile", heal: 900, gadgetDamage: 1250, gadgetRange: 330, gadgetSpeed: 560 }),
   default: Object.freeze({ hp: 7000, speed: 135, damage: 312.5, range: 230, cooldown: 1600, spread: 0.68, pellets: 8, bulletSpeed: 550, superDamage: 333.3, superRange: 340, superKind: "projectile" }),
 });
 

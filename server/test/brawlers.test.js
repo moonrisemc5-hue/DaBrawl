@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "../brawlers.js";
 
 test("all browser brawlers have explicit server rules", () => {
-  for (const id of ["kuku", "shachi", "saiyan"]) assert.ok(BRAWLERS[id], `Missing ${id}`);
+  for (const id of ["kuku", "shachi", "saiyan", "deges"]) assert.ok(BRAWLERS[id], `Missing ${id}`);
 });
 
 test("Kuku's server baseline matches the browser balance", () => {
@@ -71,4 +71,14 @@ test("Saiyan form stats include browser-aligned Kame beam damage scaling", () =>
   assert.equal(getBrawlerStats({ brawler: "saiyan", form: 0 }).beamDamageStart, 700);
   assert.equal(getBrawlerStats({ brawler: "saiyan", form: 1 }).beamDamageMax, 3200);
   assert.equal(getBrawlerStats({ brawler: "saiyan", form: 5 }).beamDamageMax, 5700);
+});
+
+
+test("Degeš has a support bottle attack and cigar gadget stats", () => {
+  assert.equal(BRAWLERS.deges.hp, 7600);
+  assert.equal(BRAWLERS.deges.damage, 850);
+  assert.equal(BRAWLERS.deges.heal, 900);
+  assert.equal(BRAWLERS.deges.gadgetDamage, 1250);
+  assert.equal(BRAWLERS.deges.gadgetSpeed, 560);
+  assert.equal(getBrawlerStats({ brawler: "deges" }).superKind, "projectile");
 });

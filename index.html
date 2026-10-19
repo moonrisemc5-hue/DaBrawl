@@ -633,7 +633,8 @@
     const BR = {
       kuku: {nm:'KUKU', rarity:'COMMON', rarityCol:'#00c0ff', hp:7000, spd:135, pel:8, dmg:312.5, spr:.68, rng:230, bs:550, rel:1.6, sd:333.3, sp:12, ss:.72, sr:340, w:140, z:2.5, cm:0.6, cls:'DAMAGE DEALER', atkNm:'2500 DMG', supNm:'WALL BREAKER', info:'Kuku fires 8 rapid buckshot pellets!'},
       shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:8000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2000, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
-      saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'FIGHTER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'}
+      saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'FIGHTER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'},
+      deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b86b3d', hp:7600, spd:138, pel:1, dmg:850, spr:0, rng:300, bs:430, rel:1.05, sd:0, sr:0, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'BEER BOTTLE', supNm:'BOTTLE BARRAGE', info:'Throws beer bottles that hurt enemies and heal teammates!'}
     };
     const FM = [
       {},
@@ -978,6 +979,11 @@
     function fire(p,s){
       if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet) window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,super:false});
       K=p.k; if(s&&K.lg){ leap(p,0); return; }
+      if(p.b==='deges'&&!s){
+        const a=p.a;
+        B.push({x:p.x+Math.cos(a)*22,y:p.y+Math.sin(a)*22,vx:Math.cos(a)*K.bs,vy:Math.sin(a)*K.bs,r:K.rng,d:K.dmg,t:p.t,o:p,s:false,z:5,col:'#d99a42',beer:true,heal:900});
+        p.am--; p.rec=.14; puff(p.x+Math.cos(a)*28,p.y+Math.sin(a)*28,5,'#d99a42',.5); beep(320,.12,.08,'triangle',120); return;
+      }
       const n = s?K.sp:K.pel, sp = s?K.ss:K.spr;
       for(let i=0;i<n;i++){
         const a = p.a + (i/(n-1)-.5)*sp + (Math.random()-.5)*.04;
@@ -1023,6 +1029,10 @@ function gadget(p){
         if(p.form>=4){ p.dodge = p.form==5?5:3; p.gcd = p.form==5?15:13; playInstantTransmissionSound(); return; }
         else if(tele(p)) p.gcd=10;
         return;
+      }
+      if(p.b==='deges'){
+        const a=p.a; B.push({x:p.x+Math.cos(a)*24,y:p.y+Math.sin(a)*24,vx:Math.cos(a)*560,vy:Math.sin(a)*560,r:330,d:1250,t:p.t,o:p,s:false,z:5,col:'#b88758',cigar:true});
+        p.gcd=10; shake=Math.max(shake,3); puff(p.x+Math.cos(a)*26,p.y+Math.sin(a)*26,3,'#c6a27a',.45); beep(220,.14,.06,'triangle',-50); return;
       }
       if(p.k.lg){ if(asteroid(p)) p.gcd=10; return; }
       p.gcd=10; p.dash=.22; p.dd=(p.mx||p.my)?Math.atan2(p.my,p.mx):p.a; puff(p.x,p.y,8,'#fff'); beep(300,.2,.1,'triangle',400);
@@ -1223,7 +1233,12 @@ function gadget(p){
             else if(b.bn>0 && tile(b.x,b.y)=='#'){ b.x-=b.vx*k; b.y-=b.vy*k; if(tile(b.x+b.vx*k,b.y)=='#') b.vx=-b.vx; else b.vy=-b.vy; b.bn--; }
             else if(tile(b.x,b.y)=='#'){ dead=true; if(b.s && ti>0 && tj>0 && ti<MW-1 && tj<MH-1){ M[tj][ti]='.'; if(networkMode && b.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
             else if(networkMode && b.o?.netRemote){ /* remote owner's browser resolves hits */ }
-          else for(const e of P){ if(e!==b.o && e.alive && !e.lp && !(e.tf>0) && (gameMode==='showdown'||(gameMode==='duo'&&e.t!==b.t)||(gameMode!=='showdown'&&gameMode!=='duo'&&e.t!==b.t)) && Math.hypot(e.x-b.x,e.y-b.y)<20+(b.z>9?b.z-9:0)){ dmg(e,b); dead=true; break; } }
+          else for(const e of P){ if(e!==b.o && e.alive && !e.lp && !(e.tf>0) && Math.hypot(e.x-b.x,e.y-b.y)<20+(b.z>9?b.z-9:0)){
+            const sameTeam=e.t===b.t;
+            if(b.beer&&sameTeam){ const healed=Math.min(e.mh-e.hp,b.heal||900); if(healed>0){e.hp+=healed; puff(e.x,e.y,5,'#7df9a5',.65); if(e===me) beep(620,.12,.08,'sine',100);} }
+            else if(!sameTeam && e.t!==b.t) dmg(e,b);
+            dead=true; break;
+          } }
           }
           if(dead) B.splice(i,1);
         }
