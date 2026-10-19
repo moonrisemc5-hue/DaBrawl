@@ -1505,7 +1505,13 @@ function gadget(p){
     function ki(p,ch){
       K=p.k; const c = Math.cos(p.a), s = Math.sin(p.a), startDmg = K.kd||1600, maxDmg = K.kmax||2600, dCalculated = startDmg + ch*(maxDmg - startDmg);
       let kiCol = K.aura; if(p.form === 2) kiCol = '#ff3a3a'; else if(p.form === 3) kiCol = '#38bdf8';
-      B.push({x:p.x+c*24, y:p.y+s*24, vx:c*K.bs, vy:s*K.bs, r:K.rng+ch*140, d:dCalculated, t:p.t, o:p, s:0, z:12+ch*16, col:kiCol, bn:3+(ch>.6?1:0)});
+      const projectile={x:p.x+c*24,y:p.y+s*24,vx:c*K.bs,vy:s*K.bs,r:K.rng+ch*140,d:dCalculated,t:p.t,o:p,s:0,z:12+ch*16,col:kiCol,bn:3+(ch>.6?1:0)};
+      B.push(projectile);
+      // Charged Saiyan ki blasts are released through ki()/bigK(), not fire().
+      // Broadcast their projectile geometry so every other client can render the shot.
+      if(networkMode && p===me && ch>0 && window.DaBrawlNet){
+        window.DaBrawlNet.sendAction('charged-ki',p.a,{x:projectile.x,y:projectile.y,vx:projectile.vx,vy:projectile.vy,r:projectile.r,z:projectile.z,col:projectile.col,bn:projectile.bn});
+      }
       p.rec=.1; if(ch>0) shake = Math.max(shake, 5+ch*6); puff(p.x+c*28, p.y+s*28, 4, kiCol, .6); playKameSound();
     }
     function bigK(p,ch){ if(p.am<1||p.kcd>0) return; p.am--; ki(p,ch); }
@@ -2178,6 +2184,14 @@ function gadget(p){
         }
         if(!p.alive) return;
         if(Number.isFinite(msg.angle)) p.a=msg.angle;
+        if(msg.action==='charged-ki'){
+          const x=Number(msg.x),y=Number(msg.y),vx=Number(msg.vx),vy=Number(msg.vy),r=Math.max(0,Number(msg.r)||0);
+          if([x,y,vx,vy].every(Number.isFinite)&&r>0){
+            // Remote projectile is visual-only here; its owner resolves hits authoritatively.
+            B.push({x,y,vx,vy,r,d:0,t:p.t,o:p,s:0,z:Math.max(4,Number(msg.z)||12),col:msg.col||p.k?.aura||'#4cf',bn:Math.max(0,Math.min(8,Number(msg.bn)||0)),remoteVisual:true});
+          }
+          return;
+        }
         if(msg.action==='kame'){
           p.a=Number.isFinite(msg.angle)?msg.angle:p.a;
           const charge=Math.max(0,Math.min(1,Number(msg.charge)||0));
@@ -2459,10 +2473,29 @@ function gadget(p){
       $('modeBtn').title=room.host_id===user?.id?'Choose the party game mode':'Only the party leader chooses the game mode';
       el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready) ? 'inline-block':'none';
       status('Lobby connected · '+players.length+'/3 players · '+roomMode.toUpperCase()+'. Everyone must be ready to start.');
-      if(user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
+      const roomReadyToStart=!!user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready);
+      if(!roomReadyToStart && roomStartRequestedFor===room.id){
+        if(roomCountdownTimer){clearInterval(roomCountdownTimer);roomCountdownTimer=null;}
+        roomStartRequestedFor=null;
+      }
+      if(roomReadyToStart && roomStartRequestedFor!==room.id){
         roomStartRequestedFor=room.id;
-        void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
-        setTimeout(()=>{if(!activeMatchId&&roomStartRequestedFor===room.id)roomStartRequestedFor=null;},5000);
+        const target=roomMode==='duel'?2:(roomMode==='showdown'||roomMode==='duo')?10:6;
+        const countdownEnds=Date.now()+10000;
+        const updateRoomCountdown=()=>{
+          if(!currentRoom||currentRoom.id!==room.id||roomStartRequestedFor!==room.id){
+            if(roomCountdownTimer){clearInterval(roomCountdownTimer);roomCountdownTimer=null;}
+            return;
+          }
+          const remaining=Math.max(0,Math.ceil((countdownEnds-Date.now())/1000));
+          status('PLAYERS JOINED: '+Math.min(target,players.length)+'/'+target+' · '+(remaining?'STARTING IN '+remaining+'s':'STARTING MATCH')+' — bots fill empty slots.');
+          if(remaining<=0){
+            if(roomCountdownTimer){clearInterval(roomCountdownTimer);roomCountdownTimer=null;}
+            void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
+          }
+        };
+        updateRoomCountdown();
+        roomCountdownTimer=setInterval(updateRoomCountdown,250);
       }
     }
     async function createRoom(){
