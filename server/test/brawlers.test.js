@@ -76,12 +76,12 @@ test("Saiyan form stats include browser-aligned Kame beam damage scaling", () =>
 
 test("Degeš has a mouse-aimed lob, stronger support puddles, and cigar gadget stats", () => {
   assert.equal(BRAWLERS.deges.hp, 7600);
-  assert.equal(BRAWLERS.deges.damage, 2125);
-  assert.equal(BRAWLERS.deges.cooldown, 1250);
+  assert.equal(BRAWLERS.deges.damage, 708);
+  assert.equal(BRAWLERS.deges.cooldown, 1600);
   assert.equal(BRAWLERS.deges.heal, 2250);
-  assert.equal(BRAWLERS.deges.superDamage, 2750);
+  assert.equal(BRAWLERS.deges.superDamage, 917);
   assert.equal(BRAWLERS.deges.superHeal, 3750);
-  assert.equal(BRAWLERS.deges.gadgetDamage, 3125);
+  assert.equal(BRAWLERS.deges.gadgetDamage, 2000);
   assert.equal(BRAWLERS.deges.gadgetSpeed, 560);
   assert.equal(getBrawlerStats({ brawler: "deges" }).superKind, "projectile");
 });
