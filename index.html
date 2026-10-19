@@ -1234,7 +1234,7 @@ function gadget(p){
             else if(tile(b.x,b.y)=='#'){ dead=true; if(b.s && ti>0 && tj>0 && ti<MW-1 && tj<MH-1){ M[tj][ti]='.'; if(networkMode && b.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
             else if(networkMode && b.o?.netRemote){ /* remote owner's browser resolves hits */ }
           else for(const e of P){ if(e!==b.o && e.alive && !e.lp && !(e.tf>0) && Math.hypot(e.x-b.x,e.y-b.y)<20+(b.z>9?b.z-9:0)){
-            const sameTeam=(gameMode==='duo'||gameMode==='showdown')&&e.t===b.t;
+            const sameTeam=e.t===b.t;
             if(b.beer&&sameTeam){ const healed=Math.min(e.mh-e.hp,b.heal||900); if(healed>0){e.hp+=healed; puff(e.x,e.y,5,'#7df9a5',.65); if(e===me) beep(620,.12,.08,'sine',100);} }
             else if(!sameTeam && e.t!==b.t) dmg(e,b);
             dead=true; break;
