@@ -577,7 +577,7 @@
     const hitW = (x,y,r) => solid(x-r,y-r) || solid(x+r,y-r) || solid(x-r,y+r) || solid(x+r,y+r);
     const BR = {
       kuku: {nm:'KUKU', rarity:'COMMON', rarityCol:'#00c0ff', hp:7000, spd:135, pel:8, dmg:312.5, spr:.68, rng:230, bs:550, rel:1.6, sd:333.3, sp:12, ss:.72, sr:340, w:140, z:2.5, cm:0.6, cls:'DAMAGE DEALER', atkNm:'2500 DMG', supNm:'WALL BREAKER', info:'Kuku fires 8 rapid buckshot pellets!'},
-      shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:8000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2500, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
+      shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:8000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2000, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
       saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'FIGHTER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'}
     };
     const FM = [
@@ -1372,6 +1372,15 @@ function gadget(p){
     }
     function impact(m){
       shake=12; F.push({k:'r', x:m.x, y:m.y, vx:0, vy:0, l:.45, m:.45, rad:80}); puff(m.x, m.y, 14, '#ffb347', 1.6); beep(60,.4,.3,'sawtooth',-20);
+      // Shachi's Meteor gadget cracks walls around the impact on every client.
+      const ci=Math.floor(m.x/T), cj=Math.floor(m.y/T);
+      for(let j=cj-3;j<=cj+3;j++) for(let i=ci-3;i<=ci+3;i++){
+        if(i<=0||j<=0||i>=MW-1||j>=MH-1||M[j]?.[i]!=='#') continue;
+        const wx=(i+.5)*T, wy=(j+.5)*T;
+        if(Math.hypot(wx-m.x,wy-m.y)>80) continue;
+        M[j][i]='.'; puff(wx,wy,6,'#8a5a2b',1.2);
+        if(networkMode && m.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i,j});
+      }
       if(networkMode && m.o?.netRemote) return;
       for(const e of P) if(e!==m.o && e.alive && !e.lp && (gameMode==='showdown'||(gameMode==='duo'&&e.t!==m.o.t)||(gameMode!=='showdown'&&gameMode!=='duo'&&e.t!==m.o.t))){ const dx=e.x-m.x, dy=e.y-m.y, d=Math.hypot(dx,dy); if(d<80){ dmg(e, {d:2500, o:m.o, s:1, vx:dx||1, vy:dy}); mv(e, dx/(d||1)*25, dy/(d||1)*25); } }
     }
@@ -1404,6 +1413,17 @@ function gadget(p){
       while(len<mx_){
         if(!isMax && tile(p.x+c*len, p.y+s*len)=='#') break;
         len+=8;
+      }
+      // Fully charged Kamehameha destroys each wall in its path. Every client
+      // resolves the same line, while the firing client broadcasts tile changes.
+      if(isMax){
+        const broken=new Set();
+        for(let d=0;d<len;d+=8){
+          const ti=Math.floor((p.x+c*d)/T), tj=Math.floor((p.y+s*d)/T), key=ti+','+tj;
+          if(broken.has(key)||ti<=0||tj<=0||ti>=MW-1||tj>=MH-1||M[tj]?.[ti]!=='#') continue;
+          broken.add(key); M[tj][ti]='.'; puff((ti+.5)*T,(tj+.5)*T,6,'#8a5a2b',1.2);
+          if(networkMode && p===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj});
+        }
       }
       p.chg=0; p.kcd = (p.form<=1?3:5); p.burst=0;
       const startDmg = K.kd||700, maxDmg = K.kmax||2200, actualDmg = startDmg + ch*(maxDmg - startDmg);
