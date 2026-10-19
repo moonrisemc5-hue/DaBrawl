@@ -150,7 +150,7 @@ function doFire(room, p, isSuper = false) {
     const angle = p.aim;
     room.projectiles.push({ id: nextProjectileId++, ownerId: p.id, team: p.team,
       x: p.x + Math.cos(angle) * 18, y: p.y + Math.sin(angle) * 18, angle,
-      speed: stats.bulletSpeed, damage: isSuper ? stats.superDamage : stats.damage,
+      speed: isSuper ? stats.superBulletSpeed : stats.bulletSpeed, damage: isSuper ? stats.superDamage : stats.damage,
       heal: isSuper ? 1500 : 900, friendlySupport: true, splashRadius: isSuper ? 88 : 58, superBeer: isSuper, range: isSuper ? stats.superRange : stats.range,
       traveled: 0, super: isSuper });
     p.meter = clamp(p.meter + (isSuper ? 0 : 8), 0, 100);
