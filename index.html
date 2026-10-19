@@ -710,14 +710,14 @@
     $('sup').style.touchAction='none';$('gad').style.touchAction='manipulation';
     let superPointer=null,superStart=null,superCurrent=null,superDragged=false;
     function useSuperFromGesture(){
-      if(scr!=='game'||!me||me.sc<1||me.tf>0||(me.k.sy&&me.form<5))return;
+      if(scr!=='game'||!me||me.sc<1||me.tf>0)return;
       if(superDragged&&superStart&&superCurrent)me.a=Math.atan2(superCurrent.y-superStart.y,superCurrent.x-superStart.x);
       else aimAtNearestEnemy(me);
       sup(me);
     }
     $('sup').addEventListener('pointerdown',e=>{
       e.preventDefault();e.stopPropagation();
-      if(scr!=='game'||!me||me.sc<1||me.tf>0|| (me.k.sy&&me.form<5))return;
+      if(scr!=='game'||!me||me.sc<1||me.tf>0)return;
       superPointer=e.pointerId;superStart={x:e.clientX,y:e.clientY};superCurrent={...superStart};superDragged=false;
       try{$('sup').setPointerCapture(e.pointerId);}catch(_){}
     });
