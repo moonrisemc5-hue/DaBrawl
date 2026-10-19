@@ -2430,7 +2430,6 @@ function gadget(p){
             // 10-second window instead of filling empty slots with bots.
             if(humansNow.length<target && requireHumanMatch){
               if(Date.now()>=deadline){
-                queueStartedAt=Date.now();
                 $('mmTxt').textContent='STILL SEARCHING: '+Math.min(target,humansNow.length)+'/'+target;
                 $('mmHint').textContent='No bots for signed-in players. Still searching for real players…';
                 deadline=Date.now()+10000;
