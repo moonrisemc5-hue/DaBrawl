@@ -2296,12 +2296,12 @@ function gadget(p){
       const roster=players.map((p,i)=>({id:p.user_id,name:live.find(x=>x.userId===p.user_id)?.name||(p.user_id===user.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Player '+p.player_slot),brawler:p.character_id||'kuku',bot:false,team:(mode==='knockout'||mode==='duo')?0:(mode==='showdown'?i:i%2)}));
       const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax'];
       const botBrawlers=['kuku','shachi','saiyan'];
-      const target=mode==='knockout'?6:(mode==='showdown'||mode==='duo')?10:2;
+      const target=mode==='knockout'?6:mode==='showdown'?10:mode==='duo'?(players.length===3?9:10):2;
       let seed=0; for(const ch of String(currentRoom.id)) seed=(seed*31+ch.charCodeAt(0))>>>0;
       const seeded=()=>{seed=(seed*1664525+1013904223)>>>0;return seed;};
       while(roster.length<target){
         const i=roster.length, botIndex=i-players.length;
-        const team=mode==='knockout'?(i<3?0:1):mode==='duo'?Math.floor(i/2):i;
+        const team=mode==='knockout'?(i<3?0:1):mode==='duo'?(players.length===3?Math.floor((i-players.length)/2)+1:Math.floor(i/2)):i;
         roster.push({id:'bot-'+currentRoom.id+'-'+i,name:botNames[botIndex%botNames.length]+' BOT',brawler:botBrawlers[seeded()%botBrawlers.length],bot:true,team});
       }
       const matchId='room-'+currentRoom.id+'-'+Date.now().toString(36);
