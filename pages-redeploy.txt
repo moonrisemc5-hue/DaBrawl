@@ -1,0 +1,1 @@
+Trigger a fresh GitHub Pages deployment after the github-pages environment protection settings were corrected.
