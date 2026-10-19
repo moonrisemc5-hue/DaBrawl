@@ -599,6 +599,7 @@
     function syncStickEditButton(){const b=$('stickEditBtn');if(!b)return;const visible=!!(isTestMode&&touch&&scr==='game');b.style.display=visible?'block':'none';b.textContent=stickEditMode?'DONE MOVING CONTROLS':'MOVE CONTROLS';b.style.background=stickEditMode?'#b45309':'#252b40';}
     $('stickEditBtn').addEventListener('click',()=>{stickEditMode=!stickEditMode;for(const k of ['m','a','s']){const p=stickOrigin(k);ts[k].ox=p.x;ts[k].oy=p.y;ts[k].x=p.x;ts[k].y=p.y;}syncStickEditButton();});
     function positionAbilityButtons(){for(const k of ['sup','gad']){const el=$(k);if(!el)continue;const p=stickOrigin(k);el.style.position='fixed';el.style.left=(p.x-30)+'px';el.style.top=(p.y-30)+'px';el.style.right='auto';el.style.bottom='auto';el.style.zIndex='80';el.style.touchAction='none';}}
+    for(const id of ['sup','gad']){const el=$(id);let dragId=null;if(!el)continue;el.addEventListener('pointerdown',e=>{if(!stickEditMode)return;e.preventDefault();e.stopImmediatePropagation();dragId=e.pointerId;try{el.setPointerCapture(e.pointerId);}catch(_){}},{capture:true});el.addEventListener('pointermove',e=>{if(!stickEditMode||dragId!==e.pointerId)return;e.preventDefault();const k=id,nx=Math.max(.04,Math.min(.96,e.clientX/innerWidth)),ny=Math.max(.08,Math.min(.92,e.clientY/innerHeight));stickPositions[k]={x:nx,y:ny};saveStickPositions();applyControlPositions();},{capture:true});const endDrag=e=>{if(dragId!==e.pointerId)return;dragId=null;saveStickPositions();};el.addEventListener('pointerup',endDrag,{capture:true});el.addEventListener('pointercancel',endDrag,{capture:true});}
     function applyControlPositions(){positionAbilityButtons();syncStickEditButton();}
     function initAccountControlPositions(){void loadStickPositionsAccount().then(applyControlPositions);}
     window.addEventListener('resize',applyControlPositions);
@@ -696,7 +697,7 @@
     }
     $('sup').addEventListener('pointerup',e=>finishSuperPointer(e,false));
     $('sup').addEventListener('pointercancel',e=>finishSuperPointer(e,true));
-    $('gad').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(scr==='game'&&me)gadget(me);});
+    $('gad').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(scr==='game'&&me&&!stickEditMode)gadget(me);});
     for(const button of [$('sup'),$('gad')]){
       button.addEventListener('keydown',e=>{
         if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();
