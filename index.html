@@ -398,7 +398,7 @@
       if(s==='game') touch = controlMode==='mobile';
       document.body.classList.toggle('mobile-controls',controlMode==='mobile' && s==='game');
       document.querySelectorAll('.scr').forEach(e => {const active=e.id===s;e.classList.toggle('on',active);e.style.pointerEvents=active?'auto':'none';});
-      $('leaveBtn').style.display = (s == 'game' && (isTestMode || (gameMode==='showdown' && me && !me.alive && G?.ph==='play'))) ? 'block' : 'none';
+      $('leaveBtn').style.display = (s == 'game' && (isTestMode || (gameMode==='showdown' && me && !me.alive && (G?.ph==='play'||G?.ph==='end')))) ? 'block' : 'none';
       $('hud').classList.toggle('on', s == 'game');
       cv.style.pointerEvents = (s == 'game') ? 'auto' : 'none';
       if(s == 'menu'){ updateMenuUI(); startMenuMusic(); try { playMenuShowcase(selB, false); } catch(err) { console.warn('Menu showcase restart failed:', err); } } else { stopMenuMusic(); }
@@ -838,13 +838,13 @@
       });
       button.addEventListener('contextmenu',e=>e.preventDefault());
     }
-    $('leaveBtn').onclick = () => { if(scr==='game' && gameMode==='showdown' && me && !me.alive && G?.ph==='play'){ finish(); return; } show('menu'); isTestMode = false; };
+    $('leaveBtn').onclick = () => { if(scr==='game' && gameMode==='showdown' && me && !me.alive && (G?.ph==='play'||G?.ph==='end')){ finish(); return; } show('menu'); isTestMode = false; };
     $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ if(isNetworkHost) void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
     $('home').onclick = () => { try{localStorage.removeItem('dabrawl_active_match');}catch(_){} beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
     $('play').onclick = () => {
       if(window.DaBrawlNet?.isInParty()){window.DaBrawlNet.toggleReady?.();return;}
       beep(500,.1);
-      if(gameMode==='duel'){startLoadingScreen(false);return;}
+      if(gameMode==='duel'){matchmake();return;}
       // Quickplay is the same for guests and signed-in players: everyone joins the
       // shared queue, real players can join for 10 seconds, then bots fill empty slots.
       matchmake();
@@ -876,10 +876,14 @@
       document.querySelectorAll('.mode-card').forEach(card=>{const active=card.dataset.mode===mode;card.style.borderColor=active?'#ffd21f':'#64748b';card.style.boxShadow=active?'0 0 0 2px #ffd21f':'none';});
     }
     $('modeBtn').onclick = () => {
-      if(window.DaBrawlNet?.isInParty?.()){ window.DaBrawlNet.changeRoomMode?.(); return; }
+      if(window.DaBrawlNet?.isInParty?.() && $('modeBtn').disabled){status('Only the party leader can choose the game mode.',true);return;}
       applyGameMode(gameMode);show('modePicker');beep(400,.1);
     };
-    document.querySelectorAll('.mode-card').forEach(card=>card.onclick=()=>{applyGameMode(card.dataset.mode);beep(500,.08);show('menu');});
+    document.querySelectorAll('.mode-card').forEach(card=>card.onclick=()=>{
+      const chosen=card.dataset.mode; beep(500,.08);
+      if(window.DaBrawlNet?.isInParty?.()){void window.DaBrawlNet.changeRoomMode?.(chosen);return;}
+      applyGameMode(chosen);show('menu');
+    });
     $('modePickerBack').onclick=()=>show('menu');
     $('bk2').onclick = () => { clearInterval(mmI); clearTimeout(mmTimeout); mmI=null; mmTimeout=null; if(window.DaBrawlNet) window.DaBrawlNet.cancelMatchmaking(); show('menu'); };
     function aimAtNearestEnemy(p){
@@ -1210,11 +1214,12 @@ function gadget(p){
       }
       $('rt').textContent = win ? 'VICTORY!' : 'DEFEAT'; $('rt').style.color = win ? '#ffd21f' : '#ff5a5a'; $('rd').textContent = (d>0?'+':'')+d+' 🏆';
       if(networkMode){
-        $('again').style.display=isNetworkHost?'':'none'; $('home').style.display=isNetworkHost?'':'none';
+        // Rematch stays host-only; every player can leave a completed match.
+        $('again').style.display=isNetworkHost?'':'none'; $('home').style.display=''; $('home').textContent='LEAVE MATCH';
         $('mmHint').textContent='';
         if(isNetworkHost && window.DaBrawlNet) void window.DaBrawlNet.announceMatchEnd(win);
-        if(!isNetworkHost){$('rt').textContent='MATCH OVER';$('rd').textContent='Waiting for the host…';$('home').style.display='none';}
-      } else { $('again').style.display=''; $('home').style.display=''; }
+        if(!isNetworkHost){$('rt').textContent='MATCH OVER';$('rd').textContent='Match ended. You can leave whenever you are ready.';}
+      } else { $('again').style.display=''; $('home').style.display=''; $('home').textContent='HOME'; }
       show('res');
     }
     function updateMenuUI(){
@@ -1398,7 +1403,6 @@ function gadget(p){
       K=p.k; let len=0; const c = Math.cos(p.a), s = Math.sin(p.a), mx_ = 300+ch*260, isMax = ch>=0.95;
       while(len<mx_){
         if(!isMax && tile(p.x+c*len, p.y+s*len)=='#') break;
-        if(isMax && tile(p.x+c*len, p.y+s*len)=='#'){ const ti=Math.floor((p.x+c*len)/T), tj=Math.floor((p.y+s*len)/T); if(ti>0&&tj>0&&ti<MW-1&&tj<MH-1){ M[tj][ti]='.'; if(networkMode && p===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); } }
         len+=8;
       }
       p.chg=0; p.kcd = (p.form<=1?3:5); p.burst=0;
@@ -2066,7 +2070,8 @@ function gadget(p){
         tr=Math.max(0,tr+d); bTrophies[selB]=Math.max(0,(bTrophies[selB]||0)+d); saveTrophies();
         $('rt').textContent=win?'VICTORY!':'DEFEAT'; $('rt').style.color=win?'#ffd21f':'#ff5a5a';
         $('rd').textContent=(d>0?'+':'')+d+' 🏆';
-        $('again').style.display='none'; $('home').style.display='none'; $('mmHint').textContent='';
+        $('again').style.display='none'; $('home').style.display=''; $('home').textContent='LEAVE MATCH'; $('mmHint').textContent='';
+        $('rd').textContent='Match ended. You can leave whenever you are ready.';
         show('res');
       },
       makeRemoteBot(id){
@@ -2553,7 +2558,8 @@ function gadget(p){
     async function hostLeaveMatch(){
       if(!isNetworkHost || !matchChannel) return;
       const ch=matchChannel;
-      await ch.send({type:'broadcast',event:'match-control',payload:{action:'leave',hostId:activeMatchHostId}});
+      // Only party teammates are auto-returned when their leader leaves; public quick-play players leave independently.
+      if(currentRoom) await ch.send({type:'broadcast',event:'match-control',payload:{action:'leave',hostId:activeMatchHostId}});
       // Clear the host's own ready flag as well; both friends can ready up again
       // without leaving/recreating the room.
       if(currentRoom && activeMatchLocalId){
@@ -2882,6 +2888,7 @@ function gadget(p){
       status('Party leader selected '+next.toUpperCase()+'.');
       await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
       await refreshRoom();
+      show('menu');
     }
     window.DaBrawlNet.toggleReady=toggleRoomReady;
     window.DaBrawlNet.changeRoomMode=changeRoomMode;
