@@ -151,7 +151,7 @@ function doFire(room, p, isSuper = false) {
     room.projectiles.push({ id: nextProjectileId++, ownerId: p.id, team: p.team,
       x: p.x + Math.cos(angle) * 18, y: p.y + Math.sin(angle) * 18, angle,
       speed: stats.bulletSpeed, damage: isSuper ? stats.superDamage : stats.damage,
-      heal: 900, friendlySupport: true, range: isSuper ? stats.superRange : stats.range,
+      heal: isSuper ? 1500 : 900, friendlySupport: true, splashRadius: isSuper ? 88 : 58, superBeer: isSuper, range: isSuper ? stats.superRange : stats.range,
       traveled: 0, super: isSuper });
     p.meter = clamp(p.meter + (isSuper ? 0 : 8), 0, 100);
     event(room, isSuper ? "super-fired" : "attack-fired", { playerId:p.id, aim:p.aim, kind:"beer-bottle" });
@@ -254,6 +254,25 @@ function stepRoom(room, dt) {
   const keep = [];
   for (const b of room.projectiles) {
     advanceProjectile(b, dt);
+    const splashProjectile = () => {
+      if (!b.friendlySupport && !b.cigar) return;
+      const radius = b.splashRadius || 0, owner = room.players.get(b.ownerId);
+      for (const target of room.players.values()) {
+        if (!target.alive || target.id === b.ownerId || Math.hypot(target.x-b.x,target.y-b.y) > radius) continue;
+        if (b.friendlySupport && target.team === b.team) {
+          const healed = Math.min(target.maxHp-target.hp, b.heal || 900);
+          if (healed > 0) { target.hp += healed; event(room,"heal",{projectileId:b.id,playerId:b.ownerId,targetId:target.id,amount:healed,hp:target.hp,splash:true}); }
+        } else if (target.team !== b.team) {
+          const damage = b.cigar ? b.damage : b.damage;
+          target.hp = Math.max(0,target.hp-damage);
+          target.meter = clamp(target.meter+12,0,100);
+          event(room,"hit",{projectileId:b.id,attackerId:b.ownerId,targetId:target.id,damage,hp:target.hp,splash:true,super:!!b.superBeer});
+          if(target.hp<=0){target.alive=false;cancelKameCharge(target);target.input={x:0,y:0};event(room,"knockout",{playerId:target.id,by:b.ownerId});}
+        }
+      }
+      event(room,"projectile-splash",{projectileId:b.id,ownerId:b.ownerId,x:b.x,y:b.y,radius,kind:b.cigar?"cigar":"beer",super:!!b.superBeer});
+      if(owner && b.superBeer) owner.meter=0;
+    };
     const wallHit = findProjectileObstacleHit(b, room.world.obstacles, 2);
     let contact = findProjectileContact(b, room.players.values(), t, 19);
     if (b.friendlySupport) {
@@ -269,11 +288,13 @@ function stepRoom(room, dt) {
       if (allyContact && (!contact || allyContact.t < contact.t)) contact = { ...allyContact, friendly: true };
     }
     if (wallHit && (!contact || wallHit.t <= contact.t)) {
+      splashProjectile();
       const wall = wallHit.obstacle;
       if (b.super && wall.tile === "#" && removeArenaWall(room.world, wall.row, wall.col)) {
         event(room, "wall-break", { playerId: b.ownerId, row: wall.row, col: wall.col });
       }
     } else if (contact) {
+      if (b.friendlySupport || b.cigar) { splashProjectile(); continue; }
       const hit = contact.player;
       if (contact.friendly && b.friendlySupport) {
         const healed = Math.min(hit.maxHp - hit.hp, b.heal || 900);
@@ -286,6 +307,7 @@ function stepRoom(room, dt) {
         if (hit.hp <= 0) { hit.alive=false; cancelKameCharge(hit); hit.input={x:0,y:0}; event(room,"knockout",{playerId:hit.id,by:b.ownerId}); }
       }
     } else if (projectileStillInRange(b, room.world.width, room.world.height)) keep.push(b);
+    else splashProjectile();
   }
   room.projectiles = keep;
   if (room.phase !== "playing") room.beams = [];
@@ -438,7 +460,7 @@ wss.on("connection", (ws,_req,meta) => {
               const stats = getBrawlerStats(player);
               room.projectiles.push({ id:nextProjectileId++, ownerId:player.id, team:player.team,
                 x:player.x+Math.cos(a)*24, y:player.y+Math.sin(a)*24, angle:a,
-                speed:stats.gadgetSpeed, damage:stats.gadgetDamage, range:stats.gadgetRange,
+                speed:stats.gadgetSpeed, damage:stats.gadgetDamage, range:stats.gadgetRange, splashRadius:34,
                 traveled:0, super:false, cigar:true });
             } else {
               const dashPosition=movePlayerWithObstacles(player.x,player.y,Math.cos(a)*70,Math.sin(a)*70,room.world,PLAYER_RADIUS);
