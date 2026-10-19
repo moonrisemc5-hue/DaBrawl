@@ -816,12 +816,27 @@
       if(window.DaBrawlNet?.isInParty()){window.DaBrawlNet.toggleReady?.();return;}
       beep(500,.1);
       if(gameMode==='duel'){startLoadingScreen(false);return;}
-      // Playing without an account should launch an offline bot match, not fail in matchmaking.
+      // Read the locally persisted session first. getUser() can fail transiently on mobile
+      // networks even while a valid signed-in session is already stored.
       try{
-        const {data:{user}} = await db.auth.getUser();
+        const {data:{session},error:sessionError} = await db.auth.getSession();
+        if(sessionError) throw sessionError;
+        if(session?.user){
+          matchmake();
+          return;
+        }
+        // Confirm there's really no account before allowing the guest-only bot shortcut.
+        const {data:{user},error:userError} = await db.auth.getUser();
+        if(userError) throw userError;
         if(!user){ startLoadingScreen(false); return; }
-      }catch(_){ startLoadingScreen(false); return; }
-      matchmake();
+        matchmake();
+      }catch(_){
+        // Never silently turn an auth/network error into an instant bot game.
+        show('onlineLobby');
+        status('Could not verify your sign-in. Check your connection and try again.',true);
+        void updateAuthUI().catch(()=>{});
+        return;
+      }
     };
      $('bra').onclick = () => show('brs');
     $('featuredBrawler').onclick = () => show('brs');
