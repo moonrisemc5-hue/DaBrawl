@@ -1833,7 +1833,7 @@ function gadget(p){
           const p=friends[i];
           if(!p){
             btn.classList.remove('room-menu-slot','ready'); delete btn.dataset.roomUserId; btn.innerHTML='+'; btn.title='Invite a friend by room code'; btn.setAttribute('aria-label','Add a friend by code');
-            btn.onclick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.openRoom?.();}; return;
+            btn.onclick=e=>{e.preventDefault();e.stopPropagation();window.DaBrawlNet?.openRoom?.(i);}; return;
           }
           btn.classList.add('room-menu-slot'); btn.classList.toggle('ready',p.ready); btn.dataset.roomUserId=p.userId;
           const username=String(p.name||('Player '+p.slot)).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -2047,7 +2047,7 @@ function gadget(p){
     const SUPABASE_URL = 'https://xqbfjpjdweibdbpeefze.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_6fzoQyw9JuuLHuGVbdyIjw_C9RTVQuu';
     const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-    let currentRoom = null, roomChannel = null;
+    let currentRoom = null, roomChannel = null, desiredRoomInviteSlot=2, pendingRoomJoinSlot=null;
     const el = id => document.getElementById(id);
     function status(msg, bad=false){ const n=el('onlineStatus'); n.textContent=msg; n.style.color=bad?'#fca5a5':'#cbd5e1'; }
     const PROTOTYPE_WS_URL = 'wss://xqbfjpjdweibdbpeefze.supabase.co/functions/v1/dabrawl-match-prototype';
@@ -2102,7 +2102,7 @@ function gadget(p){
       }
       if(currentRoom.host_id!==user.id){status('Only the lobby host can invite friends. Leave this lobby or ask its host to invite them.',true);return;}
       startRoomInviteCooldown();
-      const {error}=await db.from('dabrawl_room_invites').insert({sender_id:user.id,recipient_id:recipientId,room_code:currentRoom.room_code,status:'pending'});
+      const {error}=await db.from('dabrawl_room_invites').insert({sender_id:user.id,recipient_id:recipientId,room_code:currentRoom.room_code,player_slot:desiredRoomInviteSlot,status:'pending'});
       if(error){status('Your lobby is ready, but the invitation could not be sent: '+error.message,true);return;}
       status('Lobby invitation sent! You are the host. Your friend can accept the popup to join.');
     }
@@ -2237,7 +2237,7 @@ function gadget(p){
       const code=el('roomCodeInput').value.trim().toUpperCase();
       if(!code){status('Enter a room code.',true);return;}
       status('Joining room…');
-      const {data:roomId,error}=await db.rpc('join_dabrawl_room',{p_room_code:code,p_character_id:(localStorage.getItem('dabrawl_b')||'kuku')});
+      const {data:roomId,error}=await db.rpc('join_dabrawl_room',{p_room_code:code,p_character_id:(localStorage.getItem('dabrawl_b')||'kuku'),p_player_slot:pendingRoomJoinSlot});
       if(error){status(error.message,true);return;}
       const {data:room,error:re}=await db.from('game_rooms').select('*').eq('id',roomId).single();
       if(re){status(re.message,true);return;}
@@ -2486,7 +2486,7 @@ function gadget(p){
       if(matchChannel){const old=matchChannel;matchChannel=null;await db.removeChannel(old);}
       if(window.DaBrawlGame) window.DaBrawlGame.endNetworkGame();
     }
-    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,showcaseBrawler:brawler=>{if(roomChannel&&['kuku','shachi','saiyan'].includes(brawler))void db.auth.getUser().then(({data:{user}})=>user?roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler,userId:user.id}}):null);},toggleReady:null,openRoom:async()=>{const {data:{user}}=await db.auth.getUser();if(!user){show('onlineLobby');return;}if(!currentRoom)await createRoom();if(currentRoom){await loadLobbyFriends(user);show('friendsScreen');}}};
+    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,showcaseBrawler:brawler=>{if(roomChannel&&['kuku','shachi','saiyan'].includes(brawler))void db.auth.getUser().then(({data:{user}})=>user?roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler,userId:user.id}}):null);},toggleReady:null,openRoom:async(side=0)=>{desiredRoomInviteSlot=side===1?3:2;const {data:{user}}=await db.auth.getUser();if(!user){show('onlineLobby');return;}if(!currentRoom)await createRoom();if(currentRoom){await loadLobbyFriends(user);show('friendsScreen');}}};
 
     let friendsPresenceChannel=null, friendsPresenceTimer=null;
     const friendsEscape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -2557,7 +2557,7 @@ function gadget(p){
         const {data:{user},error:authError}=await db.auth.getUser();
         if(authError||!user)return;
         const {data:invites,error}=await db.from('dabrawl_room_invites')
-          .select('id,sender_id,recipient_id,room_code,status,created_at')
+          .select('id,sender_id,recipient_id,room_code,player_slot,status,created_at')
           .eq('recipient_id',user.id).eq('status','pending').order('created_at',{ascending:true}).limit(10);
         if(error)throw error;
         const unseen=(invites||[]).filter(inv=>inv.sender_id!==user.id&&!shownRoomInviteIds.has(inv.id)&&!queuedRoomInviteIds.has(inv.id));
@@ -2570,7 +2570,7 @@ function gadget(p){
       finally{invitePollBusy=false;}
     }
     function closeRoomInvite(){el('roomInvitePopup').style.display='none';activeRoomInvite=null;}
-    async function respondRoomInvite(accept){const inv=activeRoomInvite;if(!inv)return;try{const {data:{user}}=await db.auth.getUser();if(!user)throw new Error('Sign in first.');const {error}=await db.from('dabrawl_room_invites').update({status:accept?'accepted':'declined'}).eq('id',inv.id).eq('recipient_id',user.id);if(error)throw error;closeRoomInvite();if(accept){show('onlineLobby');await updateAuthUI();el('roomCodeInput').value=inv.room_code;await joinRoom();}}catch(err){status('Could not respond to invitation: '+(err?.message||String(err)),true);}}
+    async function respondRoomInvite(accept){const inv=activeRoomInvite;if(!inv)return;try{const {data:{user}}=await db.auth.getUser();if(!user)throw new Error('Sign in first.');const {error}=await db.from('dabrawl_room_invites').update({status:accept?'accepted':'declined'}).eq('id',inv.id).eq('recipient_id',user.id);if(error)throw error;closeRoomInvite();if(accept){show('onlineLobby');await updateAuthUI();el('roomCodeInput').value=inv.room_code;pendingRoomJoinSlot=inv.player_slot||null;try{await joinRoom();}finally{pendingRoomJoinSlot=null;}}}catch(err){status('Could not respond to invitation: '+(err?.message||String(err)),true);}}
     setInterval(()=>{
       if(!screenIsGame()&&!activeRoomInvite&&pendingRoomInvites.length){
         const next=pendingRoomInvites.shift();
