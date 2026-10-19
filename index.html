@@ -59,6 +59,29 @@
     #gad { right: calc(130px + env(safe-area-inset-right,0px)); bottom: calc(30px + env(safe-area-inset-bottom,0px)); width: 62px; height: 62px; font-size: 20px; background: #2a9d3c; }
     #leaveBtn { position: fixed; left: 16px; top: calc(12px + env(safe-area-inset-top,0px)); z-index: 399; display: none; pointer-events: auto; }
     .menu-bottom-controls { width:min(96vw,760px); }
+    body.mobile-controls .scr { overflow:hidden; overscroll-behavior:none; padding: max(8px,env(safe-area-inset-top,0px)) 8px max(8px,env(safe-area-inset-bottom,0px)); box-sizing:border-box; }
+    body.mobile-controls #brs.on { justify-content:flex-start; gap:clamp(8px,2vh,16px); padding-top:calc(12px + env(safe-area-inset-top,0px)); padding-bottom:calc(12px + env(safe-area-inset-bottom,0px)); }
+    body.mobile-controls #brs #grid { width:100%; max-height:calc(100dvh - 130px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)); overflow-y:auto; overscroll-behavior:contain; padding:6px 2px 12px; box-sizing:border-box; align-content:start; }
+    body.mobile-controls #brs .b-card { width:clamp(86px,25vw,110px); height:clamp(112px,24vh,140px); flex-shrink:0; }
+    body.mobile-controls #det.on { overflow-y:auto; justify-content:flex-start; gap:8px; padding-top:calc(8px + env(safe-area-inset-top,0px)); }
+    body.mobile-controls #det .det-layout { flex:1 0 auto; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; padding:4px; box-sizing:border-box; }
+    body.mobile-controls #det .det-left { max-width:none; min-width:0; gap:5px; }
+    body.mobile-controls #det .det-title { font-size:clamp(18px,5vw,28px); padding:3px 8px; }
+    body.mobile-controls #det .det-lore { font-size:12px; padding:7px; }
+    body.mobile-controls #det #dpv { width:min(42vw,220px)!important; height:min(32vh,220px)!important; max-width:100%; }
+    body.mobile-controls #det .det-right { grid-column:1 / -1; width:auto; padding:8px; gap:6px; }
+    body.mobile-controls #det .level-slots { gap:3px; }
+    body.mobile-controls #det .lvl-slot { width:clamp(20px,6vw,32px); height:clamp(20px,6vw,32px); font-size:9px; }
+    body.mobile-controls #det .stat-box { padding:5px 8px; }
+    body.mobile-controls #det .row { flex-shrink:0; gap:8px; margin:0!important; }
+    body.mobile-controls #det .row .btn { font-size:clamp(17px,4.5vw,26px)!important; padding:6px 14px!important; }
+    body.mobile-controls #settingsScreen { overflow-y:auto; justify-content:flex-start; padding-top:calc(12px + env(safe-area-inset-top,0px)); }
+    body.mobile-controls #settingsScreen > div { flex-shrink:0; }
+    body.mobile-controls #settingsScreen #keybindRows { grid-template-columns:1fr; }
+    body.mobile-controls #sup { right:calc(18px + env(safe-area-inset-right,0px)); bottom:calc(100px + env(safe-area-inset-bottom,0px)); width:clamp(68px,18vw,88px); height:clamp(68px,18vw,88px); }
+    body.mobile-controls #gad { right:calc(105px + env(safe-area-inset-right,0px)); bottom:calc(24px + env(safe-area-inset-bottom,0px)); width:clamp(54px,14vw,66px); height:clamp(54px,14vw,66px); }
+    body.mobile-controls #leaveBtn { top:calc(8px + env(safe-area-inset-top,0px)); left:8px; }
+    @media(max-width:600px){ body.mobile-controls #menu #bra { left:8px; } body.mobile-controls #menu .mid { gap:4px; } body.mobile-controls #menu #pv { width:min(42vw,220px); height:min(42vw,220px); } body.mobile-controls #menu #bn { font-size:24px; } body.mobile-controls #menu #play { right:8px!important; font-size:26px!important; padding:6px 18px!important; } body.mobile-controls #menu .menu-bottom-controls { bottom:calc(8px + env(safe-area-inset-bottom,0px))!important; } }
     @media(max-width:600px){ #friendsBtn{right:8px!important;top:42%!important;width:52px!important;height:52px!important;font-size:23px!important} .menu-bottom-controls{bottom:calc(8px + env(safe-area-inset-bottom,0px))!important} #pv{width:min(250px,38vh);height:min(250px,38vh)} }
     .mode-sel { background: linear-gradient(#2b2d42, #141629); border: 3px solid #000; border-radius: 24px; padding: 8px 24px; font-size: 20px; color: var(--y); cursor: pointer; box-shadow: 0 4px 0 #000; display: flex; align-items: center; gap: 10px; pointer-events: auto; z-index: 300; }
     .bar-wrap { width: min(80vw, 360px); height: 26px; background: #000; border: 3px solid #000; border-radius: 14px; overflow: hidden; position: relative; box-shadow: 0 4px 0 #000; }
@@ -177,6 +200,8 @@
     <div style="width:min(92vw,620px);display:flex;flex-direction:column;gap:12px;text-align:left">
       <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
         <h3 style="margin:0 0 10px;color:var(--y);font-size:24px">CONTROLS</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px"><div><div style="font-size:18px;color:#fff">Control layout</div><div style="font:13px Arial,sans-serif;color:#cbd5e1">Choose touch controls or keyboard and mouse.</div></div><div id="controlModeSwitch" role="group" aria-label="Control layout" style="display:flex;gap:6px"><button type="button" class="btn" id="pcModeBtn" style="font-size:17px;padding:7px 14px">🖥 PC</button><button type="button" class="btn" id="mobileModeBtn" style="font-size:17px;padding:7px 14px">📱 MOBILE</button></div></div>
+        <div id="controlModeStatus" style="font:13px Arial,sans-serif;color:#93c5fd;margin-bottom:8px"></div>
         <div id="keybindRows" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
         <p id="keybindHint" style="font:13px Arial,sans-serif;color:#cbd5e1;margin:10px 0 0">Choose a control, then press the key you want to use.</p>
         <button class="btn" id="resetKeybinds" style="font-size:18px;margin-top:10px">RESET DEFAULTS</button>
@@ -263,6 +288,22 @@
       ctx.restore();
     }
     function initLogos(){ drawHilalLogo($('logoCv'), 44); drawHilalLogo($('mmLogo'), 120); drawHilalLogo($('ldLogo'), 100); }
+    const CONTROL_MODE_KEY='dabrawl_control_mode';
+    let controlMode='pc';
+    try { controlMode=localStorage.getItem(CONTROL_MODE_KEY)==='mobile'?'mobile':'pc'; } catch(_){}
+    function applyControlMode(mode,save=true){
+      controlMode=mode==='mobile'?'mobile':'pc';
+      document.body.classList.toggle('mobile-controls',controlMode==='mobile');
+      const pc=$('pcModeBtn'), mob=$('mobileModeBtn'), status=$('controlModeStatus');
+      if(pc){pc.style.background=controlMode==='pc'?'linear-gradient(#4895ef,#4361ee)':'#252b40';pc.setAttribute('aria-pressed',String(controlMode==='pc'));}
+      if(mob){mob.style.background=controlMode==='mobile'?'linear-gradient(#4895ef,#4361ee)':'#252b40';mob.setAttribute('aria-pressed',String(controlMode==='mobile'));}
+      if(status) status.textContent=controlMode==='mobile'?'Mobile layout enabled. Touch joysticks appear during matches.':'PC layout enabled. Use keyboard and mouse.';
+      if(save){try{localStorage.setItem(CONTROL_MODE_KEY,controlMode);}catch(_){}}
+      if(controlMode==='mobile') touch=true;
+    }
+    $('pcModeBtn').addEventListener('click',()=>applyControlMode('pc'));
+    $('mobileModeBtn').addEventListener('click',()=>applyControlMode('mobile'));
+    applyControlMode(controlMode,false);
     function show(s){
       if(s !== 'game' && s !== 'loading' && s !== 'res' && networkMode){ networkMode = false; if(window.DaBrawlNet) window.DaBrawlNet.leaveMatch(); }
       scr = s; document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id == s));
@@ -548,7 +589,7 @@
         for(const k in ts){
           if(ts[k].active && ts[k].id == t.identifier){
             if(scr == 'game'){
-              if(Math.hypot(ts[k].x - ts[k].ox, ts[k].y - ts[k].ox) > 12) me.a = Math.atan2(ts[k].y - ts[k].ox, ts[k].x - ts[k].ox);
+              if(k==='a' && Math.hypot(ts[k].x-ts[k].ox,ts[k].y-ts[k].oy)>12) me.a=Math.atan2(ts[k].y-ts[k].oy,ts[k].x-ts[k].ox);
               else autoAimAndShoot(me);
               if(k == 'a') tryFire(me); if(k == 's' && me.tf <= 0) sup(me);
             }
@@ -827,7 +868,7 @@ function gadget(p){
           if(p.lp){ air(p,dt); continue; }
           if(p.human){
             let ix = (keys[keyBinds.right]||keys.arrowright?1:0) - (keys[keyBinds.left]||keys.arrowleft?1:0), iy = (keys[keyBinds.down]||keys.arrowdown?1:0) - (keys[keyBinds.up]||keys.arrowup?1:0);
-            if(ts.m.active){ ix = (ts.m.x-ts.m.ox)/60; iy = (ts.m.y-ts.m.ox)/60; }
+            if(ts.m.active){ ix = (ts.m.x-ts.m.ox)/60; iy = (ts.m.y-ts.m.oy)/60; }
             const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
             if(p.muiCharging<=0 && !isBeamShooting){
               if(touch){ if(ts.a.active){ const s=ts.a; if(Math.hypot(s.x-s.ox,s.y-s.ox)>12) p.a=Math.atan2(ts.y-ts.ox,s.x-s.ox); } else if(p.autoAimTimer<=0) autoAimAndShoot(p); }
