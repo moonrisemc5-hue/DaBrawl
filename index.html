@@ -1082,7 +1082,7 @@ function gadget(p){
           if(gameMode == 'showdown' || gameMode == 'duel' || gameMode === 'duo'){
             const aliveCount = P.filter(p=>p.alive).length;
             const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
-            if(gameMode==='duo' ? aliveTeams.filter(team=>P.some(p=>p.t===team&&p.alive)).length<=1 && !P.some(p=>!p.alive&&p.respawnPending&&P.some(q=>q!==p&&q.t===p.t&&q.alive)) : (gameMode==='showdown' ? aliveCount<=1 : (aliveCount<=1 || !me.alive))){
+            if(gameMode==='duo' ? aliveTeams.filter(team=>P.some(p=>p.t===team&&p.alive)).length<=1 && !(!networkMode&&P.some(p=>!p.alive&&p.respawnPending&&P.some(q=>q!==p&&q.t===p.t&&q.alive))) : (gameMode==='showdown' ? aliveCount<=1 : (aliveCount<=1 || !me.alive))){
               const win = gameMode==='duo' ? aliveTeams[0]===me.t : me.alive && aliveCount==1;
               if(gameMode==='duel'){
                 const winnerTeam=win?me.t:(me.t===0?1:0);
