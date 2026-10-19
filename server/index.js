@@ -146,6 +146,17 @@ function doFire(room, p, isSuper = false) {
     event(room,"super-slam",{playerId:p.id,hits});
     return;
   }
+  if (p.brawler === "deges") {
+    const angle = p.aim;
+    room.projectiles.push({ id: nextProjectileId++, ownerId: p.id, team: p.team,
+      x: p.x + Math.cos(angle) * 18, y: p.y + Math.sin(angle) * 18, angle,
+      speed: stats.bulletSpeed, damage: isSuper ? stats.superDamage : stats.damage,
+      heal: 900, friendlySupport: true, range: isSuper ? stats.superRange : stats.range,
+      traveled: 0, super: isSuper });
+    p.meter = clamp(p.meter + (isSuper ? 0 : 8), 0, 100);
+    event(room, isSuper ? "super-fired" : "attack-fired", { playerId:p.id, aim:p.aim, kind:"beer-bottle" });
+    return;
+  }
   const count = isSuper ? 1 : stats.pellets;
   for (let i = 0; i < count; i++) {
     const spread = isSuper ? 0 : stats.spread;
@@ -244,7 +255,19 @@ function stepRoom(room, dt) {
   for (const b of room.projectiles) {
     advanceProjectile(b, dt);
     const wallHit = findProjectileObstacleHit(b, room.world.obstacles, 2);
-    const contact = findProjectileContact(b, room.players.values(), t, 19);
+    let contact = findProjectileContact(b, room.players.values(), t, 19);
+    if (b.friendlySupport) {
+      const x1 = Number.isFinite(b.previousX) ? b.previousX : b.x, y1 = Number.isFinite(b.previousY) ? b.previousY : b.y;
+      const dx = b.x - x1, dy = b.y - y1, length2 = dx*dx + dy*dy;
+      let allyContact = null, firstT = Infinity;
+      for (const ally of room.players.values()) {
+        if (ally.id === b.ownerId || ally.team !== b.team || !ally.alive || ally.hp >= ally.maxHp) continue;
+        const u = length2 ? clamp(((ally.x-x1)*dx + (ally.y-y1)*dy)/length2, 0, 1) : 0;
+        const distance2 = (ally.x-(x1+u*dx))**2 + (ally.y-(y1+u*dy))**2;
+        if (distance2 <= 19*19 && u < firstT) { allyContact = { player: ally, t: u }; firstT = u; }
+      }
+      if (allyContact && (!contact || allyContact.t < contact.t)) contact = { ...allyContact, friendly: true };
+    }
     if (wallHit && (!contact || wallHit.t <= contact.t)) {
       const wall = wallHit.obstacle;
       if (b.super && wall.tile === "#" && removeArenaWall(room.world, wall.row, wall.col)) {
@@ -252,10 +275,16 @@ function stepRoom(room, dt) {
       }
     } else if (contact) {
       const hit = contact.player;
-      hit.hp = Math.max(0, hit.hp-b.damage); hit.meter = clamp(hit.meter+12,0,100);
-      const owner = room.players.get(b.ownerId); if (owner) owner.meter = clamp(owner.meter+18,0,100);
-      event(room, "hit", { projectileId:b.id, attackerId:b.ownerId, targetId:hit.id, damage:b.damage, hp:hit.hp });
-      if (hit.hp <= 0) { hit.alive=false; cancelKameCharge(hit); hit.input={x:0,y:0}; event(room,"knockout",{playerId:hit.id,by:b.ownerId}); }
+      if (contact.friendly && b.friendlySupport) {
+        const healed = Math.min(hit.maxHp - hit.hp, b.heal || 900);
+        hit.hp += healed;
+        event(room, "heal", { projectileId:b.id, playerId:b.ownerId, targetId:hit.id, amount:healed, hp:hit.hp });
+      } else {
+        hit.hp = Math.max(0, hit.hp-b.damage); hit.meter = clamp(hit.meter+12,0,100);
+        const owner = room.players.get(b.ownerId); if (owner) owner.meter = clamp(owner.meter+18,0,100);
+        event(room, "hit", { projectileId:b.id, attackerId:b.ownerId, targetId:hit.id, damage:b.damage, hp:hit.hp });
+        if (hit.hp <= 0) { hit.alive=false; cancelKameCharge(hit); hit.input={x:0,y:0}; event(room,"knockout",{playerId:hit.id,by:b.ownerId}); }
+      }
     } else if (projectileStillInRange(b, room.world.width, room.world.height)) keep.push(b);
   }
   room.projectiles = keep;
@@ -405,9 +434,17 @@ wss.on("connection", (ws,_req,meta) => {
           const at=now();
           if (isCombatPhase(room.phase) && player.alive && player.transformUntil<=at && !(player.kameChargeStartedAt>0) && tryConsumeGadget(player,at)) {
             const a=player.aim;
-            const dashPosition=movePlayerWithObstacles(player.x,player.y,Math.cos(a)*70,Math.sin(a)*70,room.world,PLAYER_RADIUS);
-            player.x=dashPosition.x; player.y=dashPosition.y;
-            event(room,"gadget",{playerId:player.id,cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
+            if (player.brawler === "deges") {
+              const stats = getBrawlerStats(player);
+              room.projectiles.push({ id:nextProjectileId++, ownerId:player.id, team:player.team,
+                x:player.x+Math.cos(a)*24, y:player.y+Math.sin(a)*24, angle:a,
+                speed:stats.gadgetSpeed, damage:stats.gadgetDamage, range:stats.gadgetRange,
+                traveled:0, super:false, cigar:true });
+            } else {
+              const dashPosition=movePlayerWithObstacles(player.x,player.y,Math.cos(a)*70,Math.sin(a)*70,room.world,PLAYER_RADIUS);
+              player.x=dashPosition.x; player.y=dashPosition.y;
+            }
+            event(room,"gadget",{playerId:player.id,kind:player.brawler==="deges"?"cigar-projectile":"dash",cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
             sendState(room);
           }
         } else if (m.action==="add-bot") {
