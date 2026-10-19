@@ -1184,6 +1184,18 @@ function gadget(p){
           canvas.style.visibility='visible';
           canvas.style.opacity='1';
           const drawn=rb(canvas,selB,2.6,8);
+          // If the canvas renderer fails on a restored mobile tab, show a visible
+          // in-page fallback portrait instead of leaving the lobby looking frozen.
+          let fallback=$('menuBrawlerFallback');
+          if(!fallback){
+            fallback=document.createElement('div');
+            fallback.id='menuBrawlerFallback';
+            fallback.setAttribute('aria-hidden','true');
+            fallback.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-34%);width:min(180px,28vw);height:min(180px,28vw);display:none;align-items:center;justify-content:center;font-size:min(120px,22vw);z-index:230;pointer-events:none;filter:drop-shadow(0 8px 0 #0008)';
+            $('featuredBrawler').appendChild(fallback);
+          }
+          fallback.textContent=({kuku:'🐔',saiyan:'⚡',shachi:'🦈',pip:'🐧',rex:'🦖',mochi:'🐱',zed:'👾',bolt:'🤖',nova:'🌟',juno:'🦊',taco:'🌮',blaze:'🔥',jax:'🥊',vex:'👻',zane:'😎'})[selB]||'⭐';
+          fallback.style.display=drawn?'none':'flex';
           if(!drawn) console.error('DaBrawl: failed to draw menu brawler',selB);
         }
       } catch(e){ console.error('Menu preview render failed:',e); }
