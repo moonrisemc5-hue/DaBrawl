@@ -1409,8 +1409,8 @@ function gadget(p){
       const startDmg = K.kd||700, maxDmg = K.kmax||2200, actualDmg = startDmg + ch*(maxDmg - startDmg);
       let kameCol = K.aura || '#4cf'; if(p.form === 2) kameCol = '#ff3a3a'; else if(p.form === 3) kameCol = '#38bdf8';
       if(networkMode && window.DaBrawlNet){
-        if(p===me) window.DaBrawlNet.sendAction('kame',p.a,{charge:ch});
-        else if(isNetworkHost && p.isBot) window.DaBrawlNet.sendAction('kame',p.a,{charge:ch,playerId:p.netId});
+        if(p===me) window.DaBrawlNet.sendAction('kame',p.a,{charge:ch,x:p.x,y:p.y,len,w:14+ch*40,damage:actualDmg,col:kameCol,isMaxChg:isMax});
+        else if(isNetworkHost && p.isBot) window.DaBrawlNet.sendAction('kame',p.a,{charge:ch,x:p.x,y:p.y,len,w:14+ch*40,damage:actualDmg,col:kameCol,isMaxChg:isMax,playerId:p.netId});
       }
       KM.push({o:p, a:p.a, x:p.x, y:p.y, len, w:14+ch*40, d:actualDmg, t:.6, m:.6, tk:0, col:kameCol, destroys:isMax, isMaxChg:isMax});
       shake = 8+ch*12; playKameSound();
@@ -2038,7 +2038,13 @@ function gadget(p){
         if(Number.isFinite(msg.angle)) p.a=msg.angle;
         if(msg.action==='kame'){
           p.a=Number.isFinite(msg.angle)?msg.angle:p.a;
-          p.kcd=0; kame(p,Math.max(0,Math.min(1,Number(msg.charge)||0)));
+          const charge=Math.max(0,Math.min(1,Number(msg.charge)||0));
+          if(Number.isFinite(msg.x)&&Number.isFinite(msg.y)&&Number.isFinite(msg.len)){
+            // Render the firing player's exact released beam, even if this client's
+            // latest position/state packet arrived before or after the action event.
+            KM.push({o:p,a:p.a,x:msg.x,y:msg.y,len:Math.max(0,msg.len),w:Math.max(14,Number(msg.w)||14+charge*40),d:Number(msg.damage)||700,isMaxChg:!!msg.isMaxChg,t:.6,m:.6,tk:0,col:msg.col||p.k?.aura||'#4cf',remoteVisual:true});
+            p.kcd=Math.max(p.kcd||0,3);
+          }else{p.kcd=0;kame(p,charge);}
         }
         else if(msg.action==='bot-fire'){
           p.a=Number.isFinite(msg.angle)?msg.angle:p.a;
