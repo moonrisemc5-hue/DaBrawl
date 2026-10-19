@@ -1201,7 +1201,8 @@ function gadget(p){
       const totalTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].length : 0;
       const eliminatedTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].filter(team=>!aliveTeams.includes(team)).length : 0;
       const place = gameMode==='showdown' ? (me.alive ? 1 : Math.max(2, Math.min(10, 11-(me.elimOrder||matchEliminations||1)))) : gameMode==='duo' ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(5, 6-(teamEliminationOrder[me.t]||teamEliminations||1)))) : (G.w[me.t]>=2 ? 1 : 5);
-      const d = (gameMode==='showdown'||gameMode==='duo') ? (place===1 ? 10 : place===2 ? 8 : place===3 ? 5 : place===4 ? 0 : -5) : (G.w[me.t]>=2 ? 8 : -4);
+      const soloShowdownTrophies = [10, 8, 5, 0, -2, -5, -8, -10];
+      const d = gameMode==='showdown' ? (soloShowdownTrophies[place-1] ?? -10) : gameMode==='duo' ? (place===1 ? 10 : place===2 ? 8 : place===3 ? 5 : place===4 ? 0 : -5) : (G.w[me.t]>=2 ? 8 : -4);
       const win = (gameMode==='showdown'||gameMode==='duo') ? place===1 : G.w[me.t]>=2;
       // Online clients wait for the host's final result before changing trophies.
       if(!networkMode || isNetworkHost){
