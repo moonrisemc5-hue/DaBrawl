@@ -368,6 +368,7 @@
     $('mobileModeBtn').addEventListener('click',()=>applyControlMode('mobile'));
     applyControlMode(controlMode,false);
     window.addEventListener('pageshow',()=>{requestAnimationFrame(()=>{if($('menu')?.classList.contains('on')){updateMenuUI();playMenuShowcase(selB,false);}});});
+    window.addEventListener('orientationchange',()=>setTimeout(()=>{if($('menu')?.classList.contains('on')){updateMenuUI();playMenuShowcase(selB,false);}},250));
     function show(s){
       if(s !== 'loading' && activeLoadingTimer){clearInterval(activeLoadingTimer);activeLoadingTimer=null;loadingGeneration++;}
       if(s !== 'loading'){loadingGeneration++;}
@@ -1159,21 +1160,7 @@ function gadget(p){
       try {
         $('bn').textContent = BR[selB].nm;
         const canvas=$('pv');
-        if(canvas){
-          // Reinitialize the preview canvas after mobile orientation changes or a page refresh.
-          const rect=canvas.getBoundingClientRect();
-          const dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
-          if(rect.width>0&&rect.height>0){
-            const w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);
-            if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
-            if(!rb(canvas,selB,Math.min(canvas.width,canvas.height)/115,8*dpr)){
-              const ctx=canvas.getContext('2d');
-              if(ctx){ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);}
-            }
-          }else{
-            rb(canvas,selB,2.6,8);
-          }
-        }
+        if(canvas) rb(canvas,selB,2.6,8);
       } catch(e){ console.error('Menu preview render failed:',e); }
     }
     function rb(c,id,sc,dy,form,angle,tf,tfn,showcasePose){
@@ -1266,7 +1253,7 @@ function gadget(p){
       c.restore();return phase<3.35;
     }
     function startShowcaseAnimation(id){const token=++showcaseToken,canvas=$('dpv');if(showcaseFrame)cancelAnimationFrame(showcaseFrame);const started=performance.now();function frame(now){if(token!==showcaseToken||!$('det').classList.contains('on'))return;if(!drawShowcaseFrame(canvas,id,(now-started)/1000,3.2,10)){rb(canvas,id,3.2,10);showcaseFrame=0;return;}showcaseFrame=requestAnimationFrame(frame);}showcaseFrame=requestAnimationFrame(frame);}
-    function playMenuShowcase(id,broadcast=true){if(!BR[id])return;const token=++menuShowcaseToken,canvas=$('pv');if(menuShowcaseFrame)cancelAnimationFrame(menuShowcaseFrame);const started=performance.now();function frame(now){if(token!==menuShowcaseToken||!$('menu').classList.contains('on')){menuShowcaseFrame=0;return;}const rect=canvas?.getBoundingClientRect();if(canvas&&rect&&rect.width>0&&rect.height>0){const dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1)),w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}}if(!drawShowcaseFrame(canvas,id,(now-started)/1000,2.6,8)){updateMenuUI();menuShowcaseFrame=0;return;}menuShowcaseFrame=requestAnimationFrame(frame);}menuShowcaseFrame=requestAnimationFrame(frame);if(broadcast)window.DaBrawlNet?.showcaseBrawler?.(id);}
+    function playMenuShowcase(id,broadcast=true){if(!BR[id])return;const token=++menuShowcaseToken,canvas=$('pv');if(menuShowcaseFrame)cancelAnimationFrame(menuShowcaseFrame);const started=performance.now();function frame(now){if(token!==menuShowcaseToken||!$('menu').classList.contains('on')){menuShowcaseFrame=0;return;}if(!drawShowcaseFrame(canvas,id,(now-started)/1000,2.6,8)){rb(canvas,id,2.6,8);menuShowcaseFrame=0;return;}menuShowcaseFrame=requestAnimationFrame(frame);}menuShowcaseFrame=requestAnimationFrame(frame);if(broadcast)window.DaBrawlNet?.showcaseBrawler?.(id);}
     $('bk3').onclick = () => show('brs'); $('bra').onclick = () => show('brs');
     function leap(p,gd){
       K=p.k; let nd=1e9; for(const e of P) if(e!==p && e.alive && sees(p.t,e)) nd = Math.min(nd, Math.hypot(e.x-p.x, e.y-p.y));
