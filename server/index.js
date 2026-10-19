@@ -57,7 +57,7 @@ function snapshot(room) {
       gadgetCharges:gadgetCharges(p),gadgetCooldownMs:Math.max(0,p.gadgetReadyAt-now()),
       kameCooldownMs:Math.max(0,(p.kameReadyAt||0)-now()),kameCharging:Boolean(p.kameChargeStartedAt),kameCharge:kameChargePower(p.kameChargeStartedAt,now()),muiCharging:Boolean(p.pendingMuiBeam),
       transforming:p.transformUntil>now(),connected:p.connected,ready:p.ready
-    })), projectiles: room.projectiles.map(b => ({ id:b.id,ownerId:b.ownerId,x:b.x,y:b.y,angle:b.angle,super:b.super })) };
+    })), projectiles: room.projectiles.map(b => ({ id:b.id,ownerId:b.ownerId,x:b.x,y:b.y,angle:b.angle,super:b.super,beer:!!b.friendlySupport,cigar:!!b.cigar,flightTime:b.flightTime||0,flightDuration:b.flightDuration||0,arcHeight:b.arcHeight||58,range:b.range||300,damage:b.damage||0,splashRadius:b.splashRadius||0 })) };
 }
 function sendState(room) { emit(room, "state", { state: snapshot(room) }); }
 function event(room, name, data = {}) { room.events.push({ name, at: now(), ...data }); if (room.events.length > 80) room.events.shift(); emit(room, "event", { event: name, ...data }); }
@@ -151,8 +151,8 @@ function doFire(room, p, isSuper = false) {
     room.projectiles.push({ id: nextProjectileId++, ownerId: p.id, team: p.team,
       x: p.x + Math.cos(angle) * 18, y: p.y + Math.sin(angle) * 18, angle,
       speed: isSuper ? stats.superBulletSpeed : stats.bulletSpeed, damage: isSuper ? stats.superDamage : stats.damage,
-      heal: isSuper ? 1500 : 900, friendlySupport: true, splashRadius: isSuper ? 88 : 58, superBeer: isSuper, range: isSuper ? stats.superRange : stats.range,
-      traveled: 0, super: isSuper });
+      heal: isSuper ? (stats.superHeal || 3750) : (stats.heal || 2250), friendlySupport: true, splashRadius: isSuper ? 110 : 72, superBeer: isSuper, range: isSuper ? stats.superRange : stats.range,
+      flightTime: 0, flightDuration: (isSuper ? stats.superRange : stats.range) / (isSuper ? stats.superBulletSpeed : stats.bulletSpeed), arcHeight: isSuper ? 78 : 58, traveled: 0, super: isSuper });
     p.meter = clamp(p.meter + (isSuper ? 0 : 8), 0, 100);
     event(room, isSuper ? "super-fired" : "attack-fired", { playerId:p.id, aim:p.aim, kind:"beer-bottle" });
     return;
@@ -319,7 +319,7 @@ function stepRoom(room, dt) {
       zone.nextTickAt = t + 600;
       for (const target of room.players.values()) {
         if (!target.alive || target.id === zone.ownerId || Math.hypot(target.x-zone.x,target.y-zone.y) > zone.radius) continue;
-        const sameTeam = target.team === zone.team;
+        const sameTeam = (room.mode === "knockout" || room.mode === "duo") && target.team === zone.team;
         if (sameTeam) {
           const healed = Math.min(target.maxHp-target.hp, zone.heal);
           if (healed > 0) { target.hp += healed; event(room,"heal",{projectileId:zone.id,playerId:zone.ownerId,targetId:target.id,amount:healed,hp:target.hp,splash:true,beerZone:true}); }
