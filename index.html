@@ -1268,7 +1268,19 @@ function gadget(p){
       c.restore();return phase<3.35;
     }
     function startShowcaseAnimation(id){const token=++showcaseToken,canvas=$('dpv');if(showcaseFrame)cancelAnimationFrame(showcaseFrame);const started=performance.now();function frame(now){if(token!==showcaseToken||!$('det').classList.contains('on'))return;if(!drawShowcaseFrame(canvas,id,(now-started)/1000,3.2,10)){rb(canvas,id,3.2,10);showcaseFrame=0;return;}showcaseFrame=requestAnimationFrame(frame);}showcaseFrame=requestAnimationFrame(frame);}
-    function playMenuShowcase(id,broadcast=true){if(!BR[id])return;const token=++menuShowcaseToken,canvas=$('pv');if(menuShowcaseFrame)cancelAnimationFrame(menuShowcaseFrame);const started=performance.now();function frame(now){if(token!==menuShowcaseToken||!$('menu').classList.contains('on')){menuShowcaseFrame=0;return;}if(!drawShowcaseFrame(canvas,id,(now-started)/1000,2.6,8)){rb(canvas,id,2.6,8);menuShowcaseFrame=0;return;}menuShowcaseFrame=requestAnimationFrame(frame);}menuShowcaseFrame=requestAnimationFrame(frame);if(broadcast)window.DaBrawlNet?.showcaseBrawler?.(id);}
+    function playMenuShowcase(id,broadcast=true){
+      if(!BR[id])return;
+      if(menuShowcaseFrame)cancelAnimationFrame(menuShowcaseFrame);
+      menuShowcaseFrame=0;
+      // Keep the menu preview deterministic: the animated canvas loop was able
+      // to clear the portrait during mobile viewport refreshes.
+      const canvas=$('pv');
+      if(canvas){
+        canvas.width=300;canvas.height=300;
+        rb(canvas,id,2.6,8);
+      }
+      if(broadcast)window.DaBrawlNet?.showcaseBrawler?.(id);
+    }
     $('bk3').onclick = () => show('brs'); $('bra').onclick = () => show('brs');
     function leap(p,gd){
       K=p.k; let nd=1e9; for(const e of P) if(e!==p && e.alive && sees(p.t,e)) nd = Math.min(nd, Math.hypot(e.x-p.x, e.y-p.y));
