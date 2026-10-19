@@ -293,11 +293,6 @@
     // throws during startup or a preview renderer fails.
     (() => {
       const $ = id => document.getElementById(id);
-      const fallbackBrawlers = [
-        {id:'kuku',name:'KUKU',color:'#facc15',cls:'DAMAGE DEALER',lore:'Rapid buckshot pellets. Strong up close.'},
-        {id:'shachi',name:'SHACHI',color:'#fb923c',cls:'CONTROLLER',lore:'Uses a powerful orange ball-arm.'},
-        {id:'saiyan',name:'SAIYAN',color:'#60a5fa',cls:'POWER FIGHTER',lore:'Build Super and transform to unleash power.'}
-      ];
       function fallbackShow(id) {
         document.querySelectorAll('.scr').forEach(s => {
           const active = s.id === id;
@@ -358,17 +353,11 @@
         }
       },true);
       window.addEventListener('error',event=>{
-        const canvas=$('pv');if(canvas)drawFallback(canvas,'#ffd21f');
-        let panel=$('daGlitchDiagnostic');
-        if(!panel){panel=document.createElement('div');panel.id='daGlitchDiagnostic';panel.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:20000;background:#7f1d1d;color:white;padding:10px;border:2px solid #fca5a5;border-radius:10px;font:14px Arial,sans-serif;white-space:normal;overflow-wrap:anywhere';document.body.appendChild(panel);}
-        panel.textContent='DaBrawl startup error: '+String(event.message||'unknown error')+' (line '+String(event.lineno||'?')+').';
+        console.error('DaBrawl startup error:', event.message, event.filename, event.lineno);
       });
       window.addEventListener('unhandledrejection',event=>{
-        let panel=$('daGlitchDiagnostic');
-        if(!panel){panel=document.createElement('div');panel.id='daGlitchDiagnostic';panel.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:20000;background:#7f1d1d;color:white;padding:10px;border:2px solid #fca5a5;border-radius:10px;font:14px Arial,sans-serif;white-space:normal;overflow-wrap:anywhere';document.body.appendChild(panel);}
-        panel.textContent='DaBrawl startup error: '+String(event.reason&&event.reason.message||event.reason||'unhandled promise rejection');
+        console.error('DaBrawl startup rejection:', event.reason);
       });
-      window.addEventListener('load',()=>{const canvas=$('pv');if(canvas && !canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data.some(v=>v!==0))drawFallback(canvas,'#ffd21f');},{once:true});
     })();
   </script>
 
