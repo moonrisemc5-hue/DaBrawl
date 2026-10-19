@@ -603,8 +603,27 @@
     });
     $('sup').setAttribute('aria-label', 'Super ability');
     $('gad').setAttribute('aria-label', 'Gadget ability');
-    $('sup').onpointerdown = e => { e.stopPropagation(); if(me.sc>=1 && me.tf<=0){ autoAimAndShoot(me); sup(me); } };
-    $('gad').onpointerdown = e => { e.stopPropagation(); gadget(me); };
+    // Ability buttons sit above the canvas: cancel browser gestures and never leak a press
+    // into movement/aim input. Super aims at the nearest valid enemy without spending a normal shot.
+    for(const button of [$('sup'),$('gad')]){
+      button.addEventListener('pointerdown',e=>{
+        e.preventDefault();e.stopPropagation();
+        if(scr!=='game'||!me)return;
+        if(button.id==='sup'){
+          if(me.sc>=1&&me.tf<=0){aimAtNearestEnemy(me);sup(me);}
+        }else gadget(me);
+      });
+      button.addEventListener('keydown',e=>{
+        if(e.key!=='Enter'&&e.key!==' ')return;
+        e.preventDefault();
+        if(scr!=='game'||!me)return;
+        if(button.id==='sup'){if(me.sc>=1&&me.tf<=0){aimAtNearestEnemy(me);sup(me);}}
+        else gadget(me);
+      });
+    }
+    // Keep touch presses from selecting text or generating a delayed synthetic click.
+    $('sup').addEventListener('contextmenu',e=>e.preventDefault());
+    $('gad').addEventListener('contextmenu',e=>e.preventDefault());
     $('leaveBtn').onclick = () => { show('menu'); isTestMode = false; };
     $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ if(isNetworkHost) void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
     $('home').onclick = () => { beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
@@ -652,15 +671,20 @@
     document.querySelectorAll('.mode-card').forEach(card=>card.onclick=()=>{applyGameMode(card.dataset.mode);beep(500,.08);show('menu');});
     $('modePickerBack').onclick=()=>show('menu');
     $('bk2').onclick = () => { clearInterval(mmI); clearTimeout(mmTimeout); mmI=null; mmTimeout=null; if(window.DaBrawlNet) window.DaBrawlNet.cancelMatchmaking(); show('menu'); };
-    function autoAimAndShoot(p){
-      if(p.muiCharging > 0 || KM.some(k => k.o === p)) return;
-      let b = 600, a = null;
-      for(const e of P){
-        if(e===p || !e.alive || (gameMode!=='showdown' && gameMode!=='duo' && e.t==p.t) || !sees(p.t,e)) continue;
-        const d = Math.hypot(e.x - p.x, e.y - p.y); if(d < b){ b = d; a = Math.atan2(e.y - p.y, e.x - p.x); }
+    function aimAtNearestEnemy(p){
+      let bestDistance=600, bestAngle=null;
+      for(const enemy of P){
+        if(enemy===p||!enemy.alive||(gameMode!=='showdown'&&gameMode!=='duo'&&enemy.t===p.t)||!sees(p.t,enemy))continue;
+        const distance=Math.hypot(enemy.x-p.x,enemy.y-p.y);
+        if(distance<bestDistance){bestDistance=distance;bestAngle=Math.atan2(enemy.y-p.y,enemy.x-p.x);}
       }
-      if(a !== null){ p.a = a; p.autoAimTimer = 0.4; }
-      if(p.k.sy) sTap(p); else tryFire(p);
+      if(bestAngle!==null){p.a=bestAngle;p.autoAimTimer=.4;return true;}
+      return false;
+    }
+    function autoAimAndShoot(p){
+      if(p.muiCharging>0||KM.some(k=>k.o===p))return;
+      aimAtNearestEnemy(p);
+      if(p.k.sy)sTap(p);else tryFire(p);
     }
     const sees = (tm,p) => gameMode=='showdown' || gameMode=='duo' || p.t==tm || tile(p.x,p.y)!='b' || P.some(a => a.alive && a.t==tm && Math.hypot(a.x-p.x, a.y-p.y)<2.5*T);
     function puff(x,y,n,c,s=1){ for(let i=0;i<n;i++){ const a=Math.random()*6.28, v=40+Math.random()*90*s; F.push({k:'p',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.5,m:.5,c,s:8+Math.random()*8}); } }
