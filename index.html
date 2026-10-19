@@ -58,6 +58,31 @@
     #sup { right: calc(28px + env(safe-area-inset-right,0px)); bottom: calc(130px + env(safe-area-inset-bottom,0px)); width: 82px; height: 82px; font-size: 18px; background: #444; }
     #gad { right: calc(130px + env(safe-area-inset-right,0px)); bottom: calc(30px + env(safe-area-inset-bottom,0px)); width: 62px; height: 62px; font-size: 20px; background: #2a9d3c; }
     #leaveBtn { position: fixed; left: 16px; top: calc(12px + env(safe-area-inset-top,0px)); z-index: 399; display: none; pointer-events: auto; }
+    #mobileControls{display:none;position:fixed;inset:0;pointer-events:none;z-index:58;touch-action:none}
+    .mobile-stick{position:absolute;width:clamp(104px,19vw,148px);height:clamp(104px,19vw,148px);bottom:calc(22px + env(safe-area-inset-bottom,0px));left:clamp(18px,5vw,54px);border-radius:50%;pointer-events:auto;touch-action:none;display:none;align-items:center;justify-content:center}
+    .mobile-stick .stick-ring{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,#6da9e544 0 35%,#4c9df022 36% 68%,#1d4ed833 69%);border:3px solid #8bd5ff99;box-shadow:inset 0 0 0 7px #0b1b3380}
+    .mobile-stick .stick-knob{position:absolute;width:43%;height:43%;border-radius:50%;background:radial-gradient(circle at 35% 28%,#d8f4ff,#2699f4 55%,#1261c0);border:3px solid #d9f3ff;box-shadow:0 4px 0 #06366d,0 0 12px #42b7ff88;transform:translate(0,0)}
+    .mobile-stick .stick-caption{position:absolute;bottom:-19px;font:10px Arial,sans-serif;letter-spacing:1px;color:#ffffffaa;text-shadow:0 1px 3px #000}
+    .aim-stick{left:auto;right:clamp(18px,5vw,54px)}
+    .aim-stick .stick-ring{background:radial-gradient(circle,#a1a1aa22 0 34%,#9ca3af28 35% 69%,#64748b55 70%);border-color:#d1d5db99}
+    .aim-stick .stick-knob{background:radial-gradient(circle at 35% 28%,#dbeafe,#1687f8 55%,#064eaa);border-color:#dbeafe}
+    body.mobile-mode .scr{overflow:hidden;overscroll-behavior:none}
+    body.mobile-mode #brs,body.mobile-mode #det{justify-content:flex-start;gap:clamp(5px,1.5vh,12px);padding:calc(8px + env(safe-area-inset-top,0px)) 8px calc(8px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
+    body.mobile-mode #brs #grid{width:100%;flex:1;min-height:0;overflow-y:auto;align-content:center;gap:8px;padding:4px;box-sizing:border-box}
+    body.mobile-mode .b-card{width:clamp(82px,22vw,110px);height:clamp(108px,23vh,140px)}
+    body.mobile-mode #det .det-layout{flex:1;min-height:0;overflow:auto;align-items:center;justify-content:center;gap:8px;padding:4px;box-sizing:border-box}
+    body.mobile-mode #det .det-left{gap:5px;max-width:33%;min-width:0}
+    body.mobile-mode #det .det-title{font-size:clamp(16px,3vh,24px);padding:3px 8px}
+    body.mobile-mode #det .det-lore{font-size:clamp(10px,1.6vh,13px);padding:6px}
+    body.mobile-mode #det .det-right{width:33%;min-width:0;padding:7px;gap:5px;box-sizing:border-box}
+    body.mobile-mode #det .stat-box{padding:4px;gap:4px}
+    body.mobile-mode #det .level-slots{display:none}
+    body.mobile-mode #det .row{margin:0!important;gap:8px}
+    body.mobile-mode #det .row .btn{font-size:clamp(16px,2.5vh,24px)!important;padding:5px 12px!important}
+    body.mobile-mode #hud.mobile-game #mobileControls{display:block}
+    body.mobile-mode #hud.mobile-game .mobile-stick{display:flex}
+    body.mobile-mode #hud.mobile-game #sup{right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(155px + env(safe-area-inset-bottom,0px));width:clamp(58px,12vw,78px);height:clamp(58px,12vw,78px);font-size:clamp(12px,2vw,16px);background:radial-gradient(circle at 35% 25%,#fff176,#f59e0b 52%,#a16207);border-color:#fff2a8}
+    body.mobile-mode #hud.mobile-game #gad{right:calc(95px + env(safe-area-inset-right,0px));bottom:calc(45px + env(safe-area-inset-bottom,0px));width:clamp(48px,10vw,62px);height:clamp(48px,10vw,62px);font-size:20px;background:radial-gradient(circle at 35% 25%,#86efac,#16a34a 58%,#14532d);border-color:#bbf7d0}
     .menu-bottom-controls { width:min(96vw,760px); }
     @media(max-width:600px){ #friendsBtn{right:8px!important;top:42%!important;width:52px!important;height:52px!important;font-size:23px!important} .menu-bottom-controls{bottom:calc(8px + env(safe-area-inset-bottom,0px))!important} #pv{width:min(250px,38vh);height:min(250px,38vh)} }
     .mode-sel { background: linear-gradient(#2b2d42, #141629); border: 3px solid #000; border-radius: 24px; padding: 8px 24px; font-size: 20px; color: var(--y); cursor: pointer; box-shadow: 0 4px 0 #000; display: flex; align-items: center; gap: 10px; pointer-events: auto; z-index: 300; }
@@ -80,6 +105,7 @@
   <canvas id="c"></canvas>
   <button class="btn r" id="leaveBtn">LEAVE</button>
   <div id="hud">
+    <div id="mobileControls"><div class="mobile-stick" id="moveStick"><div class="stick-ring"></div><div class="stick-knob" id="moveKnob"></div><span class="stick-caption">MOVE</span></div><div class="mobile-stick aim-stick" id="aimStick"><div class="stick-ring"></div><div class="stick-knob" id="aimKnob"></div><span class="stick-caption">AIM / FIRE</span></div></div>
     <button class="hb" id="sup" type="button">SUPER</button>
     <button class="hb" id="gad" type="button" aria-label="Gadget ready">⚡</button>
   </div>
@@ -177,6 +203,7 @@
     <div style="width:min(92vw,620px);display:flex;flex-direction:column;gap:12px;text-align:left">
       <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
         <h3 style="margin:0 0 10px;color:var(--y);font-size:24px">CONTROLS</h3>
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;background:#0b132b;border:2px solid #334155;border-radius:12px;font:16px Arial,sans-serif;color:#fff"><span><strong style="color:#ffd21f">MOBILE CONTROLS</strong><br><small style="font:12px Arial,sans-serif">Touch joysticks and phone layout</small></span><input id="mobileModeToggle" type="checkbox" style="width:26px;height:26px;accent-color:#2196f3"></label>
         <div id="keybindRows" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
         <p id="keybindHint" style="font:13px Arial,sans-serif;color:#cbd5e1;margin:10px 0 0">Choose a control, then press the key you want to use.</p>
         <button class="btn" id="resetKeybinds" style="font-size:18px;margin-top:10px">RESET DEFAULTS</button>
@@ -263,9 +290,12 @@
       ctx.restore();
     }
     function initLogos(){ drawHilalLogo($('logoCv'), 44); drawHilalLogo($('mmLogo'), 120); drawHilalLogo($('ldLogo'), 100); }
+    let mobileMode=false;try{mobileMode=localStorage.getItem('dabrawl_mobile_mode')==='1';}catch(_){}
+    function applyMobileMode(){document.body.classList.toggle('mobile-mode',mobileMode);const toggle=$('mobileModeToggle');if(toggle)toggle.checked=mobileMode;$('hud').classList.toggle('mobile-game',mobileMode);}
+    const mobileToggle=$('mobileModeToggle');if(mobileToggle)mobileToggle.addEventListener('change',()=>{mobileMode=mobileToggle.checked;try{localStorage.setItem('dabrawl_mobile_mode',mobileMode?'1':'0');}catch(_){}applyMobileMode();});applyMobileMode();
     function show(s){
       if(s !== 'game' && s !== 'loading' && s !== 'res' && networkMode){ networkMode = false; if(window.DaBrawlNet) window.DaBrawlNet.leaveMatch(); }
-      scr = s; document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id == s));
+      scr = s; document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id == s)); applyMobileMode();
       $('leaveBtn').style.display = (s == 'game' && isTestMode) ? 'block' : 'none';
       $('hud').classList.toggle('on', s == 'game');
       cv.style.pointerEvents = (s == 'game') ? 'auto' : 'none';
@@ -529,6 +559,12 @@
     cv.addEventListener('contextmenu', e => e.preventDefault());
     const ts = {m:{id:null,ox:0,oy:0,x:0,y:0,active:false}, a:{id:null,ox:0,oy:0,x:0,y:0,active:false}, s:{id:null,ox:0,oy:0,x:0,y:0,active:false}};
     function getTouchPos(t){ const rect = cv.getBoundingClientRect(); return { x: (t.clientX - rect.left) * (W / rect.width), y: (t.clientY - rect.top) * (H / rect.height) }; }
+    const mobilePointers={move:null,aim:null};
+    function setStickVisual(which,dx,dy){const knob=$(''+(which==='move'?'moveKnob':'aimKnob'));if(knob)knob.style.transform=`translate(${dx}px,${dy}px)`;}
+    function resetStick(which){mobilePointers[which]=null;setStickVisual(which,0,0);const t=ts[which==='move'?'m':'a'];t.active=false;t.id=null;}
+    function moveStickPointer(which,x,y,cx,cy,max){let dx=x-cx,dy=y-cy,d=Math.hypot(dx,dy);if(d>max){dx=dx/d*max;dy=dy/d*max;}const t=ts[which==='move'?'m':'a'];t.x=cx+dx;t.y=cy+dy;setStickVisual(which,dx,dy);}
+    function attachMobileStick(which,el){if(!el)return;el.addEventListener('pointerdown',e=>{if(!mobileMode||scr!=='game')return;e.preventDefault();e.stopPropagation();el.setPointerCapture?.(e.pointerId);mobilePointers[which]=e.pointerId;touch=true;const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;ts[which==='move'?'m':'a']={id:e.pointerId,ox:cx,oy:cy,x:e.clientX,y:e.clientY,active:true};moveStickPointer(which,e.clientX,e.clientY,cx,cy,r.width*.34);},{passive:false});el.addEventListener('pointermove',e=>{if(mobilePointers[which]!==e.pointerId)return;e.preventDefault();const t=ts[which==='move'?'m':'a'];const r=el.getBoundingClientRect();moveStickPointer(which,e.clientX,e.clientY,t.ox,t.oy,r.width*.34);},{passive:false});const end=e=>{if(mobilePointers[which]!==e.pointerId)return;e.preventDefault();if(which==='aim'&&scr==='game'){const t=ts.a;if(Math.hypot(t.x-t.ox,t.y-t.oy)>10){me.a=Math.atan2(t.y-t.oy,t.x-t.ox);tryFire(me);}else autoAimAndShoot(me);}resetStick(which);};el.addEventListener('pointerup',end,{passive:false});el.addEventListener('pointercancel',end,{passive:false});}
+    attachMobileStick('move',$('moveStick'));attachMobileStick('aim',$('aimStick'));
     cv.addEventListener('touchstart', e => {
       e.preventDefault(); touch = true;
       for(const t of e.changedTouches){
@@ -548,7 +584,7 @@
         for(const k in ts){
           if(ts[k].active && ts[k].id == t.identifier){
             if(scr == 'game'){
-              if(Math.hypot(ts[k].x - ts[k].ox, ts[k].y - ts[k].ox) > 12) me.a = Math.atan2(ts[k].y - ts[k].ox, ts[k].x - ts[k].ox);
+              if(Math.hypot(ts[k].x - ts[k].ox, ts[k].y - ts[k].oy) > 12) me.a = Math.atan2(ts[k].y - ts[k].ox, ts[k].x - ts[k].ox);
               else autoAimAndShoot(me);
               if(k == 'a') tryFire(me); if(k == 's' && me.tf <= 0) sup(me);
             }
@@ -827,10 +863,10 @@ function gadget(p){
           if(p.lp){ air(p,dt); continue; }
           if(p.human){
             let ix = (keys[keyBinds.right]||keys.arrowright?1:0) - (keys[keyBinds.left]||keys.arrowleft?1:0), iy = (keys[keyBinds.down]||keys.arrowdown?1:0) - (keys[keyBinds.up]||keys.arrowup?1:0);
-            if(ts.m.active){ ix = (ts.m.x-ts.m.ox)/60; iy = (ts.m.y-ts.m.ox)/60; }
+            if(ts.m.active){ ix = (ts.m.x-ts.m.ox)/60; iy = (ts.m.y-ts.m.oy)/60; const ml=Math.hypot(ix,iy);if(ml>1){ix/=ml;iy/=ml;} }
             const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
             if(p.muiCharging<=0 && !isBeamShooting){
-              if(touch){ if(ts.a.active){ const s=ts.a; if(Math.hypot(s.x-s.ox,s.y-s.ox)>12) p.a=Math.atan2(ts.y-ts.ox,s.x-s.ox); } else if(p.autoAimTimer<=0) autoAimAndShoot(p); }
+              if(touch){ if(ts.a.active){ const s=ts.a; if(Math.hypot(s.x-s.ox,s.y-s.ox)>12) p.a=Math.atan2(s.y-s.oy,s.x-s.ox); } else if(p.autoAimTimer<=0) autoAimAndShoot(p); }
               else { if(p.rec<=0 && p.autoAimTimer<=0) p.a = Math.atan2(my/z+cam.y-p.y, mx/z+cam.x-p.x); }
               step(p,ix,iy,dt);
             } else step(p,0,0,dt);
