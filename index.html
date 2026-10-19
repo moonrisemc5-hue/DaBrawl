@@ -576,7 +576,7 @@
       e.preventDefault(); touch = true;
       for(const t of e.changedTouches){
         const pos = getTouchPos(t), side = pos.x < W/2 ? 'm' : 'a';
-        if(!ts[side].active) ts[side] = {id: t.identifier, ox: pos.x, oy: pos.y, x: pos.x, y: pos.y, active: true};
+        if(!ts[side].active){ const ox=side==='m'?Math.max(76,W*.16):Math.min(W-150,W*.78), oy=H*.76; ts[side] = {id:t.identifier,ox,oy,x:ox,y:oy,active:true}; ts[side].x=pos.x; ts[side].y=pos.y; }
       }
     },{passive:false});
     cv.addEventListener('touchmove', e => {
@@ -1494,7 +1494,7 @@ function gadget(p){
           for(const k of ['m', 'a', 's']){
             const s = ts[k];
             if(s.active){
-              const d = Math.hypot(s.x - s.ox, s.y - s.ox), m = Math.min(d, 55), a = Math.atan2(s.y - s.ox, s.x - s.ox);
+              const d = Math.hypot(s.x - s.ox, s.y - s.oy), m = Math.min(d, 55), a = Math.atan2(s.y - s.oy, s.x - s.ox);
               g.globalAlpha = 0.35; circ(s.ox, s.oy, 60, colors[k]);
               g.globalAlpha = 0.85; circ(s.ox + Math.cos(a)*m, s.oy + Math.sin(a)*m, 26, stickCols[k]);
             }
