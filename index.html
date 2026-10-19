@@ -1175,7 +1175,17 @@ function gadget(p){
       try {
         $('bn').textContent = BR[selB].nm;
         const canvas=$('pv');
-        if(canvas) rb(canvas,selB,2.6,8);
+        if(canvas){
+          // Recreate the menu canvas backing store independently of viewport/DPR.
+          canvas.width=300; canvas.height=300;
+          canvas.style.width='min(300px, 46vh)';
+          canvas.style.height='min(300px, 46vh)';
+          canvas.style.display='block';
+          canvas.style.visibility='visible';
+          canvas.style.opacity='1';
+          const drawn=rb(canvas,selB,2.6,8);
+          if(!drawn) console.error('DaBrawl: failed to draw menu brawler',selB);
+        }
       } catch(e){ console.error('Menu preview render failed:',e); }
     }
     function rb(c,id,sc,dy,form,angle,tf,tfn,showcasePose){
