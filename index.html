@@ -577,6 +577,7 @@
       for(const t of e.changedTouches){
         const pos = getTouchPos(t), side = pos.x < W/2 ? 'm' : 'a';
         if(!ts[side].active){ const ox=side==='m'?Math.max(76,W*.16):Math.min(W-150,W*.78), oy=H*.76; ts[side] = {id:t.identifier,ox,oy,x:ox,y:oy,active:true}; ts[side].x=pos.x; ts[side].y=pos.y; }
+        else if(side==='m' && ts.m.id!==t.identifier && !ts.a.active){ ts.a={id:t.identifier,ox:Math.min(W-150,W*.78),oy:H*.76,x:pos.x,y:pos.y,active:true}; }
       }
     },{passive:false});
     cv.addEventListener('touchmove', e => {
@@ -591,9 +592,9 @@
         for(const k in ts){
           if(ts[k].active && ts[k].id == t.identifier){
             if(scr == 'game'){
-              if(k==='a' && Math.hypot(ts[k].x-ts[k].ox,ts[k].y-ts[k].oy)>12) me.a=Math.atan2(ts[k].y-ts[k].oy,ts[k].x-ts[k].ox);
-              else autoAimAndShoot(me);
-              if(k == 'a') tryFire(me); if(k == 's' && me.tf <= 0) sup(me);
+              if(k==='a' && Math.hypot(ts[k].x-ts[k].ox,ts[k].y-ts[k].oy)>12){ me.a=Math.atan2(ts[k].y-ts[k].oy,ts[k].x-ts[k].ox); tryFire(me); }
+              else if(k==='a') autoAimAndShoot(me);
+              if(k == 's' && me.tf <= 0) sup(me);
             }
             ts[k].active = false;
           }
