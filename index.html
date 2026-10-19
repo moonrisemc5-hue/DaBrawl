@@ -20,6 +20,8 @@
     #menu.on { z-index: 400 !important; }
     #menu.on > .mid { z-index: 410 !important; }
     #menu.on > button, #menu.on > .pill, #menu.on > #roomMenuBar, #menu.on > .menu-bottom-controls { z-index: 430 !important; pointer-events: auto !important; }
+    #menu.on #play, #menu.on #bra, #menu.on #featuredBrawler { z-index: 450 !important; pointer-events: auto !important; touch-action: manipulation; }
+    #menu.on .mid { width:100%; height:100%; }
     #menu.on #featuredBrawler { position: relative; z-index: 411; pointer-events: auto !important; }
     #menu.on #pv { display: block; visibility: visible; opacity: 1; }
     h1 { font-size: min(16vw, 96px); margin: 0; color: var(--y); -webkit-text-stroke: 3px #000; text-shadow: 0 6px 0 #000; transform: rotate(-3deg); }
@@ -1032,7 +1034,7 @@ function gadget(p){
       try {
         if(!c) return; const ctx = c.getContext('2d'); if(!ctx) return;
         ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,c.width,c.height); ctx.setTransform(sc,0,0,sc,c.width/2,c.height/2+dy);
-        const oldG = g; g = ctx; drawP({x:0,y:0,t:0,b:id,a:arguments[5]??0.15,walk:0,rec:0,fl:0,alive:true,dt:0,hp:1000,mh:1000,k:BR[id],form:form||0,tf:tf||0,tfn:tfn||1,showcasePose:showcasePose,sc:0,afterimages:[]}); g = oldG;
+        const oldG = g; g = ctx; drawP({x:0,y:0,t:0,b:id,a:arguments[5]??0.15,walk:0,rec:0,fl:0,alive:true,dt:0,hp:1000,mh:1000,k:BR[id],form:form||0,tf:tf||0,tfn:tfn||1,showcasePose:showcasePose,preview:true,sc:0,afterimages:[]}); g = oldG;
       } catch(e){}
     }
     function grid(){
@@ -1406,7 +1408,7 @@ function gadget(p){
       }
     }
     function drawP(p){
-      const v = p.human || gameMode=='showdown' || gameMode==='duo' || sees(0,p); if(!v) return;
+      const v = p.preview || p.human || gameMode=='showdown' || gameMode==='duo' || sees(0,p); if(!v) return;
       if(p.afterimages){
         for(const ai of p.afterimages){
           g.save(); g.translate(ai.x, ai.y); g.globalAlpha = (ai.t / ai.maxT) * 0.45;
@@ -1626,6 +1628,19 @@ function gadget(p){
         }
       }
     }
+    // Capture critical menu taps before any full-screen overlay can swallow them.
+    document.addEventListener('click', e => {
+      const target = e.target;
+      const button = target && target.closest ? target.closest('#play, #bra') : null;
+      const featured = target && target.closest ? target.closest('#featuredBrawler') : null;
+      if (button && document.getElementById('menu')?.classList.contains('on')) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        if (button.id === 'bra') show('brs');
+        else if (typeof button.onclick === 'function') void button.onclick.call(button, e);
+      } else if (featured && document.getElementById('menu')?.classList.contains('on')) {
+        e.preventDefault(); e.stopImmediatePropagation(); show('brs');
+      }
+    }, true);
     // Defensive click routing: keep primary navigation usable on mobile browsers.
     document.addEventListener('click', e => {
       const b = e.target.closest('button'); if(!b) return;
