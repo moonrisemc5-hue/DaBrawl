@@ -3,6 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0b132b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DaBrawl">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icon.svg">
   <title>DaBrawl</title>
   <link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
   <style>
@@ -534,7 +541,7 @@
     ];
     let K = BR.kuku;
     const NM = ["Pip","Rex","Mochi","Zed","Bolt","Nova","Juno","Taco","Blaze","Jax","Vex","Zane"];
-    let P=[], B=[], F=[], MT=[], KM=[], me, G, cam={x:0,y:0}, shake=0, wf=0, touch=false, matchEliminations=0, teamEliminationOrder={};
+    let P=[], B=[], F=[], MT=[], KM=[], me, G, cam={x:0,y:0}, shake=0, wf=0, touch=false, matchEliminations=0, teamEliminations=0, teamEliminationOrder={};
     let selB='kuku'; try { selB = localStorage.getItem('dabrawl_b') || 'kuku'; if(!BR[selB]) selB='kuku'; } catch(e){}
     const brawlerKeys = Object.keys(BR);
     function cycleBrawler(dir){
@@ -574,8 +581,8 @@
       }, 120);
     }
     function startGame(test=false){
-      isTestMode = test; if(!test){try{localStorage.setItem('dabrawl_active_match','active');}catch(_){}} mapVariant=Math.floor(Math.random()*3); const n = [...NM].sort(() => Math.random()-.5);
-      P = []; matchEliminations=0; teamEliminationOrder={}; build(); me = mk(0,0,1,'You',selB); P.push(me);
+      isTestMode = test; if(!test && !networkMode){try{localStorage.setItem('dabrawl_active_match','active');}catch(_){}} else {try{localStorage.removeItem('dabrawl_active_match');}catch(_){}} mapVariant=Math.floor(Math.random()*3); const n = [...NM].sort(() => Math.random()-.5);
+      P = []; matchEliminations=0; teamEliminations=0; teamEliminationOrder={}; build(); me = mk(0,0,1,'You',selB); P.push(me);
       if(test){
         P.push(mk(1,0,0,'Dummy Kuku','kuku',true)); P.push(mk(1,1,0,'Dummy Shachi','shachi',true));
         G = {ph:'play',t:0,w:[0,0],r:1,res:''};
@@ -937,7 +944,7 @@ function gadget(p){
       if(b.s){ const l=Math.hypot(b.vx,b.vy); mv(t, b.vx/l*13, b.vy/l*13); }
       beep(220,.08,.08,'square',-100); if(!t.isDummy && t.hp<=0) die(t);
     }
-    function die(t){ if(!t.alive)return; t.alive=false; t.hp=0; t.dt=0; if(gameMode==='showdown'||gameMode==='duo') t.elimOrder=++matchEliminations; if(gameMode==='duo'&&!P.some(p=>p.alive&&p.t===t.t)) teamEliminationOrder[t.t]=matchEliminations; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); shake=10; }
+    function die(t){ if(!t.alive)return; t.alive=false; t.hp=0; t.dt=0; if(gameMode==='showdown'||gameMode==='duo') t.elimOrder=++matchEliminations; if(gameMode==='duo'&&!P.some(p=>p.alive&&p.t===t.t)) teamEliminationOrder[t.t]=++teamEliminations; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); shake=10; }
     function ai(b,dt){
       if(b.isDummy){
         let tg=null, bd=1e9;
@@ -1103,7 +1110,7 @@ function gadget(p){
       const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
       const totalTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].length : 0;
       const eliminatedTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].filter(team=>!aliveTeams.includes(team)).length : 0;
-      const place = gameMode==='showdown' ? (me.alive ? 1 : Math.max(2, Math.min(10, 11-(me.elimOrder||matchEliminations||1)))) : gameMode==='duo' ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(5, 6-(teamEliminationOrder[me.t]||matchEliminations||1)))) : (G.w[me.t]>=2 ? 1 : 5);
+      const place = gameMode==='showdown' ? (me.alive ? 1 : Math.max(2, Math.min(10, 11-(me.elimOrder||matchEliminations||1)))) : gameMode==='duo' ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(5, 6-(teamEliminationOrder[me.t]||teamEliminations||1)))) : (G.w[me.t]>=2 ? 1 : 5);
       const d = (gameMode==='showdown'||gameMode==='duo') ? (place===1 ? 10 : place===2 ? 8 : place===3 ? 5 : place===4 ? 0 : -5) : (G.w[me.t]>=2 ? 8 : -4);
       const win = (gameMode==='showdown'||gameMode==='duo') ? place===1 : G.w[me.t]>=2;
       // Online clients wait for the host's final result before changing trophies.
@@ -1732,6 +1739,9 @@ function gadget(p){
     function loop(t){
       requestAnimationFrame(loop); const dt = Math.min(.05, (t-last)/1000||0); last = t;
       if(scr == 'game'){
+        const canLeaveShowdown=gameMode==='showdown' && me && !me.alive && G?.ph==='play';
+        $('leaveBtn').style.display=(isTestMode||canLeaveShowdown)?'block':'none';
+        $('leaveBtn').textContent=canLeaveShowdown?'RESULTS':'LEAVE';
         try { upd(dt); draw(); }
         catch(err){
           console.error('DaBrawl game loop failed:',err);
@@ -2764,8 +2774,17 @@ function gadget(p){
     db.auth.onAuthStateChange(()=>{setTimeout(updateAuthUI,0);});
   </script>
 
-
-  
+  <script>
+    // GitHub Pages PWA support: refresh the worker on each visit so installed copies
+    // pick up new releases without requiring users to remove and re-add the shortcut.
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+          .then(reg => { reg.update().catch(() => {}); })
+          .catch(err => console.warn('DaBrawl offline support unavailable:', err));
+      });
+    }
+  </script>
 
 </body>
 </html>
