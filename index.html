@@ -1809,7 +1809,7 @@ function gadget(p){
         P=[]; me=null; build(); B=[]; F=[]; MT=[]; KM=[];
         roster.forEach((entry,idx)=>{
           const team = entry.team!==undefined ? entry.team : gameMode === 'showdown' ? idx : gameMode === 'duo' ? Math.floor(idx/2) : gameMode === 'duel' ? idx % 2 : (idx < 3 ? 0 : 1);
-          const slot = gameMode === 'showdown' ? idx : gameMode === 'duo' || gameMode === 'duel' ? idx % 2 : idx % 3;
+          const slot = gameMode === 'showdown' ? idx : gameMode === 'duo' ? idx % 3 : gameMode === 'duel' ? idx % 2 : idx % 3;
           const brawler = BR[entry.brawler] ? entry.brawler : 'kuku';
           const p = mk(team,slot,!entry.bot,entry.name,brawler,false);
           p.netId = entry.id;
@@ -2187,7 +2187,7 @@ function gadget(p){
       const presence=roomChannel?.presenceState?.()||{};
       const onlineUsers=Object.values(presence).flat().filter(p=>p&&p.userId);
       const roomNameFor=id=>onlineUsers.find(p=>p.userId===id)?.name || (id===user?.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Connecting…');
-      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:2},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);const bn=p?.character_id||'kuku';return '<div style="width:150px;min-height:150px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><canvas class="lobby-brawler" data-brawler="'+bn+'" width="100" height="100" style="width:82px;height:82px"></canvas><div style="font-weight:bold">'+(p?String(roomNameFor(p.user_id)).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])):'Empty slot')+'</div><small>'+(p?String(bn).toUpperCase()+' · '+(p.is_ready?'✓ READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>';
+      el('roomPlayers').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'+Array.from({length:3},(_,i)=>{const p=players.find(x=>x.player_slot===i+1);const bn=p?.character_id||'kuku';return '<div style="width:150px;min-height:150px;padding:8px;box-sizing:border-box;border:3px solid '+(p&&p.is_ready?'#22c55e':'#000')+';border-radius:12px;background:#172554"><canvas class="lobby-brawler" data-brawler="'+bn+'" width="100" height="100" style="width:82px;height:82px"></canvas><div style="font-weight:bold">'+(p?String(roomNameFor(p.user_id)).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])):'Empty slot')+'</div><small>'+(p?String(bn).toUpperCase()+' · '+(p.is_ready?'✓ READY':'NOT READY'):'Waiting for player')+'</small></div>';}).join('')+'</div>';
       el('roomPlayers').querySelectorAll('canvas.lobby-brawler').forEach(c=>requestAnimationFrame(()=>rb(c,c.dataset.brawler,1.65,8)));
       window.DaBrawlGame?.setRoomMenuState(players.map(p=>({slot:p.player_slot,brawler:p.character_id||'kuku',ready:!!p.is_ready,userId:p.user_id,name:roomNameFor(p.user_id)})),user?.id,room.room_code,room.host_id===user?.id);
       el('readyRoomBtn').style.display=user && mine ? 'inline-block':'none';
@@ -2203,7 +2203,7 @@ function gadget(p){
       $('modeBtn').title=room.host_id===user?.id?'Choose the party game mode':'Only the party leader chooses the game mode';
       el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.every(p=>p.is_ready) ? 'inline-block':'none';
       status('Lobby connected · '+players.length+'/2 players · '+roomMode.toUpperCase()+'. Both players ready to start.');
-      if(user && room.host_id===user.id && players.length===2 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
+      if(user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
         roomStartRequestedFor=room.id;
         void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
         setTimeout(()=>{if(!activeMatchId&&roomStartRequestedFor===room.id)roomStartRequestedFor=null;},5000);
@@ -2286,14 +2286,14 @@ function gadget(p){
       if(currentRoom.host_id!==user.id){status('Only the room host can start the match.',true);return;}
       const {data:players,error}=await db.from('game_room_players').select('player_slot,character_id,user_id,is_ready').eq('room_id',currentRoom.id).order('player_slot');
       if(error){status('Could not load room players: '+error.message,true);return;}
-      if(players.length!==2){status('A room match needs exactly two players right now.',true);return;}
-      if(!players.every(p=>p.is_ready)){status('Both players must press READY before the match can start.',true);return;}
+      if(players.length<2||players.length>3){status('A room match needs 2 or 3 players.',true);return;}
+      if(!players.every(p=>p.is_ready)){status('Everyone in the party must press READY before the match can start.',true);return;}
       const {data:room,error:roomError}=await db.from('game_rooms').select('game_mode').eq('id',currentRoom.id).single();
       if(roomError){status('Could not read the leader’s game mode: '+roomError.message,true);return;}
       const mode=room?.game_mode||'knockout';
       const presence=roomChannel?.presenceState?.()||{};
       const live=Object.values(presence).flat().filter(p=>p&&p.userId);
-      const roster=players.map((p,i)=>({id:p.user_id,name:live.find(x=>x.userId===p.user_id)?.name||(p.user_id===user.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Player '+p.player_slot),brawler:p.character_id||'kuku',bot:false,team:(mode==='knockout'||mode==='duo')?0:i}));
+      const roster=players.map((p,i)=>({id:p.user_id,name:live.find(x=>x.userId===p.user_id)?.name||(p.user_id===user.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Player '+p.player_slot),brawler:p.character_id||'kuku',bot:false,team:(mode==='knockout'||mode==='duo')?0:(mode==='showdown'?i:i%2)}));
       const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax'];
       const botBrawlers=['kuku','shachi','saiyan'];
       const target=mode==='knockout'?6:(mode==='showdown'||mode==='duo')?10:2;
