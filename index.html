@@ -634,7 +634,7 @@
       kuku: {nm:'KUKU', rarity:'COMMON', rarityCol:'#00c0ff', hp:7000, spd:135, pel:8, dmg:312.5, spr:.68, rng:230, bs:550, rel:1.6, sd:333.3, sp:12, ss:.72, sr:340, w:140, z:2.5, cm:0.6, cls:'DAMAGE DEALER', atkNm:'2500 DMG', supNm:'WALL BREAKER', info:'Kuku fires 8 rapid buckshot pellets!'},
       shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:8000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2000, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
       saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'FIGHTER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'},
-      deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b86b3d', hp:7600, spd:138, pel:1, dmg:2125, spr:0, rng:300, bs:430, rel:1.05, sd:2750, sr:110, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'LOBbed BEER', supNm:'BEER BARRAGE', info:'Lobs beer that leaves a damaging and healing puddle!'}
+      deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b86b3d', hp:7600, spd:138, pel:1, dmg:2125, spr:0, rng:300, bs:430, rel:1.25, sd:2750, sr:110, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'LOBbed BEER', supNm:'BEER BARRAGE', info:'Lobs beer that leaves a damaging and healing puddle!'}
     };
     const FM = [
       {},
@@ -976,11 +976,24 @@
     }
     function puff(x,y,n,c,s=1){ for(let i=0;i<n;i++){ const a=Math.random()*6.28, v=40+Math.random()*90*s; F.push({k:'p',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.5,m:.5,c,s:8+Math.random()*8}); } }
     function star(x,y,n){ for(let i=0;i<n;i++){ const a=Math.random()*6.28, v=80+Math.random()*140; F.push({k:'s',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-60,l:.9,m:.9}); } }
-    function tryFire(p){ if(G.ph!='play'||!p.alive||p.am<1||p.cd>0||p.lp||p.k.sy||p.tf>0) return; if(networkMode && p===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('fire',p.a); fire(p,0); p.cd=.38; }
+    function degesAimTarget(p,maxRange){
+      const sx=p.x+Math.cos(p.a)*24,sy=p.y+Math.sin(p.a)*24;
+      let tx=sx+Math.cos(p.a)*maxRange,ty=sy+Math.sin(p.a)*maxRange;
+      if(p===me&&!touch&&scr==='game'&&Number.isFinite(mx)&&Number.isFinite(my)){tx=mx/Math.max(.01,z)+cam.x;ty=my/Math.max(.01,z)+cam.y;}
+      else if(p.remoteBeerTarget&&Number.isFinite(p.remoteBeerTarget.x)&&Number.isFinite(p.remoteBeerTarget.y)){tx=p.remoteBeerTarget.x;ty=p.remoteBeerTarget.y;}
+      const dx=tx-sx,dy=ty-sy,dist=Math.hypot(dx,dy),range=Math.max(70,Math.min(maxRange,dist));
+      return {x:sx+dx/(dist||1)*range,y:sy+dy/(dist||1)*range,range,angle:Math.atan2(dy,dx)};
+    }
+    function tryFire(p){
+      if(G.ph!='play'||!p.alive||p.am<1||p.cd>0||p.lp||p.k.sy||p.tf>0) return;
+      if(p.b==='deges'){const target=degesAimTarget(p,300);p.a=target.angle;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',target.angle,{targetX:target.x,targetY:target.y,beerRange:target.range});}
+      else if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',p.a);
+      fire(p,0);p.cd=p.b==='deges'?.55:.38;
+    }
     function sup(p){
       if(G.ph!='play'||!p.alive||p.sc<1||p.tf>0) return;
       if(networkMode && window.DaBrawlNet){
-        if(p===me) window.DaBrawlNet.sendAction('super',p.a);
+        if(p===me){if(p.b==='deges'){const target=degesAimTarget(p,330);window.DaBrawlNet.sendAction('super',target.angle,{targetX:target.x,targetY:target.y,beerRange:target.range});}else window.DaBrawlNet.sendAction('super',p.a);}
         else if(isNetworkHost && p.isBot) window.DaBrawlNet.sendAction('super',p.a,{playerId:p.netId});
       }
       p.chg=0; p.holdT=0;
@@ -996,8 +1009,9 @@
       if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet) window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,super:false});
       K=p.k; if(s&&K.lg){ leap(p,0); return; }
       if(p.b==='deges'){
-        const a=p.a, big=!!s, range=big?330:300, speed=big?300:430;
-        B.push({x:p.x+Math.cos(a)*24,y:p.y+Math.sin(a)*24,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,r:range,flightRange:range,flightT:0,flightDuration:range/speed,arcHeight:big?78:58,d:big?2750:2125,t:p.t,o:p,s:big,z:big?15:9,col:'#d99a42',beer:true,heal:big?3750:2250,splashRadius:big?110:72,superBeer:big});
+        const big=!!s,maxRange=big?330:300,speed=big?300:430,target=degesAimTarget(p,maxRange),a=target.angle,range=target.range;
+        B.push({x:p.x+Math.cos(a)*24,y:p.y+Math.sin(a)*24,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,r:range,flightRange:range,flightT:0,flightDuration:range/speed,arcHeight:big?105:82,targetX:target.x,targetY:target.y,d:big?2750:2125,t:p.t,o:p,s:big,z:big?15:9,col:'#d99a42',beer:true,heal:big?3750:2250,splashRadius:big?110:72,superBeer:big,remoteVisual:networkMode&&p!==me});
+        p.remoteBeerTarget=null;
         if(!big)p.am--; else p.sc=0;
         p.rec=.14; puff(p.x+Math.cos(a)*30,p.y+Math.sin(a)*30,5,'#d99a42',.5); beep(big?180:320,.12,.08,'triangle',120); return;
       }
@@ -1246,9 +1260,9 @@ function gadget(p){
           for(let s=0;s<3&&!dead;s++){
             const k=dt/3; b.x+=b.vx*k; b.y+=b.vy*k; b.r-=sp*k; if(b.beer)b.flightT=(b.flightT||0)+k;
             const ti=Math.floor(b.x/T), tj=Math.floor(b.y/T);
-            if(b.r<=0){ dead=true; if(b.beer||b.cigar) degesSplash(b.x,b.y,b); else puff(b.x,b.y,1,'#ffe9a0',.3); }
+            if(b.r<=0){ dead=true; if(b.remoteVisual){puff(b.x,b.y,8,'#eabf68',.8);}else if(b.beer||b.cigar) degesSplash(b.x,b.y,b); else puff(b.x,b.y,1,'#ffe9a0',.3); }
             else if(b.bn>0 && tile(b.x,b.y)=='#'){ b.x-=b.vx*k; b.y-=b.vy*k; if(tile(b.x+b.vx*k,b.y)=='#') b.vx=-b.vx; else b.vy=-b.vy; b.bn--; }
-            else if(tile(b.x,b.y)=='#'){ dead=true; if(b.beer||b.cigar) degesSplash(b.x,b.y,b); if(b.s && ti>0 && tj>0 && ti<MW-1 && tj<MH-1){ M[tj][ti]='.'; if(networkMode && b.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
+            else if(!b.beer&&tile(b.x,b.y)=='#'){ dead=true; if(b.cigar) degesSplash(b.x,b.y,b); if(b.s && ti>0 && tj>0 && ti<MW-1 && tj<MH-1){ M[tj][ti]='.'; if(networkMode && b.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
             else if(networkMode && b.o?.netRemote){ /* remote owner's browser resolves hits */ }
           else for(const e of P){ if(!b.beer && e!==b.o && e.alive && !e.lp && !(e.tf>0) && Math.hypot(e.x-b.x,e.y-b.y)<20+(b.z>9?b.z-9:0)){
             const sameTeam=e.t===b.t;
@@ -1259,16 +1273,18 @@ function gadget(p){
           }
           if(dead) B.splice(i,1);
         }
-        if(!networkMode){
+        {
           const nowMs=Date.now();
           for(let zi=Z.length-1;zi>=0;zi--){
             const zone=Z[zi];
             if(nowMs>=zone.expires){Z.splice(zi,1);continue;}
             if(nowMs<zone.nextTick)continue;
+            if(networkMode&&zone.owner!==me)continue;
             zone.nextTick=nowMs+600;
             for(const target of P){
-              if(!target.alive||target===zone.owner||Math.hypot(target.x-zone.x,target.y-zone.y)>zone.radius)continue;
-              if((gameMode==='knockout'||gameMode==='duo')&&target.t===zone.team){
+              if(!target.alive||Math.hypot(target.x-zone.x,target.y-zone.y)>zone.radius)continue;
+              const isOwner=target===zone.owner;
+              if(isOwner||((gameMode==='knockout'||gameMode==='duo')&&target.t===zone.team)){
                 const healed=Math.min(target.mh-target.hp,zone.heal);
                 if(healed>0){target.hp+=healed;puff(target.x,target.y,5,'#7df9a5',.7);}
               }else{
@@ -1819,24 +1835,21 @@ function gadget(p){
       if(p.b == 'shachi') drawSh(p);
       else if(p.b == 'saiyan') drawSa(p);
       else if(p.b === 'deges') {
-        const bob=1+Math.sin(p.walk)*.035; g.scale(1,bob);
-        // Friendlier Degeš: rounded face, expressive brows, bright eyes, and a simple smile.
-        g.fillStyle='#243746'; g.strokeStyle='#101923'; g.lineWidth=3;
-        g.beginPath(); g.roundRect(-15,1,30,22,6); g.fill(); g.stroke();
-        g.fillStyle='#f4ead7'; g.fillRect(-5,2,10,18);
-        g.fillStyle='#2b5c52'; g.beginPath(); g.arc(0,-13,18,Math.PI,Math.PI*2); g.lineTo(18,-4); g.quadraticCurveTo(0,1,-18,-4); g.closePath(); g.fill(); g.stroke();
-        g.fillStyle='#f0bd91'; g.strokeStyle='#9a6047'; g.lineWidth=1.5;
-        g.beginPath();g.ellipse(0,-8,14,15,0,0,Math.PI*2);g.fill();g.stroke();
-        g.strokeStyle='#54352a';g.lineWidth=2.3;g.beginPath();g.moveTo(-10,-14);g.lineTo(-4,-15);g.moveTo(4,-15);g.lineTo(10,-14);g.stroke();
-        circ(-7,-10,3.1,'#fff',1);circ(7,-10,3.1,'#fff',1);
-        circ(-7+Math.cos(p.a)*1.2,-10+Math.sin(p.a)*1.2,1.55,'#173047');
-        circ(7+Math.cos(p.a)*1.2,-10+Math.sin(p.a)*1.2,1.55,'#173047');
-        circ(0,-4,2,'#d98b6c',1);
-        g.strokeStyle='#7c3d34';g.lineWidth=2.1;g.beginPath();g.moveTo(-6,-1);g.quadraticCurveTo(0,5,6,-1);g.stroke();
-        g.fillStyle='#152331';g.fillRect(-18,15,12,7);g.fillRect(6,15,12,7);
-        g.save(); g.translate(Math.cos(p.a)*14,Math.sin(p.a)*14+3); g.rotate(p.a);
-        g.fillStyle='#a86b2d'; g.strokeStyle='#4a2a12'; g.lineWidth=2; g.beginPath(); g.roundRect(-3,-7,8,17,3); g.fill(); g.stroke();
-        g.fillStyle='#d7d3c8'; g.fillRect(-2,-11,6,5); g.fillStyle='#f1cf67'; g.fillRect(-2,0,6,4); g.restore();
+        const bob=1+Math.sin(p.walk)*.045; g.scale(1,bob);
+        // Chunky, high-contrast cartoon silhouette matching the other brawlers.
+        g.fillStyle='#183b32';g.strokeStyle='#101923';g.lineWidth=3;g.beginPath();g.ellipse(0,8,20,18,0,0,Math.PI*2);g.fill();g.stroke();
+        g.fillStyle='#2f6f4f';g.beginPath();g.moveTo(-17,2);g.quadraticCurveTo(-19,-12,-12,-20);g.lineTo(12,-20);g.quadraticCurveTo(20,-10,17,2);g.closePath();g.fill();g.stroke();
+        g.fillStyle='#d9a441';g.beginPath();g.roundRect(-15,-21,30,5,2);g.fill();g.stroke();
+        g.fillStyle='#e7b85f';g.beginPath();g.ellipse(0,-23,17,7,-.04,Math.PI,Math.PI*2);g.lineTo(20,-19);g.quadraticCurveTo(0,-15,-20,-19);g.closePath();g.fill();g.stroke();
+        g.fillStyle='#f0bd91';g.strokeStyle='#8d543d';g.lineWidth=2;g.beginPath();g.ellipse(0,-8,14,16,0,0,Math.PI*2);g.fill();g.stroke();
+        g.strokeStyle='#563526';g.lineWidth=3.2;g.lineCap='round';g.beginPath();g.moveTo(-10,-15);g.quadraticCurveTo(-7,-18,-3,-15);g.moveTo(3,-15);g.quadraticCurveTo(7,-18,10,-15);g.stroke();
+        circ(-6.5,-10,4.1,'#fff',1);circ(6.5,-10,4.1,'#fff',1);circ(-6.5+Math.cos(p.a)*1.5,-10+Math.sin(p.a)*1.5,2,'#243b53');circ(6.5+Math.cos(p.a)*1.5,-10+Math.sin(p.a)*1.5,2,'#243b53');
+        g.fillStyle='#e99570';g.beginPath();g.ellipse(0,-4,3.2,2.5,0,0,Math.PI*2);g.fill();
+        g.fillStyle='#fff7df';g.strokeStyle='#713c2b';g.lineWidth=1.8;g.beginPath();g.moveTo(-7,0);g.quadraticCurveTo(0,8,7,0);g.quadraticCurveTo(0,3,-7,0);g.fill();g.stroke();
+        g.fillStyle='#f19b84';g.globalAlpha=.65;g.beginPath();g.ellipse(-10,-4,3,2,0,0,Math.PI*2);g.ellipse(10,-4,3,2,0,0,Math.PI*2);g.fill();g.globalAlpha=1;
+        g.fillStyle='#143b30';g.strokeStyle='#0a211b';g.lineWidth=2;g.beginPath();g.moveTo(-16,12);g.lineTo(-10,6);g.lineTo(0,13);g.lineTo(10,6);g.lineTo(16,12);g.lineTo(17,23);g.lineTo(-17,23);g.closePath();g.fill();g.stroke();
+        circ(-5,17,1.8,'#f6c453');circ(5,17,1.8,'#f6c453');
+        g.save();g.translate(Math.cos(p.a)*17,Math.sin(p.a)*15+4);g.rotate(p.a);g.fillStyle='#b9782f';g.strokeStyle='#4b2d19';g.lineWidth=2.2;g.beginPath();g.roundRect(-4,-7,9,18,3);g.fill();g.stroke();g.fillStyle='#e6d7a4';g.fillRect(-2.5,-11,6,5);g.fillStyle='#f7d46c';g.fillRect(-2.5,0,6,5);g.restore();
       }
       else {
         const bob = 1 + Math.sin(p.walk)*.05; g.scale(1, bob);
@@ -2239,12 +2252,13 @@ function gadget(p){
           if(msg.super && p.sc<1) p.sc=1;
           fire(p,!!msg.super);
         }
-        else if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.k.sy) sTap(p); else tryFire(p); }
+        else if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; if(p.k.sy) sTap(p); else tryFire(p); }
         else if(msg.action==='super'){
           // Remote bot supers must not depend on this browser's local round phase.
           // The host can be a fraction of a tick ahead, otherwise the non-host silently
           // drops the bot's super when its local G.ph is still counting/ending.
           p.sc=1; p.tf=0; p.chg=0; p.holdT=0;
+          if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY};
           if(p.k?.sy){
             if(p.form<5 && !p.lp) xform(p);
             else if(p.form===5 && !p.lp) superUltraKame(p);
