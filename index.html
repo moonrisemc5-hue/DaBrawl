@@ -1156,7 +1156,7 @@ function gadget(p){
           }
           continue;
         }
-        if(p.alive && G.ph=='play'){
+        if(p.alive && G.ph=='play' && (!networkMode || p===me || (isNetworkHost && p.isBot && !p.netRemote))){
           const px = p.x/T, py = p.y/T;
           if(px < gasDist || px > MW - gasDist || py < gasDist || py > MH - gasDist){
             p.gasTimer = (p.gasTimer || 0) + dt;
@@ -1167,7 +1167,7 @@ function gadget(p){
       for(let i=F.length-1;i>=0;i--){ const f=F[i]; f.l-=dt; f.x+=f.vx*dt; f.y+=f.vy*dt; if(f.k=='s') f.vy+=300*dt; if(f.l<=0) F.splice(i,1); }
       for(let i=MT.length-1;i>=0;i--){ const m=MT[i]; m.t-=dt; if(m.t<=0){ MT.splice(i,1); impact(m); } }
       wf = Math.max(0, wf);
-      for(let i=KM.length-1;i>=0;i--){ const k=KM[i]; k.t-=dt; k.x=k.o.x; k.y=k.o.y; k.tk-=dt; if(k.tk<=0){ k.tk=.1; beamHit(k); } if(k.t<=0) KM.splice(i,1); }
+      for(let i=KM.length-1;i>=0;i--){ const k=KM[i]; k.t-=dt; if(!k.remoteVisual){ k.x=k.o.x; k.y=k.o.y; } k.tk-=dt; if(k.tk<=0){ k.tk=.1; beamHit(k); } if(k.t<=0) KM.splice(i,1); }
       if(G.ph=='count'){ G.t=Math.max(0,((G.endAt||Date.now())-Date.now())/1000); if(G.t<=0) G.ph='play'; }
       else if(G.ph=='end'){ G.t-=dt; if(G.t<=0){ if(G.w[0]>=2||G.w[1]>=2||gameMode=='showdown'||gameMode==='duo') finish(); else { G.r++; resetRound(); } } }
       if(G.ph=='play'){
@@ -1499,7 +1499,7 @@ function gadget(p){
       if(networkMode && k.o?.netRemote) return;
       const c = Math.cos(k.a), s = Math.sin(k.a);
       for(const e of P){
-        if(e===k.o || !e.alive || e.lp || e.tf>0 || (gameMode=='knockout'&&e.t==k.o.t)) continue;
+        if(e===k.o || !e.alive || e.lp || e.tf>0 || ((gameMode==='knockout'||gameMode==='duo')&&e.t===k.o.t)) continue;
         const rx = e.x-k.x, ry = e.y-k.y, al = rx*c + ry*s, pp = Math.abs(-rx*s + ry*c);
         if(al>0 && al<k.len && pp<k.w+14 && !(k.instantRed && k.hitTargets && k.hitTargets.includes(e))){
           if(k.instantRed){ if(!k.hitTargets) k.hitTargets=[]; k.hitTargets.push(e); }
