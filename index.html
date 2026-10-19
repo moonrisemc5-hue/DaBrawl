@@ -1104,7 +1104,9 @@ function gadget(p){
       try{localStorage.removeItem('dabrawl_active_match');}catch(_){}
       lastMatchWasOnline=!!networkMode; lastQueueMode=gameMode;
       const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
-      const place = gameMode==='showdown' ? Math.max(1, Math.min(10, P.filter(p=>!p.alive).length+1)) : gameMode==='duo' ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(5, 6-aliveTeams.length))) : (G.w[me.t]>=2 ? 1 : 5);
+      const totalTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].length : 0;
+      const eliminatedTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].filter(team=>!aliveTeams.includes(team)).length : 0;
+      const place = gameMode==='showdown' ? Math.max(1, Math.min(10, P.filter(p=>!p.alive).length+1)) : gameMode==='duo' ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(totalTeams, eliminatedTeams+1))) : (G.w[me.t]>=2 ? 1 : 5);
       const win = place===1, d = place===1 ? 10 : place===2 ? 8 : place===3 ? 5 : place===4 ? 0 : -5;
       // Online clients wait for the host's final result before changing trophies.
       if(!networkMode || isNetworkHost){
