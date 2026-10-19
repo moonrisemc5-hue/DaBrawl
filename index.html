@@ -634,7 +634,7 @@
       kuku: {nm:'KUKU', rarity:'COMMON', rarityCol:'#00c0ff', hp:7000, spd:135, pel:8, dmg:312.5, spr:.68, rng:230, bs:550, rel:1.6, sd:333.3, sp:12, ss:.72, sr:340, w:140, z:2.5, cm:0.6, cls:'DAMAGE DEALER', atkNm:'2500 DMG', supNm:'WALL BREAKER', info:'Kuku fires 8 rapid buckshot pellets!'},
       shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:8000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2000, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
       saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'FIGHTER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'},
-      deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b86b3d', hp:7600, spd:138, pel:1, dmg:850, spr:0, rng:300, bs:430, rel:1.05, sd:0, sr:0, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'BEER BOTTLE', supNm:'BOTTLE BARRAGE', info:'Throws beer bottles that hurt enemies and heal teammates!'}
+      deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b86b3d', hp:7600, spd:138, pel:1, dmg:2125, spr:0, rng:300, bs:430, rel:1.05, sd:2750, sr:110, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'LOBbed BEER', supNm:'BEER BARRAGE', info:'Lobs beer that leaves a damaging and healing puddle!'}
     };
     const FM = [
       {},
@@ -1934,9 +1934,14 @@ function gadget(p){
           g.fillStyle='#ff5a2a33'; g.fill(); circ(m.x+u*40, m.y-u*420, 16, '#7a5a3a', 1);
         }
         for(const p of P) if(p.lp){ g.strokeStyle='#fffa'; g.lineWidth=4; g.beginPath(); g.arc(p.lp.ex, p.lp.ey, p.lp.r, 0, 6.283); g.stroke(); }
+        for(const zone of Z){
+          const fade=Math.max(0,Math.min(1,(zone.expires-Date.now())/1800));
+          g.save();g.globalAlpha=.38*fade;g.fillStyle=zone.superBeer?'#f59e0b':'#d99a42';g.beginPath();g.ellipse(zone.x,zone.y,zone.radius,zone.radius*.72,0,0,Math.PI*2);g.fill();
+          g.globalAlpha=.75*fade;g.strokeStyle='#fef3c7';g.lineWidth=3;g.beginPath();g.ellipse(zone.x,zone.y,zone.radius*.92,zone.radius*.66,0,0,Math.PI*2);g.stroke();g.restore();
+        }
         for(const b of B){
           if(b.beer || b.cigar){
-            g.save(); g.translate(b.x,b.y); g.rotate(Math.atan2(b.vy,b.vx));
+            g.save(); const arcLift=b.beer?Math.sin(Math.min(1,(b.flightT||0)/(b.flightDuration||1))*Math.PI)*(b.arcHeight||46):0; g.translate(b.x,b.y-arcLift); g.rotate(Math.atan2(b.vy,b.vx));
             if(b.beer){
               g.shadowColor='#fbbf24';g.shadowBlur=b.superBeer?22:12;
               g.fillStyle='#d99a42';g.strokeStyle='#5b3217';g.lineWidth=2.5;
