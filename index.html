@@ -289,75 +289,40 @@
     <button class="btn" id="home">HOME</button>
   </div>
 <script>
-    // Independent navigation failsafe: keep BRAWLERS usable even if the main game UI
-    // throws during startup or a preview renderer fails.
+    // Navigation failsafe only. Do not draw substitute characters or replace the real roster.
     (() => {
       const $ = id => document.getElementById(id);
       function fallbackShow(id) {
-        document.querySelectorAll('.scr').forEach(s => {
-          const active = s.id === id;
-          s.classList.toggle('on', active);
-          s.style.visibility = active ? 'visible' : 'hidden';
-          s.style.pointerEvents = active ? 'auto' : 'none';
+        document.querySelectorAll('.scr').forEach(screen => {
+          const active = screen.id === id;
+          screen.classList.toggle('on', active);
+          screen.style.visibility = active ? 'visible' : 'hidden';
+          screen.style.pointerEvents = active ? 'auto' : 'none';
         });
-        const target=$(id);
-        if(target){target.style.zIndex='900';target.style.pointerEvents='auto';}
+        const target = $(id);
+        if (target) { target.style.zIndex = '900'; target.style.pointerEvents = 'auto'; }
       }
-      function drawFallback(canvas, color) {
-        if(!canvas) return;
-        const c=canvas.getContext && canvas.getContext('2d'); if(!c) return;
-        c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,canvas.width,canvas.height);
-        c.fillStyle='#18233d';c.fillRect(0,0,canvas.width,canvas.height);
-        c.fillStyle=color;c.beginPath();c.arc(canvas.width/2,canvas.height*.33,canvas.width*.13,0,Math.PI*2);c.fill();
-        c.fillRect(canvas.width*.36,canvas.height*.43,canvas.width*.28,canvas.height*.3);
-        c.fillRect(canvas.width*.25,canvas.height*.47,canvas.width*.12,canvas.height*.24);
-        c.fillRect(canvas.width*.63,canvas.height*.47,canvas.width*.12,canvas.height*.24);
-        c.fillRect(canvas.width*.38,canvas.height*.71,canvas.width*.1,canvas.height*.19);
-        c.fillRect(canvas.width*.52,canvas.height*.71,canvas.width*.1,canvas.height*.19);
-        c.strokeStyle='#fff';c.lineWidth=2;c.strokeRect(2,2,canvas.width-4,canvas.height-4);
+      function openBrawlers() {
+        try {
+          if (typeof window.show === 'function') window.show('brs');
+          else fallbackShow('brs');
+        } catch (_) { fallbackShow('brs'); }
+        const grid = $('grid'); if (grid) grid.style.pointerEvents = 'auto';
+        const back = $('bk1'); if (back) back.style.pointerEvents = 'auto';
       }
-      function buildFallbackGrid() {
-        const gr=$('grid'); if(!gr || gr.children.length) return;
-        gr.style.display='flex';gr.style.flexWrap='wrap';gr.style.justifyContent='center';
-        gr.style.gap='10px';gr.style.width='100%';gr.style.overflowY='auto';
-        fallbackBrawlers.forEach(b=>{
-          const card=document.createElement('button');
-          card.type='button';card.className='b-card';card.style.cssText='pointer-events:auto;cursor:pointer;display:flex;flex-direction:column;align-items:center;min-width:104px;min-height:180px;padding:8px;background:#111b32;color:#fff;border:2px solid '+b.color+';border-radius:12px;font: bold 14px Arial,sans-serif';
-          const canvas=document.createElement('canvas');canvas.width=100;canvas.height=118;canvas.style.width='100px';canvas.style.height='118px';
-          const label=document.createElement('span');label.textContent=b.name;
-          card.append(canvas,label);drawFallback(canvas,b.color);
-          card.addEventListener('click',()=>{
-            try { if(typeof window.det==='function'){window.det(b.id);return;} } catch(_){}
-            $('dTitle').textContent=b.name;$('dClass').textContent=b.cls;$('dLore').textContent=b.lore;
-            drawFallback($('dpv'),b.color);
-            const select=$('dsel'); if(select){select.textContent='SELECT';select.onclick=()=>{try{localStorage.setItem('dabrawl_b',b.id);}catch(_){} fallbackShow('menu');const name=$('bn');if(name)name.textContent=b.name;drawFallback($('pv'),b.color);};}
-            fallbackShow('det');
-          });
-          gr.appendChild(card);
-        });
-      }
-      function openBrawlers(){
-        try { if(typeof window.show==='function'){window.show('brs');} else fallbackShow('brs'); } catch(_){fallbackShow('brs');}
-        buildFallbackGrid();
-        const grid=$('grid'); if(grid) grid.style.pointerEvents='auto';
-        const back=$('bk1'); if(back) back.style.pointerEvents='auto';
-      }
-      document.addEventListener('click',e=>{
-        const target=e.target && e.target.closest ? e.target.closest('#bra,#featuredBrawler,#bk1,#bk3') : null;
-        if(!target) return;
-        if(target.id==='bra'||target.id==='featuredBrawler'||target.id==='bk3'){
-          e.preventDefault();e.stopImmediatePropagation();openBrawlers();
-        } else if(target.id==='bk1'){
-          e.preventDefault();e.stopImmediatePropagation();
-          try {if(typeof window.show==='function'){window.show('menu');}else fallbackShow('menu');}catch(_){fallbackShow('menu');}
+      document.addEventListener('click', event => {
+        const target = event.target && event.target.closest ? event.target.closest('#bra,#featuredBrawler,#bk1,#bk3') : null;
+        if (!target) return;
+        if (target.id === 'bra' || target.id === 'featuredBrawler' || target.id === 'bk3') {
+          event.preventDefault(); event.stopImmediatePropagation(); openBrawlers();
+        } else if (target.id === 'bk1') {
+          event.preventDefault(); event.stopImmediatePropagation();
+          try { if (typeof window.show === 'function') window.show('menu'); else fallbackShow('menu'); }
+          catch (_) { fallbackShow('menu'); }
         }
-      },true);
-      window.addEventListener('error',event=>{
-        console.error('DaBrawl startup error:', event.message, event.filename, event.lineno);
-      });
-      window.addEventListener('unhandledrejection',event=>{
-        console.error('DaBrawl startup rejection:', event.reason);
-      });
+      }, true);
+      window.addEventListener('error', event => console.error('DaBrawl startup error:', event.message, event.filename, event.lineno));
+      window.addEventListener('unhandledrejection', event => console.error('DaBrawl startup rejection:', event.reason));
     })();
   </script>
 
