@@ -627,32 +627,44 @@
     }
     addEventListener('blur',clearGameInput);
     document.addEventListener('visibilitychange',()=>{if(document.hidden)clearGameInput();});
-    $('sup').setAttribute('aria-label', 'Super ability');
-    $('gad').setAttribute('aria-label', 'Gadget ability');
-    // Super is a button, not a joystick. It must not inherit a leftover aim touch.
-    $('sup').style.touchAction='manipulation';
-    $('gad').style.touchAction='manipulation';
-    // Ability buttons sit above the canvas: cancel browser gestures and never leak a press
-    // into movement/aim input. Super aims at the nearest valid enemy without spending a normal shot.
-    for(const button of [$('sup'),$('gad')]){
-      button.addEventListener('pointerdown',e=>{
-        e.preventDefault();e.stopPropagation();
-        if(scr!=='game'||!me)return;
-        if(button.id==='sup'){
-          if(me.sc>=1&&me.tf<=0){aimAtNearestEnemy(me);sup(me);}
-        }else gadget(me);
-      });
-      button.addEventListener('keydown',e=>{
-        if(e.key!=='Enter'&&e.key!==' ')return;
-        e.preventDefault();
-        if(scr!=='game'||!me)return;
-        if(button.id==='sup'){if(me.sc>=1&&me.tf<=0){aimAtNearestEnemy(me);sup(me);}}
-        else gadget(me);
-      });
+    $('sup').setAttribute('aria-label','Super ability — drag to aim, tap to auto-aim');
+    $('gad').setAttribute('aria-label','Gadget ability');
+    $('sup').style.touchAction='none';$('gad').style.touchAction='manipulation';
+    let superPointer=null,superStart=null,superCurrent=null,superDragged=false;
+    function useSuperFromGesture(){
+      if(scr!=='game'||!me||me.sc<1||me.tf>0)return;
+      if(superDragged&&superStart&&superCurrent)me.a=Math.atan2(superCurrent.y-superStart.y,superCurrent.x-superStart.x);
+      else aimAtNearestEnemy(me);
+      sup(me);
     }
-    // Keep touch presses from selecting text or generating a delayed synthetic click.
-    $('sup').addEventListener('contextmenu',e=>e.preventDefault());
-    $('gad').addEventListener('contextmenu',e=>e.preventDefault());
+    $('sup').addEventListener('pointerdown',e=>{
+      e.preventDefault();e.stopPropagation();
+      if(scr!=='game'||!me||me.sc<1||me.tf>0)return;
+      superPointer=e.pointerId;superStart={x:e.clientX,y:e.clientY};superCurrent={...superStart};superDragged=false;
+      try{$('sup').setPointerCapture(e.pointerId);}catch(_){}
+    });
+    $('sup').addEventListener('pointermove',e=>{
+      if(superPointer!==e.pointerId||!superStart)return;
+      e.preventDefault();superCurrent={x:e.clientX,y:e.clientY};
+      if(Math.hypot(superCurrent.x-superStart.x,superCurrent.y-superStart.y)>16)superDragged=true;
+    });
+    function finishSuperPointer(e,cancelled=false){
+      if(superPointer!==e.pointerId)return;
+      e.preventDefault();e.stopPropagation();
+      if(!cancelled)useSuperFromGesture();
+      superPointer=null;superStart=null;superCurrent=null;superDragged=false;
+    }
+    $('sup').addEventListener('pointerup',e=>finishSuperPointer(e,false));
+    $('sup').addEventListener('pointercancel',e=>finishSuperPointer(e,true));
+    $('gad').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(scr==='game'&&me)gadget(me);});
+    for(const button of [$('sup'),$('gad')]){
+      button.addEventListener('keydown',e=>{
+        if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();
+        if(scr!=='game'||!me)return;
+        if(button.id==='sup'){aimAtNearestEnemy(me);sup(me);}else gadget(me);
+      });
+      button.addEventListener('contextmenu',e=>e.preventDefault());
+    }
     $('leaveBtn').onclick = () => { show('menu'); isTestMode = false; };
     $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ if(isNetworkHost) void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
     $('home').onclick = () => { beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
@@ -1541,15 +1553,17 @@ function gadget(p){
         for(const p of P) drawUI(p);
         g.setTransform(DPR, 0, 0, DPR, 0, 0);
         if(touch && scr == 'game'){
-          // Aim range is anchored to the brawler, not the joystick. It previews the shot lane.
-          if(ts.a.active && Math.hypot(ts.a.x-ts.a.ox,ts.a.y-ts.a.oy)>18 && me && me.alive){
-            const aimAngle=Math.atan2(ts.a.y-ts.a.oy,ts.a.x-ts.a.ox);
-            const playerX=(me.x-cam.x)*z,playerY=(me.y-cam.y)*z;
-            const rangePx=Math.min(W*.62,Math.max(150,W*.42));
-            g.save();g.translate(playerX,playerY);g.rotate(aimAngle);
-            g.fillStyle='rgba(205,213,225,0.25)';g.beginPath();
-            g.moveTo(0,-11);g.lineTo(rangePx,-25);g.lineTo(rangePx,25);g.lineTo(0,11);g.closePath();g.fill();
-            g.strokeStyle='rgba(226,232,240,0.7)';g.lineWidth=2;g.beginPath();g.moveTo(0,0);g.lineTo(rangePx,0);g.stroke();g.restore();
+          // Draw aim range from the brawler, for both the attack stick and drag-aimed Super.
+          if(me&&me.alive){
+            const manualAim=ts.a.active&&Math.hypot(ts.a.x-ts.a.ox,ts.a.y-ts.a.oy)>18;
+            const superAim=superPointer!==null&&superDragged&&superStart&&superCurrent;
+            if(manualAim||superAim){
+              const aimAngle=manualAim?Math.atan2(ts.a.y-ts.a.oy,ts.a.x-ts.a.ox):Math.atan2(superCurrent.y-superStart.y,superCurrent.x-superStart.x);
+              const playerX=(me.x-cam.x)*z,playerY=(me.y-cam.y)*z,rangePx=Math.min(W*.62,Math.max(150,W*.42));
+              g.save();g.translate(playerX,playerY);g.rotate(aimAngle);
+              g.fillStyle='rgba(205,213,225,0.25)';g.beginPath();g.moveTo(0,-11);g.lineTo(rangePx,-25);g.lineTo(rangePx,25);g.lineTo(0,11);g.closePath();g.fill();
+              g.strokeStyle='rgba(226,232,240,0.7)';g.lineWidth=2;g.beginPath();g.moveTo(0,0);g.lineTo(rangePx,0);g.stroke();g.restore();
+            }
           }
           const colors = {m:'#ffffff', a:'#2a7de0', s:'#ffd21f'}, stickCols = {m:'#ffffff', a:'#5cb6ff', s:'#ffe45c'};
           for(const k of ['m', 'a', 's']){
