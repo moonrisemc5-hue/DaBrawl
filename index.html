@@ -85,17 +85,18 @@
     body.mobile-controls #brs .b-card .power-bar { height:8px; flex:0 0 8px; width:90%; margin-top:2px; }
     body.mobile-controls #brs #bk1 { flex:0 0 auto; min-height:42px; }
     body.mobile-controls #det.on { overflow-y:auto; justify-content:flex-start; gap:8px; padding-top:calc(8px + env(safe-area-inset-top,0px)); }
-    body.mobile-controls #det .det-layout { flex:1 0 auto; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; padding:4px; box-sizing:border-box; }
-    body.mobile-controls #det .det-left { max-width:none; min-width:0; gap:5px; }
-    body.mobile-controls #det .det-title { font-size:clamp(18px,5vw,28px); padding:3px 8px; }
-    body.mobile-controls #det .det-lore { font-size:12px; padding:7px; }
-    body.mobile-controls #det #dpv { width:min(42vw,220px)!important; height:min(32vh,220px)!important; max-width:100%; }
-    body.mobile-controls #det .det-right { grid-column:1 / -1; width:auto; padding:8px; gap:6px; }
-    body.mobile-controls #det .level-slots { gap:3px; }
-    body.mobile-controls #det .lvl-slot { width:clamp(20px,6vw,32px); height:clamp(20px,6vw,32px); font-size:9px; }
-    body.mobile-controls #det .stat-box { padding:5px 8px; }
+    body.mobile-controls #det.on { overflow-y:auto; justify-content:flex-start; gap:10px; padding:calc(10px + env(safe-area-inset-top,0px)) 8px calc(12px + env(safe-area-inset-bottom,0px)); }
+    body.mobile-controls #det .det-layout { flex:0 0 auto; min-height:0; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:10px; padding:4px; box-sizing:border-box; }
+    body.mobile-controls #det .det-left { max-width:none; min-width:0; gap:7px; }
+    body.mobile-controls #det .det-title { font-size:clamp(24px,7vw,34px); padding:5px 10px; }
+    body.mobile-controls #det .det-lore { font-size:14px; padding:9px; }
+    body.mobile-controls #det #dpv { width:min(72vw,280px)!important; height:min(32vh,240px)!important; max-width:100%; align-self:center; }
+    body.mobile-controls #det .det-right { width:auto; padding:10px; gap:8px; }
+    body.mobile-controls #det .level-slots { gap:4px; }
+    body.mobile-controls #det .lvl-slot { width:clamp(26px,7vw,36px); height:clamp(26px,7vw,36px); font-size:11px; }
+    body.mobile-controls #det .stat-box { padding:7px 10px; }
     body.mobile-controls #det .row { flex-shrink:0; gap:8px; margin:0!important; }
-    body.mobile-controls #det .row .btn { font-size:clamp(17px,4.5vw,26px)!important; padding:6px 14px!important; }
+    body.mobile-controls #det .row .btn { font-size:clamp(20px,5vw,30px)!important; padding:8px 18px!important; }
     body.mobile-controls #settingsScreen { overflow-y:auto; justify-content:flex-start; padding-top:calc(12px + env(safe-area-inset-top,0px)); }
     body.mobile-controls #settingsScreen > div { flex-shrink:0; }
     body.mobile-controls #settingsScreen #keybindRows { grid-template-columns:1fr; }
@@ -368,6 +369,7 @@
     applyControlMode(controlMode,false);
     function show(s){
       if(s !== 'loading' && activeLoadingTimer){clearInterval(activeLoadingTimer);activeLoadingTimer=null;loadingGeneration++;}
+      if(s !== 'loading'){loadingGeneration++;}
       if(s !== 'game' && s !== 'loading' && s !== 'res' && networkMode){ networkMode = false; if(window.DaBrawlNet) window.DaBrawlNet.leaveMatch(); }
       scr = s; document.querySelectorAll('.scr').forEach(e => {const active=e.id===s;e.classList.toggle('on',active);e.style.pointerEvents=active?'auto':'none';});
       $('leaveBtn').style.display = (s == 'game' && (isTestMode || (gameMode==='showdown' && me && !me.alive && G?.ph==='play'))) ? 'block' : 'none';
@@ -592,6 +594,7 @@
     }
     function startGame(test=false){
       if(activeLoadingTimer){clearInterval(activeLoadingTimer);activeLoadingTimer=null;}
+      loadingGeneration++;
       isTestMode = test; if(!test && !networkMode){try{localStorage.setItem('dabrawl_active_match','active');}catch(_){}} else {try{localStorage.removeItem('dabrawl_active_match');}catch(_){}} mapVariant=Math.floor(Math.random()*3); const n = [...NM].sort(() => Math.random()-.5);
       P = []; matchEliminations=0; teamEliminations=0; teamEliminationOrder={}; build(); me = mk(0,0,1,'You',selB); P.push(me);
       if(test){
@@ -964,7 +967,7 @@ function gadget(p){
     function ai(b,dt){
       if(b.isDummy){
         let tg=null, bd=1e9;
-        for(const e of P){ if(e===b||!e.alive) continue; const d=Math.hypot(e.x-b.x, e.y-b.y); if(d<bd){ bd=d; tg=e; } }
+        for(const e of P){ if(e===b||!e.alive||(gameMode==='duo'&&e.t===b.t)||(gameMode!=='showdown'&&gameMode!=='duo'&&e.t===b.t)) continue; const d=Math.hypot(e.x-b.x, e.y-b.y); if(d<bd){ bd=d; tg=e; } }
         if(tg){ b.a = Math.atan2(tg.y-b.y, tg.x-b.x); if(b.cd<=0 && bd<b.k.rng+25){ if(b.am>=1){ b.am--; fire(b,0); b.cd=.6; } } }
         return;
       }
@@ -990,7 +993,7 @@ function gadget(p){
         p.dodgeFx = Math.max(0, p.dodgeFx-dt); p.autoAimTimer = Math.max(0, (p.autoAimTimer||0)-dt);
         if(p.muiCharging>0) p.muiCharging-=dt;
         if(!p.alive) p.dt+=dt;
-        if(gameMode==='duo'&&!isTestMode&&p===me&&!p.alive&&p.respawnPending&&p.dt>=10){
+        if(gameMode==='duo'&&!isTestMode&&!networkMode&&!p.alive&&p.respawnPending&&p.dt>=10){
           const mate=P.find(q=>q!==p&&q.t===p.t&&q.alive);
           if(mate){
             const spots=[[0,-76],[76,0],[0,76],[-76,0]];let pos=null;
