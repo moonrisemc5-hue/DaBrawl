@@ -1073,6 +1073,16 @@ function gadget(p){
           if(!p.alive) continue;
           // Remote players still need local-only visual animation updates (transform auras, particles).
           if(p.netRemote){
+            // Remote Shachi leap: the owner controls movement and damage, but this client
+            // must still animate the jump height and expire the landing marker locally.
+            // Otherwise the remote brawler walks through the target circle and can look
+            // permanently airborne/invulnerable if a state packet is delayed.
+            if(p.lp){
+              const leapState=p.lp;
+              leapState.t=Math.min(1,(leapState.t||0)+dt/(leapState.dur||0.5));
+              p.h=Math.sin(leapState.t*Math.PI)*80;
+              if(leapState.t>=1){ p.lp=null; p.h=0; }
+            } else p.h=0;
             if(p.tf>0) tfx(p,dt);
             else if(p.k?.sy && p.burst>0) burstU(p,dt); // Remote Saiyans must animate their released ki-blast burst too.
             continue;
