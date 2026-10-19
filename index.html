@@ -14,7 +14,7 @@
     .scr:not(.on) { visibility: hidden; pointer-events: none !important; }
     button, input { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
     .scr.on button, .scr.on input, .scr.on .b-card { pointer-events: auto !important; }
-    .scr.on > * { position: relative; }
+    /* Keep each screen's intended positioning; the blanket override could shift menu layers over controls. */
     .scr.on > [style*='position:absolute'] { position: absolute !important; }
     h1 { font-size: min(16vw, 96px); margin: 0; color: var(--y); -webkit-text-stroke: 3px #000; text-shadow: 0 6px 0 #000; transform: rotate(-3deg); }
     h2 { margin: 0; font-size: 34px; text-shadow: 3px 3px 0 #000; }
@@ -1021,7 +1021,7 @@ function gadget(p){
       } else { $('again').style.display=''; $('home').style.display=''; }
       show('res');
     }
-    function updateMenuUI(){ try { $('bn').textContent = BR[selB].nm; if(!menuShowcaseFrame)setTimeout(() => {if(!menuShowcaseFrame)rb($('pv'), selB, 2.6, 8);}, 20); } catch(e){} }
+    function updateMenuUI(){ try { $('bn').textContent = BR[selB].nm; const canvas=$('pv'); if(canvas) rb(canvas,selB,2.6,8); } catch(e){} }
     function rb(c,id,sc,dy,form,angle,tf,tfn,showcasePose){
       try {
         if(!c) return; const ctx = c.getContext('2d'); if(!ctx) return;
@@ -1110,7 +1110,7 @@ function gadget(p){
       c.restore();return phase<3.35;
     }
     function startShowcaseAnimation(id){const token=++showcaseToken,canvas=$('dpv');if(showcaseFrame)cancelAnimationFrame(showcaseFrame);const started=performance.now();function frame(now){if(token!==showcaseToken||!$('det').classList.contains('on'))return;if(!drawShowcaseFrame(canvas,id,(now-started)/1000,3.2,10)){rb(canvas,id,3.2,10);showcaseFrame=0;return;}showcaseFrame=requestAnimationFrame(frame);}showcaseFrame=requestAnimationFrame(frame);}
-    function playMenuShowcase(id,broadcast=true){if(!BR[id])return;const token=++menuShowcaseToken,canvas=$('pv');if(menuShowcaseFrame)cancelAnimationFrame(menuShowcaseFrame);const started=performance.now();function frame(now){if(token!==menuShowcaseToken||!$('menu').classList.contains('on'))return;if(!drawShowcaseFrame(canvas,id,(now-started)/1000,2.6,8)){rb(canvas,selB,2.6,8);menuShowcaseFrame=0;return;}menuShowcaseFrame=requestAnimationFrame(frame);}menuShowcaseFrame=requestAnimationFrame(frame);if(broadcast)window.DaBrawlNet?.showcaseBrawler?.(id);}
+    function playMenuShowcase(id,broadcast=true){if(!BR[id])return;const token=++menuShowcaseToken,canvas=$('pv');if(menuShowcaseFrame)cancelAnimationFrame(menuShowcaseFrame);const started=performance.now();function frame(now){if(token!==menuShowcaseToken||!$('menu').classList.contains('on')){menuShowcaseFrame=0;return;}if(!drawShowcaseFrame(canvas,id,(now-started)/1000,2.6,8)){rb(canvas,selB,2.6,8);menuShowcaseFrame=0;return;}menuShowcaseFrame=requestAnimationFrame(frame);}menuShowcaseFrame=requestAnimationFrame(frame);if(broadcast)window.DaBrawlNet?.showcaseBrawler?.(id);}
     $('bk3').onclick = () => show('brs'); $('bra').onclick = () => show('brs');
     function leap(p,gd){
       K=p.k; let nd=1e9; for(const e of P) if(e!==p && e.alive && sees(p.t,e)) nd = Math.min(nd, Math.hypot(e.x-p.x, e.y-p.y));
