@@ -757,7 +757,7 @@
       if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); autoAimAndShoot(me); }
     });
     addEventListener('keyup', e => keys[e.key.toLowerCase()] = 0);
-    cv.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive){ const wx=mx/Math.max(.01,z)+cam.x, wy=my/Math.max(.01,z)+cam.y; me.a=Math.atan2(wy-me.y,wx-me.x); me.autoAimTimer=0; } });
+    addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive){ const wx=mx/Math.max(.01,z)+cam.x, wy=my/Math.max(.01,z)+cam.y; me.a=Math.atan2(wy-me.y,wx-me.x); me.autoAimTimer=0; } });
     cv.addEventListener('mousedown', e => { touch = false; if(e.button===2){ e.preventDefault(); if(me.tf <= 0) sup(me); } else if(e.button===0){ mdown = true; tryFire(me); } });
     cv.addEventListener('mouseup', e => { if(e.button===0) mdown = false; });
     cv.addEventListener('contextmenu', e => e.preventDefault());
