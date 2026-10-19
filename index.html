@@ -397,6 +397,24 @@
       saveTrophies();
     }
     const saveTrophies = () => { try { localStorage.setItem('dabrawl_tr',tr);localStorage.setItem('dabrawl_bt',JSON.stringify(bTrophies));localStorage.setItem('dabrawl_profile_'+trophyAccountKey,JSON.stringify({tr,bt:bTrophies})); } catch(e){} $('tro').textContent=tr; };
+    // A reload/close during a local match is an abandonment loss. The marker is
+    // written before play and consumed exactly once, even if beforeunload also runs.
+    try {
+      if(localStorage.getItem('dabrawl_active_match')==='penalized'){
+        localStorage.removeItem('dabrawl_active_match');
+      } else if(localStorage.getItem('dabrawl_active_match')==='active'){
+        tr=Math.max(0,tr-5); bTrophies[selB]=Math.max(0,(bTrophies[selB]||0)-5);
+        localStorage.removeItem('dabrawl_active_match'); saveTrophies();
+      }
+    } catch(_){}
+    addEventListener('beforeunload',()=>{
+      try{
+        if(localStorage.getItem('dabrawl_active_match')==='active' && !networkMode){
+          localStorage.setItem('dabrawl_active_match','penalized');
+          tr=Math.max(0,tr-5); bTrophies[selB]=Math.max(0,(bTrophies[selB]||0)-5); saveTrophies();
+        }
+      }catch(_){}
+    });
     saveTrophies();
     function getRank(trophies){ return trophies >= 1000 ? 35 : Math.min(35, Math.floor(trophies / 29) + 1); }
     function getRankBadgeColor(rank){
@@ -482,7 +500,7 @@
     function build(){
       gasDist = 0;
       if(gameMode == 'showdown' || gameMode === 'duo'){
-        MW=44; MH=28;
+        MW=50; MH=32;
         M = Array.from({length:MH}, (_,j) => Array.from({length:MW}, (_,i) => {
           if(i==0||j==0||i==MW-1||j==MH-1) return '#';
           // Three symmetric arena layouts; mapVariant is seeded from the match ID online.
@@ -559,7 +577,7 @@
       }, 120);
     }
     function startGame(test=false){
-      isTestMode = test; mapVariant=Math.floor(Math.random()*3); const n = [...NM].sort(() => Math.random()-.5);
+      isTestMode = test; if(!test){try{localStorage.setItem('dabrawl_active_match','active');}catch(_){}} mapVariant=Math.floor(Math.random()*3); const n = [...NM].sort(() => Math.random()-.5);
       P = []; build(); me = mk(0,0,1,'You',selB); P.push(me);
       if(test){
         P.push(mk(1,0,0,'Dummy Kuku','kuku',true)); P.push(mk(1,1,0,'Dummy Shachi','shachi',true));
@@ -745,7 +763,7 @@
     }
     $('leaveBtn').onclick = () => { show('menu'); isTestMode = false; };
     $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ if(isNetworkHost) void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
-    $('home').onclick = () => { beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
+    $('home').onclick = () => { try{localStorage.removeItem('dabrawl_active_match');}catch(_){} beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
     $('play').onclick = async () => {
       if(window.DaBrawlNet?.isInParty()){window.DaBrawlNet.toggleReady?.();return;}
       beep(500,.1);
@@ -1046,7 +1064,7 @@ function gadget(p){
           if(gameMode == 'showdown' || gameMode == 'duel' || gameMode === 'duo'){
             const aliveCount = P.filter(p=>p.alive).length;
             const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
-            if(gameMode==='duo' ? aliveTeams.length<=1 : (aliveCount<=1 || !me.alive)){
+            if(gameMode==='duo' ? aliveTeams.length<=1 : (gameMode==='showdown' ? aliveCount<=1 : (aliveCount<=1 || !me.alive))){
               const win = gameMode==='duo' ? aliveTeams[0]===me.t : me.alive && aliveCount==1;
               if(gameMode==='duel'){
                 const winnerTeam=win?me.t:(me.t===0?1:0);
@@ -1083,6 +1101,7 @@ function gadget(p){
     }
     function finish(){
       if(scr==='res') return;
+      try{localStorage.removeItem('dabrawl_active_match');}catch(_){}
       lastMatchWasOnline=!!networkMode; lastQueueMode=gameMode;
       const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
       const place = gameMode==='showdown' ? Math.max(1, Math.min(10, P.filter(p=>!p.alive).length+1)) : gameMode==='duo' ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(5, 6-aliveTeams.length))) : (G.w[me.t]>=2 ? 1 : 5);
