@@ -959,18 +959,16 @@
     }
     const sees = (tm,p) => gameMode=='showdown' || gameMode=='duo' || p.t==tm || tile(p.x,p.y)!='b' || P.some(a => a.alive && a.t==tm && Math.hypot(a.x-p.x, a.y-p.y)<2.5*T);
     function degesSplash(x,y,b){
-      const radius=b.splashRadius||(b.superBeer?88:58), isBeer=!!b.beer;
-      F.push({k:'r',x,y,rad:radius,l:.42,m:.42,c:isBeer?'#d99a42':'#c4a484'});
+      const radius=b.splashRadius||(b.superBeer?110:72), isBeer=!!b.beer;
+      F.push({k:'r',x,y,rad:radius,l:isBeer?1.8:.55,m:isBeer?1.8:.55,c:isBeer?'#d99a42':'#c4a484'});
       F.push({k:'tx',x,y:y-8,tx:isBeer?'🍺':'💨',c:'#fff',l:.65,m:.65});
       puff(x,y,18,isBeer?'#eabf68':'#c4a484',1.5);
-      for(const target of P){
-        if(!target.alive||target===b.o||Math.hypot(target.x-x,target.y-y)>radius)continue;
-        const ally=target.t===b.t;
-        if(isBeer&&ally){
-          const healed=Math.min(target.mh-target.hp,b.heal||900);
-          if(healed>0){target.hp+=healed;puff(target.x,target.y,7,'#7df9a5',.9);}
-        }else if(!ally){
-          dmg(target,{...b,d:(b.d||0)*(target===b.o?0:1),o:b.o,t:b.t});
+      if(isBeer){
+        Z.push({x,y,radius,owner:b.o,team:b.t,damage:b.d||0,heal:b.heal||2250,superBeer:!!b.superBeer,expires:Date.now()+1800,nextTick:Date.now(),lastHit:new Map()});
+      }else{
+        for(const target of P){
+          if(!target.alive||target===b.o||Math.hypot(target.x-x,target.y-y)>radius||target.t===b.t)continue;
+          dmg(target,{...b,o:b.o,t:b.t});
         }
       }
       shake=Math.max(shake,b.superBeer?10:4);
