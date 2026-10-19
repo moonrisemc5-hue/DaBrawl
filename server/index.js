@@ -250,27 +250,28 @@ function stepRoom(room, dt) {
     const separated = resolvePlayerCollisions(movers, room.world, PLAYER_RADIUS);
     movers.forEach((p, index) => { p.x = separated[index].x; p.y = separated[index].y; });
   }
-  if (!isCombatPhase(room.phase)) { room.projectiles = []; room.beams = []; }
+  if (!isCombatPhase(room.phase)) { room.projectiles = []; room.splashZones = []; room.beams = []; }
   const keep = [];
   for (const b of room.projectiles) {
     advanceProjectile(b, dt);
     const splashProjectile = () => {
       if (!b.friendlySupport && !b.cigar) return;
       const radius = b.splashRadius || 0, owner = room.players.get(b.ownerId);
-      for (const target of room.players.values()) {
-        if (!target.alive || target.id === b.ownerId || Math.hypot(target.x-b.x,target.y-b.y) > radius) continue;
-        if (b.friendlySupport && target.team === b.team) {
-          const healed = Math.min(target.maxHp-target.hp, b.heal || 900);
-          if (healed > 0) { target.hp += healed; event(room,"heal",{projectileId:b.id,playerId:b.ownerId,targetId:target.id,amount:healed,hp:target.hp,splash:true}); }
-        } else if (target.team !== b.team) {
-          const damage = b.cigar ? b.damage : b.damage;
-          target.hp = Math.max(0,target.hp-damage);
+      if (b.friendlySupport && !b.cigar) {
+        room.splashZones.push({ id:b.id, ownerId:b.ownerId, team:b.team, x:b.x, y:b.y, radius,
+          damage:b.damage, heal:b.heal || 2250, superBeer:!!b.superBeer, expiresAt:t+1800, nextTickAt:t,
+          nextTargetAt:new Map() });
+      } else {
+        for (const target of room.players.values()) {
+          if (!target.alive || target.id === b.ownerId || Math.hypot(target.x-b.x,target.y-b.y) > radius) continue;
+          if (target.team === b.team) continue;
+          target.hp = Math.max(0,target.hp-b.damage);
           target.meter = clamp(target.meter+12,0,100);
-          event(room,"hit",{projectileId:b.id,attackerId:b.ownerId,targetId:target.id,damage,hp:target.hp,splash:true,super:!!b.superBeer});
+          event(room,"hit",{projectileId:b.id,attackerId:b.ownerId,targetId:target.id,damage:b.damage,hp:target.hp,splash:true});
           if(target.hp<=0){target.alive=false;cancelKameCharge(target);target.input={x:0,y:0};event(room,"knockout",{playerId:target.id,by:b.ownerId});}
         }
       }
-      event(room,"projectile-splash",{projectileId:b.id,ownerId:b.ownerId,x:b.x,y:b.y,radius,kind:b.cigar?"cigar":"beer",super:!!b.superBeer});
+      event(room,"projectile-splash",{projectileId:b.id,ownerId:b.ownerId,x:b.x,y:b.y,radius,kind:b.cigar?"cigar":"beer",super:!!b.superBeer,durationMs:b.cigar?0:1800});
       if(owner && b.superBeer) owner.meter=0;
     };
     const wallHit = findProjectileObstacleHit(b, room.world.obstacles, 2);
@@ -310,6 +311,31 @@ function stepRoom(room, dt) {
     else splashProjectile();
   }
   room.projectiles = keep;
+  const activeZones = [];
+  for (const zone of room.splashZones) {
+    if (t >= zone.expiresAt) continue;
+    if (t >= zone.nextTickAt) {
+      zone.nextTickAt = t + 600;
+      for (const target of room.players.values()) {
+        if (!target.alive || target.id === zone.ownerId || Math.hypot(target.x-zone.x,target.y-zone.y) > zone.radius) continue;
+        const sameTeam = target.team === zone.team;
+        if (sameTeam) {
+          const healed = Math.min(target.maxHp-target.hp, zone.heal);
+          if (healed > 0) { target.hp += healed; event(room,"heal",{projectileId:zone.id,playerId:zone.ownerId,targetId:target.id,amount:healed,hp:target.hp,splash:true,beerZone:true}); }
+        } else {
+          const previous = zone.nextTargetAt.get(target.id) || 0;
+          if (t < previous) continue;
+          zone.nextTargetAt.set(target.id,t+600);
+          target.hp = Math.max(0,target.hp-zone.damage);
+          target.meter = clamp(target.meter+12,0,100);
+          event(room,"hit",{projectileId:zone.id,attackerId:zone.ownerId,targetId:target.id,damage:zone.damage,hp:target.hp,splash:true,super:zone.superBeer,beerZone:true});
+          if(target.hp<=0){target.alive=false;cancelKameCharge(target);target.input={x:0,y:0};event(room,"knockout",{playerId:target.id,by:zone.ownerId});}
+        }
+      }
+    }
+    activeZones.push(zone);
+  }
+  room.splashZones = activeZones;
   if (room.phase !== "playing") room.beams = [];
   else {
     const activeBeams = [];
