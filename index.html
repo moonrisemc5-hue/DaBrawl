@@ -602,8 +602,9 @@
           const candidate=enemyGap-dist[id]*T*.72;
           if(candidate>score){score=candidate;found=id;}
         }
-        if(found>=0)goal=found;
-      }
+        p.aiBushFound=found>=0;
+        if(found>=0)goal=found;else goal=start;
+      }else p.aiBushFound=false;
       if(prev[goal]===-2||goal===start){
         // If a target is unreachable, move toward the nearest reachable tile.
         let best=start,bestScore=Infinity;
@@ -1096,8 +1097,8 @@ function gadget(p){
       if(low){
         let bush=aiRouteVector(b,tg.x,tg.y,true);
         const onBush=tile(b.x,b.y)==='b';
-        if(onBush){moveX=-Math.cos(a);moveY=-Math.sin(a);}
-        else if(Math.hypot(bush.x,bush.y)>.1){moveX=bush.x;moveY=bush.y;}
+        if(onBush){const bx=(Math.floor(b.x/T)+.5)*T,by=(Math.floor(b.y/T)+.5)*T;moveX=bx-b.x;moveY=by-b.y;}
+        else if(b.aiBushFound){moveX=bush.x;moveY=bush.y;}
         else {moveX=-route.x;moveY=-route.y;}
       }else{
         moveX+=route.y*b.sd*.42;moveY-=route.x*b.sd*.42;
