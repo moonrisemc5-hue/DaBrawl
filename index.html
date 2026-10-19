@@ -587,20 +587,33 @@
         for(const k in ts){ if(ts[k].active && ts[k].id == t.identifier){ ts[k].x = pos.x; ts[k].y = pos.y; } }
       }
     },{passive:false});
-    cv.addEventListener('touchend', e => {
+    function finishTouchInput(e, cancelled=false){
       for(const t of e.changedTouches){
-        for(const k in ts){
-          if(ts[k].active && ts[k].id == t.identifier){
-            if(scr == 'game'){
-              if(k==='a' && Math.hypot(ts[k].x-ts[k].ox,ts[k].y-ts[k].oy)>12){ me.a=Math.atan2(ts[k].y-ts[k].oy,ts[k].x-ts[k].ox); tryFire(me); }
-              else if(k==='a') autoAimAndShoot(me);
-              if(k == 's' && me.tf <= 0) sup(me);
-            }
-            ts[k].active = false;
+        for(const k of Object.keys(ts)){
+          const state=ts[k];
+          if(!state.active||state.id!==t.identifier)continue;
+          // A system interruption (notification, app switch, gesture) must release the
+          // joystick cleanly and must never fire an accidental shot or Super.
+          if(!cancelled&&scr==='game'&&me){
+            if(k==='a'&&Math.hypot(state.x-state.ox,state.y-state.oy)>12){me.a=Math.atan2(state.y-state.oy,state.x-state.ox);tryFire(me);}
+            else if(k==='a')autoAimAndShoot(me);
+            if(k==='s'&&me.tf<=0)sup(me);
           }
+          state.active=false;state.id=null;
         }
       }
-    });
+    }
+    cv.addEventListener('touchend',e=>finishTouchInput(e,false));
+    cv.addEventListener('touchcancel',e=>finishTouchInput(e,true),{passive:true});
+    // Mobile browsers can interrupt pointer streams when switching apps or opening overlays.
+    // Reset input state on blur so the player never keeps moving/firing after returning.
+    function clearGameInput(){
+      mdown=false;
+      for(const key of Object.keys(keys))keys[key]=0;
+      for(const state of Object.values(ts)){state.active=false;state.id=null;state.x=state.ox;state.y=state.oy;}
+    }
+    addEventListener('blur',clearGameInput);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)clearGameInput();});
     $('sup').setAttribute('aria-label', 'Super ability');
     $('gad').setAttribute('aria-label', 'Gadget ability');
     // Ability buttons sit above the canvas: cancel browser gestures and never leak a press
