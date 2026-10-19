@@ -1866,7 +1866,7 @@ function gadget(p){
     function loop(t){
       requestAnimationFrame(loop); const dt = Math.min(.05, (t-last)/1000||0); last = t;
       if(scr == 'game'){
-        const canLeaveShowdown=gameMode==='showdown' && me && !me.alive && G?.ph==='play';
+        const canLeaveShowdown=gameMode==='showdown' && me && !me.alive && (G?.ph==='play'||G?.ph==='end');
         $('leaveBtn').style.display=(isTestMode||canLeaveShowdown)?'block':'none';
         $('leaveBtn').textContent=canLeaveShowdown?'RESULTS':'LEAVE';
         try { upd(dt); draw(); }
