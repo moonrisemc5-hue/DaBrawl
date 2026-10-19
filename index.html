@@ -358,13 +358,17 @@
       controlMode=mode==='mobile'?'mobile':'pc';
       // Keep menus, brawler selection, settings and lobby identical to PC.
       // The mobile layout class is only needed inside an active match for touch controls.
-      document.body.classList.toggle('mobile-controls',controlMode==='mobile' && scr==='game');
+      // This control-mode script runs before the game engine script declares
+      // scr and touch. Do not read those later-script lexical bindings here:
+      // doing so throws a Temporal Dead Zone ReferenceError and aborts startup.
+      document.body.classList.toggle('mobile-controls',controlMode==='mobile' && !!document.getElementById('game')?.classList.contains('on'));
       const pc=$('pcModeBtn'), mob=$('mobileModeBtn'), status=$('controlModeStatus');
       if(pc){pc.style.background=controlMode==='pc'?'linear-gradient(#4895ef,#4361ee)':'#252b40';pc.setAttribute('aria-pressed',String(controlMode==='pc'));}
       if(mob){mob.style.background=controlMode==='mobile'?'linear-gradient(#4895ef,#4361ee)':'#252b40';mob.setAttribute('aria-pressed',String(controlMode==='mobile'));}
       if(status) status.textContent=controlMode==='mobile'?'Mobile layout enabled. Touch joysticks appear during matches.':'PC layout enabled. Use keyboard and mouse.';
       if(save){try{localStorage.setItem(CONTROL_MODE_KEY,controlMode);}catch(_){}}
-      if(controlMode==='mobile') touch=true;
+      // The game engine's touch flag is initialized in a later script; set it
+      // when the match screen opens, after that script has executed.
     }
     $('pcModeBtn').addEventListener('click',()=>applyControlMode('pc'));
     $('mobileModeBtn').addEventListener('click',()=>applyControlMode('mobile'));
@@ -391,6 +395,7 @@
       if(s !== 'loading'){loadingGeneration++;}
       if(s !== 'game' && s !== 'loading' && s !== 'res' && networkMode){ networkMode = false; if(window.DaBrawlNet) window.DaBrawlNet.leaveMatch(); }
       scr = s;
+      if(s==='game') touch = controlMode==='mobile';
       document.body.classList.toggle('mobile-controls',controlMode==='mobile' && s==='game');
       document.querySelectorAll('.scr').forEach(e => {const active=e.id===s;e.classList.toggle('on',active);e.style.pointerEvents=active?'auto':'none';});
       $('leaveBtn').style.display = (s == 'game' && (isTestMode || (gameMode==='showdown' && me && !me.alive && G?.ph==='play'))) ? 'block' : 'none';
