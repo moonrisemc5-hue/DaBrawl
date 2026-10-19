@@ -1102,45 +1102,21 @@ function gadget(p){
       try {
         $('bn').textContent = BR[selB].nm;
         const canvas=$('pv');
-        if(canvas && !rb(canvas,selB,2.6,8)){
-          const ctx=canvas.getContext('2d');
-          if(ctx){
-            ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);
-            ctx.fillStyle='#18233d';ctx.fillRect(0,0,canvas.width,canvas.height);
-            ctx.fillStyle=(BR[selB]&&BR[selB].rarityCol)||'#ffd21f';
-            ctx.beginPath();ctx.arc(canvas.width/2,canvas.height*.36,Math.min(42,canvas.width*.13),0,Math.PI*2);ctx.fill();
-            ctx.fillRect(canvas.width*.36,canvas.height*.43,canvas.width*.28,canvas.height*.29);
-            ctx.fillRect(canvas.width*.29,canvas.height*.49,canvas.width*.12,canvas.height*.2);
-            ctx.fillRect(canvas.width*.59,canvas.height*.49,canvas.width*.12,canvas.height*.2);
-            ctx.fillRect(canvas.width*.38,canvas.height*.7,canvas.width*.1,canvas.height*.19);
-            ctx.fillRect(canvas.width*.52,canvas.height*.7,canvas.width*.1,canvas.height*.19);
-            ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.strokeRect(2,2,canvas.width-4,canvas.height-4);
-          }
-        }
-      } catch(e){ console.error('Menu preview recovery failed:',e); }
+        if(canvas) rb(canvas,selB,2.6,8);
+      } catch(e){ console.error('Menu preview render failed:',e); }
     }
     function rb(c,id,sc,dy,form,angle,tf,tfn,showcasePose){
-      if(!c || !BR[id]) return false;
-      const ctx = c.getContext('2d');
-      if(!ctx) return false;
-      const oldG = g;
-      let ok = false;
-      ctx.save();
       try {
-        ctx.setTransform(1,0,0,1,0,0);
-        ctx.clearRect(0,0,c.width,c.height);
+        if(!c || !BR[id]) return false;
+        const ctx = c.getContext('2d'); if(!ctx) return false;
+        ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,c.width,c.height);
         ctx.setTransform(sc,0,0,sc,c.width/2,c.height/2+dy);
-        g = ctx;
-        drawP({x:0,y:0,t:0,b:id,a:angle??0.15,walk:0,rec:0,fl:0,alive:true,dt:0,hp:1000,mh:1000,k:BR[id],form:form||0,tf:tf||0,tfn:tfn||1,showcasePose:showcasePose,preview:true,sc:0,afterimages:[]});
-        ok = true;
-      } catch(e) {
-        console.error('Brawler canvas render failed:', id, e);
-      } finally {
-        g = oldG;
-        try { ctx.restore(); } catch(_) {}
-        ctx.setTransform(1,0,0,1,0,0);
-      }
-      return ok;
+        const oldG = g; g = ctx;
+        try {
+          drawP({x:0,y:0,t:0,b:id,a:angle??0.15,walk:0,rec:0,fl:0,alive:true,dt:0,hp:1000,mh:1000,k:BR[id],form:form||0,tf:tf||0,tfn:tfn||1,showcasePose:showcasePose,preview:true,sc:0,afterimages:[]});
+        } finally { g = oldG; }
+        return true;
+      } catch(e){ console.error('Brawler renderer error:',id,e); return false; }
     }
     function grid(){
       const gr = $('grid'); gr.innerHTML = '';
