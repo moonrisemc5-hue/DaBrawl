@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "DaBrawl",
+  "short_name": "DaBrawl",
+  "description": "DaBrawl mobile and desktop arena game",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b132b",
+  "theme_color": "#0b132b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
