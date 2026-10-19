@@ -2201,8 +2201,8 @@ function gadget(p){
       $('modeTxt').textContent=roomMode==='knockout'?'KNOCKOUT 3v3':roomMode==='showdown'?'SOLO SHOWDOWN':roomMode==='duo'?'DUO SHOWDOWN':'1v1 DUEL';
       $('modeBtn').disabled=!!user && room.host_id!==user.id;
       $('modeBtn').title=room.host_id===user?.id?'Choose the party game mode':'Only the party leader chooses the game mode';
-      el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.every(p=>p.is_ready) ? 'inline-block':'none';
-      status('Lobby connected · '+players.length+'/2 players · '+roomMode.toUpperCase()+'. Both players ready to start.');
+      el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready) ? 'inline-block':'none';
+      status('Lobby connected · '+players.length+'/3 players · '+roomMode.toUpperCase()+'. Everyone must be ready to start.');
       if(user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
         roomStartRequestedFor=room.id;
         void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
@@ -2486,7 +2486,7 @@ function gadget(p){
       if(matchChannel){const old=matchChannel;matchChannel=null;await db.removeChannel(old);}
       if(window.DaBrawlGame) window.DaBrawlGame.endNetworkGame();
     }
-    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,showcaseBrawler:brawler=>{if(roomChannel&&['kuku','shachi','saiyan'].includes(brawler))void db.auth.getUser().then(({data:{user}})=>user?roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler,userId:user.id}}):null);},toggleReady:null,openRoom:null};
+    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,showcaseBrawler:brawler=>{if(roomChannel&&['kuku','shachi','saiyan'].includes(brawler))void db.auth.getUser().then(({data:{user}})=>user?roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler,userId:user.id}}):null);},toggleReady:null,openRoom:async()=>{const {data:{user}}=await db.auth.getUser();if(!user){show('onlineLobby');return;}if(!currentRoom)await createRoom();if(currentRoom){await loadLobbyFriends(user);show('friendsScreen');}}};
 
     let friendsPresenceChannel=null, friendsPresenceTimer=null;
     const friendsEscape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
