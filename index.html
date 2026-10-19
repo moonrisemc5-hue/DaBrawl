@@ -1202,7 +1202,7 @@ function gadget(p){
           // The mobile-mode regression can leave a cleared canvas while the
           // canvas API still reports success. Keep a visible portrait fallback
           // in the lobby whenever mobile layout is enabled.
-          fallback.style.display=document.body.classList.contains('mobile-controls')?'flex':(drawn?'none':'flex');
+          fallback.style.display=(controlMode==='mobile'||!drawn)?'flex':'none';
           if(!drawn) console.error('DaBrawl: failed to draw menu brawler',selB);
         }
       } catch(e){ console.error('Menu preview render failed:',e); }
