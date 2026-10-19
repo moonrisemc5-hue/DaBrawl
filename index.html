@@ -716,10 +716,10 @@
         for(let t=0;t<2;t++)for(let i=0;i<3;i++){ if(!t&&!i) continue; P.push(mk(t,i,0,n.pop(),['kuku','shachi','saiyan'][Math.random()*3|0])); }
         G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       }
-      B=[]; F=[]; MT=[]; KM=[]; show('game');
+      B=[]; F=[]; Z=[]; MT=[]; KM=[]; show('game');
     }
     function resetRound(){
-      const savedSc = me ? me.sc : 0; build(); B=[]; F=[]; MT=[]; KM=[];
+      const savedSc = me ? me.sc : 0; build(); B=[]; F=[]; Z=[]; MT=[]; KM=[];
       P.forEach(p => Object.assign(p, mk(p.t,0,p.human,p.name,p.b,p.isDummy), {sc:p.human?savedSc:0}));
       G.ph='count'; G.t=3.2; G.endAt=Date.now()+3200;
     }
@@ -2086,7 +2086,7 @@ function gadget(p){
         networkMode = true; isTestMode = false; isNetworkHost=(localId===hostId); networkResultApplied=false; gameMode = mode || 'knockout';
         $('modeTxt').textContent = gameMode === 'showdown' ? 'SOLO SHOWDOWN' : gameMode === 'duo' ? 'DUO SHOWDOWN' : gameMode === 'duel' ? '1v1 DUEL' : 'KNOCKOUT 3v3';
         mapVariant=0; for(const ch of String(matchId)) mapVariant=(mapVariant*31+ch.charCodeAt(0))%3;
-        P=[]; me=null; build(); B=[]; F=[]; MT=[]; KM=[];
+        P=[]; me=null; build(); B=[]; F=[]; Z=[]; MT=[]; KM=[];
         roster.forEach((entry,idx)=>{
           const team = entry.team!==undefined ? entry.team : gameMode === 'showdown' ? idx : gameMode === 'duo' ? Math.floor(idx/2) : gameMode === 'duel' ? idx % 2 : (idx < 3 ? 0 : 1);
           const slot = gameMode === 'showdown' ? idx : gameMode === 'duo' ? idx % 3 : gameMode === 'duel' ? idx % 2 : idx % 3;
