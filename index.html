@@ -1260,6 +1260,28 @@ function gadget(p){
           }
           if(dead) B.splice(i,1);
         }
+        if(!networkMode){
+          const nowMs=Date.now();
+          for(let zi=Z.length-1;zi>=0;zi--){
+            const zone=Z[zi];
+            if(nowMs>=zone.expires){Z.splice(zi,1);continue;}
+            if(nowMs<zone.nextTick)continue;
+            zone.nextTick=nowMs+600;
+            for(const target of P){
+              if(!target.alive||target===zone.owner||Math.hypot(target.x-zone.x,target.y-zone.y)>zone.radius)continue;
+              if(target.t===zone.team){
+                const healed=Math.min(target.mh-target.hp,zone.heal);
+                if(healed>0){target.hp+=healed;puff(target.x,target.y,5,'#7df9a5',.7);}
+              }else{
+                const last=zone.lastHit.get(target)||0;
+                if(nowMs<last)continue;
+                zone.lastHit.set(target,nowMs+600);
+                dmg(target,{d:zone.damage,o:zone.owner,t:zone.team,s:zone.superBeer?1:0,vx:target.x-zone.x,vy:target.y-zone.y});
+                puff(target.x,target.y,4,'#d99a42',.7);
+              }
+            }
+          }
+        }
         if(!isTestMode){
           if(gameMode == 'showdown' || gameMode == 'duel' || gameMode === 'duo'){
             const aliveCount = P.filter(p=>p.alive).length;
