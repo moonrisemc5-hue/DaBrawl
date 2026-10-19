@@ -274,7 +274,7 @@ function stepRoom(room, dt) {
       event(room,"projectile-splash",{projectileId:b.id,ownerId:b.ownerId,x:b.x,y:b.y,radius,kind:b.cigar?"cigar":"beer",super:!!b.superBeer,durationMs:b.cigar?0:1800});
       if(owner && b.superBeer) owner.meter=0;
     };
-    const wallHit = findProjectileObstacleHit(b, room.world.obstacles, 2);
+    const wallHit = b.friendlySupport && !b.cigar ? null : findProjectileObstacleHit(b, room.world.obstacles, 2);
     let contact = findProjectileContact(b, room.players.values(), t, 19);
     if (b.friendlySupport && !b.cigar) contact = null; // Beer passes over players and splashes only when it lands.
     if (b.friendlySupport && b.cigar) {
@@ -318,8 +318,9 @@ function stepRoom(room, dt) {
     if (t >= zone.nextTickAt) {
       zone.nextTickAt = t + 600;
       for (const target of room.players.values()) {
-        if (!target.alive || target.id === zone.ownerId || Math.hypot(target.x-zone.x,target.y-zone.y) > zone.radius) continue;
-        const sameTeam = (room.mode === "knockout" || room.mode === "duo") && target.team === zone.team;
+        if (!target.alive || Math.hypot(target.x-zone.x,target.y-zone.y) > zone.radius) continue;
+        const isOwner = target.id === zone.ownerId;
+        const sameTeam = isOwner || ((room.mode === "knockout" || room.mode === "duo") && target.team === zone.team);
         if (sameTeam) {
           const healed = Math.min(target.maxHp-target.hp, zone.heal);
           if (healed > 0) { target.hp += healed; event(room,"heal",{projectileId:zone.id,playerId:zone.ownerId,targetId:target.id,amount:healed,hp:target.hp,splash:true,beerZone:true}); }
