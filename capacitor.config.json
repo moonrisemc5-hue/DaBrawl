@@ -3,7 +3,8 @@
   "appName": "DaBrawl",
   "webDir": "www",
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "orientation": "landscape"
   },
   "server": {
     "androidScheme": "https"
