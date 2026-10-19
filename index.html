@@ -744,7 +744,16 @@
               if(Math.hypot(state.x-state.ox,state.y-state.oy)>18){
                 me.a=Math.atan2(state.y-state.oy,state.x-state.ox);
                 // Release-to-fire: aiming never fires continuously.
-                if(me.k.sy){ /* syU handles charged Kamehameha release */ }
+                if(me.k.sy){
+                  // Touchend can arrive between simulation frames. Resolve a charged
+                  // Saiyan blast here so the release cannot be lost before syU sees it.
+                  if(me.hw){
+                    const charge=me.chg||0, held=me.holdT||0, mode=me.k.mode==1;
+                    if(charge>0){ if(mode) bigK(me,charge); else kame(me,charge); }
+                    else if(held<=.3) sTap(me);
+                    me.chg=0; me.holdT=0; me.hw=false;
+                  }
+                }
                 else if(me.muiCharging<=0&&!KM.some(km=>km.o===me)){if(me.sc>0&&me.k.lg){}else tryFire(me);}
               }else{
                 // A tap / press in the neutral centre is the mobile equivalent of F.
