@@ -276,6 +276,7 @@ function stepRoom(room, dt) {
     };
     const wallHit = findProjectileObstacleHit(b, room.world.obstacles, 2);
     let contact = findProjectileContact(b, room.players.values(), t, 19);
+    if (b.friendlySupport && !b.cigar) contact = null; // Beer passes over players and splashes only when it lands.
     if (b.friendlySupport && b.cigar) {
       const x1 = Number.isFinite(b.previousX) ? b.previousX : b.x, y1 = Number.isFinite(b.previousY) ? b.previousY : b.y;
       const dx = b.x - x1, dy = b.y - y1, length2 = dx*dx + dy*dy;
