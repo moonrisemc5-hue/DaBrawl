@@ -1195,7 +1195,10 @@ function gadget(p){
             $('featuredBrawler').appendChild(fallback);
           }
           fallback.textContent=({kuku:'🐔',saiyan:'⚡',shachi:'🦈',pip:'🐧',rex:'🦖',mochi:'🐱',zed:'👾',bolt:'🤖',nova:'🌟',juno:'🦊',taco:'🌮',blaze:'🔥',jax:'🥊',vex:'👻',zane:'😎'})[selB]||'⭐';
-          fallback.style.display=drawn?'none':'flex';
+          // The mobile-mode regression can leave a cleared canvas while the
+          // canvas API still reports success. Keep a visible portrait fallback
+          // in the lobby whenever mobile layout is enabled.
+          fallback.style.display=document.body.classList.contains('mobile-controls')?'flex':(drawn?'none':'flex');
           if(!drawn) console.error('DaBrawl: failed to draw menu brawler',selB);
         }
       } catch(e){ console.error('Menu preview render failed:',e); }
