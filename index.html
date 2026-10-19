@@ -2867,13 +2867,13 @@ function gadget(p){
       await roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler,userId:user.id}});
       await refreshRoom();
     }
-    async function changeRoomMode(){
+    async function changeRoomMode(next='knockout'){
       if(!currentRoom)return;
       const {data:{user}}=await db.auth.getUser();
       if(!user||currentRoom.host_id!==user.id){status('Only the party leader can choose the game mode.',true);return;}
-      const modes=['knockout','showdown','duo','duel'];
-      const current=currentRoom.game_mode||'knockout';
-      const next=modes[(modes.indexOf(current)+1)%modes.length];
+      
+      
+      next=next||'knockout';
       const {error}=await db.from('game_rooms').update({game_mode:next}).eq('id',currentRoom.id).eq('host_id',user.id);
       if(error){status('Could not change party mode: '+error.message,true);return;}
       currentRoom.game_mode=next;gameMode=next;
