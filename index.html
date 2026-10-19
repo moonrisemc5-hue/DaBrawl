@@ -1930,7 +1930,7 @@ function gadget(p){
         return {id:p.netId,t:p.t,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my,shieldTimer:p.shieldTimer||0,lp:p.lp?{...p.lp}:null,h:p.h||0};
       },
       getNetworkStates(){
-        const pack=p=>({id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my});
+        const pack=p=>({id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my,shieldTimer:p.shieldTimer||0,lp:p.lp?{...p.lp}:null,h:p.h||0});
         if(!me) return [];
         const states=[pack(me)];
         if(isNetworkHost) for(const p of P) if(p!==me && p.isBot) states.push(pack(p));
