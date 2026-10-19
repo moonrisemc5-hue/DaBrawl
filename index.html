@@ -865,7 +865,7 @@
     function aimAtNearestEnemy(p){
       let bestDistance=600,bestAngle=null;
       for(const enemy of P){
-        if(enemy===p||!enemy.alive||(gameMode!=='showdown'&&gameMode!=='duo'&&enemy.t===p.t)||!sees(p.t,enemy))continue;
+        if(enemy===p||!enemy.alive||(gameMode!=='showdown'&&enemy.t===p.t)||!sees(p.t,enemy))continue;
         const distance=Math.hypot(enemy.x-p.x,enemy.y-p.y);
         if(distance<bestDistance){bestDistance=distance;bestAngle=Math.atan2(enemy.y-p.y,enemy.x-p.x);}
       }
@@ -1025,12 +1025,12 @@ function gadget(p){
         p.dodgeFx = Math.max(0, p.dodgeFx-dt); p.autoAimTimer = Math.max(0, (p.autoAimTimer||0)-dt);
         if(p.muiCharging>0) p.muiCharging-=dt;
         if(!p.alive) p.dt+=dt;
-        if(gameMode==='duo'&&!isTestMode&&!networkMode&&!p.alive&&p.respawnPending&&p.dt>=10){
+        if(gameMode==='duo'&&!isTestMode&&(!networkMode||p===me)&&!p.alive&&p.respawnPending&&p.dt>=10){
           const mate=P.find(q=>q!==p&&q.t===p.t&&q.alive);
           if(mate){
             const spots=[[0,-76],[76,0],[0,76],[-76,0]];let pos=null;
             for(const [ox,oy] of spots){const x=mate.x+ox,y=mate.y+oy;if(!hitW(x,y,20)){pos={x,y};break;}}
-            p.x=pos?.x??mate.x;p.y=pos?.y??mate.y;p.hp=p.mh;p.alive=true;p.dt=0;p.respawnPending=false;p.shieldTimer=5;p.am=3;p.sc=0;p.cd=0;p.gcd=0;p.tf=0;p.dodge=0;p.fl=.8;
+            p.x=pos?.x??mate.x;p.y=pos?.y??mate.y;p.hp=p.mh;p.alive=true;p.dt=0;p.respawnPending=false;p.shieldTimer=2;p.am=3;p.sc=0;p.cd=0;p.gcd=0;p.tf=0;p.dodge=0;p.fl=.8;
             puff(p.x,p.y,24,'#8be9ff',1.8);star(p.x,p.y,14);beep(760,.25,.1,'triangle',250);
           }else p.respawnPending=false;
         }
