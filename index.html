@@ -367,8 +367,9 @@
     $('mobileModeBtn').addEventListener('click',()=>applyControlMode('mobile'));
     applyControlMode(controlMode,false);
     function show(s){
+      if(s !== 'loading' && activeLoadingTimer){clearInterval(activeLoadingTimer);activeLoadingTimer=null;loadingGeneration++;}
       if(s !== 'game' && s !== 'loading' && s !== 'res' && networkMode){ networkMode = false; if(window.DaBrawlNet) window.DaBrawlNet.leaveMatch(); }
-      scr = s; document.querySelectorAll('.scr').forEach(e => e.classList.toggle('on', e.id == s));
+      scr = s; document.querySelectorAll('.scr').forEach(e => {const active=e.id===s;e.classList.toggle('on',active);e.style.pointerEvents=active?'auto':'none';});
       $('leaveBtn').style.display = (s == 'game' && (isTestMode || (gameMode==='showdown' && me && !me.alive && G?.ph==='play'))) ? 'block' : 'none';
       $('hud').classList.toggle('on', s == 'game');
       cv.style.pointerEvents = (s == 'game') ? 'auto' : 'none';
@@ -571,16 +572,26 @@
       const maxH = BR[b].hp;
       return {b, k:BR[b], lp:null, h:0, form:0, burst:0, holdT:0, chg:0, dodge:0, dodgeFx:0, tf:0, kcd:0, bt:0, kmt:0, hw:0, alt:0, t, human, name, x:xPos, y:yPos, hp:isDummy?99999:maxH, mh:isDummy?99999:maxH, am:3, sc:0, a:t?Math.PI:0, alive:true, dt:0, fl:0, dash:0, dd:0, gcd:0, cd:0, nh:9, mx:0, my:0, walk:0, rec:0, sw:0, sd:1, isDummy, autoAimTimer:0, wasOnCd:false, gasTimer:0, muiCharging:0, kaioken:0, ss2:0, ss2Cooldown:0, afterimages:[]};
     }
+    let activeLoadingTimer=null, loadingGeneration=0;
     function startLoadingScreen(test=false){
-      show('loading'); let pct = 0;
+      if(activeLoadingTimer){clearInterval(activeLoadingTimer);activeLoadingTimer=null;}
+      const generation=++loadingGeneration;
+      show('loading'); $('ldFill').style.width='0%'; $('ldPct').textContent='0%';
       $('tipTxt').textContent = "Tip: SS Red shoots Ki Blasts just like SS Blue, but with scaled damage!";
-      const ldInt = setInterval(() => {
-        pct += Math.floor(Math.random()*15) + 10;
-        if(pct >= 100){ pct = 100; clearInterval(ldInt); setTimeout(() => startGame(test), 300); }
-        $('ldFill').style.width = pct + '%'; $('ldPct').textContent = pct + '%';
-      }, 120);
+      let pct=0, ticks=0;
+      activeLoadingTimer=setInterval(()=>{
+        if(generation!==loadingGeneration||scr!=='loading'){clearInterval(activeLoadingTimer);activeLoadingTimer=null;return;}
+        ticks++;pct=Math.min(100,pct+Math.floor(Math.random()*15)+10);
+        $('ldFill').style.width=pct+'%';$('ldPct').textContent=pct+'%';
+        if(pct>=100||ticks>=12){
+          clearInterval(activeLoadingTimer);activeLoadingTimer=null;
+          $('ldFill').style.width='100%';$('ldPct').textContent='100%';
+          setTimeout(()=>{if(generation===loadingGeneration&&scr==='loading')startGame(test);},180);
+        }
+      },120);
     }
     function startGame(test=false){
+      if(activeLoadingTimer){clearInterval(activeLoadingTimer);activeLoadingTimer=null;}
       isTestMode = test; if(!test && !networkMode){try{localStorage.setItem('dabrawl_active_match','active');}catch(_){}} else {try{localStorage.removeItem('dabrawl_active_match');}catch(_){}} mapVariant=Math.floor(Math.random()*3); const n = [...NM].sort(() => Math.random()-.5);
       P = []; matchEliminations=0; teamEliminations=0; teamEliminationOrder={}; build(); me = mk(0,0,1,'You',selB); P.push(me);
       if(test){
