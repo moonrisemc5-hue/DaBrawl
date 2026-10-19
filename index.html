@@ -890,7 +890,7 @@
       button.addEventListener('keydown',e=>{
         if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();
         if(scr!=='game'||!me)return;
-        if(button.id==='sup'){if(me.k.sy&&me.form<5)return;aimAtNearestEnemy(me);sup(me);}else gadget(me);
+        if(button.id==='sup'){if(me.k.sy&&me.form<5)return;if(me.b!=='deges')aimAtNearestEnemy(me);sup(me);}else gadget(me);
       });
       button.addEventListener('contextmenu',e=>e.preventDefault());
     }
