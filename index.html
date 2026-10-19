@@ -16,6 +16,12 @@
     .scr.on button, .scr.on input, .scr.on .b-card { pointer-events: auto !important; }
     /* Keep each screen's intended positioning; the blanket override could shift menu layers over controls. */
     .scr.on > [style*='position:absolute'] { position: absolute !important; }
+    /* Menu controls must sit above the full-screen showcase layer on touch and desktop. */
+    #menu.on { z-index: 400 !important; }
+    #menu.on > .mid { z-index: 410 !important; }
+    #menu.on > button, #menu.on > .pill, #menu.on > #roomMenuBar, #menu.on > .menu-bottom-controls { z-index: 430 !important; pointer-events: auto !important; }
+    #menu.on #featuredBrawler { position: relative; z-index: 411; pointer-events: auto !important; }
+    #menu.on #pv { display: block; visibility: visible; opacity: 1; }
     h1 { font-size: min(16vw, 96px); margin: 0; color: var(--y); -webkit-text-stroke: 3px #000; text-shadow: 0 6px 0 #000; transform: rotate(-3deg); }
     h2 { margin: 0; font-size: 34px; text-shadow: 3px 3px 0 #000; }
     .btn { font: inherit; font-size: 26px; color: #fff; background: linear-gradient(#4895ef, #4361ee); border: 4px solid #000; border-radius: 14px; padding: 6px 30px; text-shadow: 2px 2px 0 #000; box-shadow: 0 6px 0 #000; cursor: pointer; pointer-events: auto; z-index: 300; }
@@ -314,7 +320,7 @@
       $('leaveBtn').style.display = (s == 'game' && isTestMode) ? 'block' : 'none';
       $('hud').classList.toggle('on', s == 'game');
       cv.style.pointerEvents = (s == 'game') ? 'auto' : 'none';
-      if(s == 'menu'){ updateMenuUI(); startMenuMusic(); } else { stopMenuMusic(); }
+      if(s == 'menu'){ updateMenuUI(); startMenuMusic(); try { playMenuShowcase(selB, false); } catch(err) { console.warn('Menu showcase restart failed:', err); } } else { stopMenuMusic(); }
       if(s == 'brs'){ requestAnimationFrame(() => { grid(); }); }
     }
     let tr = 0; try { tr = +localStorage.getItem('dabrawl_tr') || 0; } catch(e){}
