@@ -812,31 +812,13 @@
     $('leaveBtn').onclick = () => { if(scr==='game' && gameMode==='showdown' && me && !me.alive && G?.ph==='play'){ finish(); return; } show('menu'); isTestMode = false; };
     $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ if(isNetworkHost) void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
     $('home').onclick = () => { try{localStorage.removeItem('dabrawl_active_match');}catch(_){} beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
-    $('play').onclick = async () => {
+    $('play').onclick = () => {
       if(window.DaBrawlNet?.isInParty()){window.DaBrawlNet.toggleReady?.();return;}
       beep(500,.1);
       if(gameMode==='duel'){startLoadingScreen(false);return;}
-      // Read the locally persisted session first. getUser() can fail transiently on mobile
-      // networks even while a valid signed-in session is already stored.
-      try{
-        const {data:{session},error:sessionError} = await db.auth.getSession();
-        if(sessionError) throw sessionError;
-        if(session?.user){
-          matchmake();
-          return;
-        }
-        // Confirm there's really no account before allowing the guest-only bot shortcut.
-        const {data:{user},error:userError} = await db.auth.getUser();
-        if(userError) throw userError;
-        if(!user){ startLoadingScreen(false); return; }
-        matchmake();
-      }catch(_){
-        // Never silently turn an auth/network error into an instant bot game.
-        show('onlineLobby');
-        status('Could not verify your sign-in. Check your connection and try again.',true);
-        void updateAuthUI().catch(()=>{});
-        return;
-      }
+      // Quickplay is the same for guests and signed-in players: everyone joins the
+      // shared queue, real players can join for 10 seconds, then bots fill empty slots.
+      matchmake();
     };
      $('bra').onclick = () => show('brs');
     $('featuredBrawler').onclick = () => show('brs');
@@ -2413,14 +2395,11 @@ function gadget(p){
       // A completed private-room duel can queue again just like any other online match.
       cancelMatchmaking(false); queueMode=mode||'knockout'; queueDone=false; queueStartedAt=Date.now();
       show('mm'); $('mmTxt').textContent='CONNECTING TO PLAYERS…'; $('mmHint').textContent='Connecting to DaBrawl online matchmaking…';
-      let requireHumanMatch = false;
       try {
         const {data:{user}}=await db.auth.getUser();
-        requireHumanMatch = !!user;
         localDisplayName=(user && (user.user_metadata?.username || (user.email||'').split('@')[0])) || ('Brawler-'+clientId.slice(0,4));
       } catch(e){
-        // If auth cannot be checked, fail closed: don't silently put a signed-in player into a bot match.
-        requireHumanMatch = true;
+        // Matchmaking must still work if auth lookup is temporarily unavailable.
         localDisplayName='Brawler-'+clientId.slice(0,4);
       }
       queueChannel=db.channel('dabrawl-quickplay-'+queueMode,{config:{presence:{key:clientId},broadcast:{self:false}}});
@@ -2441,17 +2420,8 @@ function gadget(p){
           const finalize=async()=>{
             if(finalized || queueDone) return;
             const humansNow=queuePlayers();
-            // Signed-in players only enter real-player matches. Keep searching after each
-            // 10-second window instead of filling empty slots with bots.
-            if(humansNow.length<target && requireHumanMatch){
-              if(Date.now()>=deadline){
-                $('mmTxt').textContent='STILL SEARCHING: '+Math.min(target,humansNow.length)+'/'+target;
-                $('mmHint').textContent='No bots for signed-in players. Still searching for real players…';
-                deadline=Date.now()+10000;
-              }
-              return;
-            }
-            // Guests may use bots after the normal matchmaking wait.
+            // Everyone gets the same quickplay flow: wait up to 10 seconds for
+            // real players, then fill any remaining slots with bots.
             if(humansNow.length<target && Date.now()<deadline) return;
             finalized=true; queueDone=true; clearInterval(queueTimer); queueTimer=null;
             let humans=humansNow;
