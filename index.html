@@ -367,8 +367,23 @@
     $('pcModeBtn').addEventListener('click',()=>applyControlMode('pc'));
     $('mobileModeBtn').addEventListener('click',()=>applyControlMode('mobile'));
     applyControlMode(controlMode,false);
-    window.addEventListener('pageshow',()=>{requestAnimationFrame(()=>{if($('menu')?.classList.contains('on')){updateMenuUI();playMenuShowcase(selB,false);}});});
-    window.addEventListener('orientationchange',()=>setTimeout(()=>{if($('menu')?.classList.contains('on')){updateMenuUI();playMenuShowcase(selB,false);}},250));
+    function recoverMenuAfterViewportChange(){
+      // Never let a viewport refresh leave the home screen with a cleared canvas.
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        if(!$('menu')?.classList.contains('on'))return;
+        try{
+          const canvas=$('pv');
+          if(canvas){
+            if(!rb(canvas,selB,2.6,8))console.warn('Menu preview recovery could not draw',selB);
+            playMenuShowcase(selB,false);
+          }
+        }catch(err){console.error('Menu preview recovery failed',err);}
+      }));
+    }
+    window.addEventListener('pageshow',recoverMenuAfterViewportChange);
+    window.addEventListener('orientationchange',()=>setTimeout(recoverMenuAfterViewportChange,300));
+    window.addEventListener('resize',()=>{if($('menu')?.classList.contains('on'))recoverMenuAfterViewportChange();});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)recoverMenuAfterViewportChange();});
     function show(s){
       if(s !== 'loading' && activeLoadingTimer){clearInterval(activeLoadingTimer);activeLoadingTimer=null;loadingGeneration++;}
       if(s !== 'loading'){loadingGeneration++;}
