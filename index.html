@@ -1479,6 +1479,15 @@ function gadget(p){
         for(const p of P) drawUI(p);
         g.setTransform(DPR, 0, 0, DPR, 0, 0);
         if(touch && scr == 'game'){
+          // Mobile aim guide: translucent grey lane follows the right-hand aim joystick.
+          if(ts.a.active && Math.hypot(ts.a.x-ts.a.ox,ts.a.y-ts.a.oy)>12){
+            const aimAngle=Math.atan2(ts.a.y-ts.a.oy,ts.a.x-ts.a.ox);
+            const rangePx=Math.min(W*.52,Math.max(130,W*.34));
+            g.save(); g.translate(ts.a.ox,ts.a.oy); g.rotate(aimAngle);
+            g.fillStyle='rgba(205,213,225,0.24)'; g.beginPath();
+            g.moveTo(0,-13); g.lineTo(rangePx,-27); g.lineTo(rangePx,27); g.lineTo(0,13); g.closePath(); g.fill();
+            g.strokeStyle='rgba(226,232,240,0.65)'; g.lineWidth=2; g.beginPath(); g.moveTo(0,0); g.lineTo(rangePx,0); g.stroke(); g.restore();
+          }
           const colors = {m:'#ffffff', a:'#2a7de0', s:'#ffd21f'}, stickCols = {m:'#ffffff', a:'#5cb6ff', s:'#ffe45c'};
           for(const k of ['m', 'a', 's']){
             const s = ts[k];
