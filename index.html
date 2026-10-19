@@ -60,9 +60,11 @@
     #leaveBtn { position: fixed; left: 16px; top: calc(12px + env(safe-area-inset-top,0px)); z-index: 399; display: none; pointer-events: auto; }
     .menu-bottom-controls { width:min(96vw,760px); }
     body.mobile-controls .scr { overflow:hidden; overscroll-behavior:none; padding: max(8px,env(safe-area-inset-top,0px)) 8px max(8px,env(safe-area-inset-bottom,0px)); box-sizing:border-box; }
-    body.mobile-controls #brs.on { justify-content:flex-start; gap:clamp(8px,2vh,16px); padding-top:calc(12px + env(safe-area-inset-top,0px)); padding-bottom:calc(12px + env(safe-area-inset-bottom,0px)); }
-    body.mobile-controls #brs #grid { width:100%; max-height:calc(100dvh - 130px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)); overflow-y:auto; overscroll-behavior:contain; padding:6px 2px 12px; box-sizing:border-box; align-content:start; }
-    body.mobile-controls #brs .b-card { width:clamp(86px,25vw,110px); height:clamp(112px,24vh,140px); flex-shrink:0; }
+    body.mobile-controls #brs.on { justify-content:flex-start; gap:clamp(8px,1.5vh,14px); padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px)); }
+    body.mobile-controls #brs h2 { flex:0 0 auto; margin:4px 0; font-size:clamp(24px,5vw,38px); }
+    body.mobile-controls #brs #grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(clamp(104px,27vw,160px),1fr)); gap:clamp(8px,1.8vw,16px); width:100%; flex:1 1 auto; min-height:0; max-height:none; overflow-y:auto; overscroll-behavior:contain; padding:8px 4px 14px; box-sizing:border-box; align-content:start; }
+    body.mobile-controls #brs .b-card { width:100%; height:clamp(142px,24vh,190px); min-width:0; flex-shrink:1; }
+    body.mobile-controls #brs #bk1 { flex:0 0 auto; min-height:42px; }
     body.mobile-controls #det.on { overflow-y:auto; justify-content:flex-start; gap:8px; padding-top:calc(8px + env(safe-area-inset-top,0px)); }
     body.mobile-controls #det .det-layout { flex:1 0 auto; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; padding:4px; box-sizing:border-box; }
     body.mobile-controls #det .det-left { max-width:none; min-width:0; gap:5px; }
@@ -573,11 +575,16 @@
     const ts = {m:{id:null,ox:0,oy:0,x:0,y:0,active:false}, a:{id:null,ox:0,oy:0,x:0,y:0,active:false}, s:{id:null,ox:0,oy:0,x:0,y:0,active:false}};
     function getTouchPos(t){ const rect = cv.getBoundingClientRect(); return { x: (t.clientX - rect.left) * (W / rect.width), y: (t.clientY - rect.top) * (H / rect.height) }; }
     cv.addEventListener('touchstart', e => {
-      e.preventDefault(); touch = true;
+      e.preventDefault(); touch=true;
       for(const t of e.changedTouches){
-        const pos = getTouchPos(t), side = pos.x < W/2 ? 'm' : 'a';
-        if(!ts[side].active){ const ox=side==='m'?Math.max(76,W*.16):Math.min(W-150,W*.78), oy=H*.76; ts[side] = {id:t.identifier,ox,oy,x:ox,y:oy,active:true}; ts[side].x=pos.x; ts[side].y=pos.y; }
-        else if(side==='m' && ts.m.id!==t.identifier && !ts.a.active){ ts.a={id:t.identifier,ox:Math.min(W-150,W*.78),oy:H*.76,x:pos.x,y:pos.y,active:true}; }
+        const pos=getTouchPos(t),side=pos.x<W/2?'m':'a';
+        if(!ts[side].active){
+          const ox=side==='m'?Math.max(76,W*.16):Math.min(W-150,W*.78),oy=H*.76;
+          // Start at the joystick's neutral centre. A tap is auto-aim; dragging is manual aim.
+          ts[side]={id:t.identifier,ox,oy,x:ox,y:oy,active:true};
+        }else if(side==='m'&&ts.m.id!==t.identifier&&!ts.a.active){
+          ts.a={id:t.identifier,ox:Math.min(W-150,W*.78),oy:H*.76,x:Math.min(W-150,W*.78),y:H*.76,active:true};
+        }
       }
     },{passive:false});
     cv.addEventListener('touchmove', e => {
@@ -595,8 +602,14 @@
           // A system interruption (notification, app switch, gesture) must release the
           // joystick cleanly and must never fire an accidental shot or Super.
           if(!cancelled&&scr==='game'&&me){
-            if(k==='a'&&Math.hypot(state.x-state.ox,state.y-state.oy)>12){me.a=Math.atan2(state.y-state.oy,state.x-state.ox);tryFire(me);}
-            else if(k==='a')autoAimAndShoot(me);
+            if(k==='a'){
+              if(Math.hypot(state.x-state.ox,state.y-state.oy)>18){
+                me.a=Math.atan2(state.y-state.oy,state.x-state.ox);
+              }else{
+                // A tap / press in the neutral centre is the mobile equivalent of F.
+                autoAimAndShoot(me);
+              }
+            }
             if(k==='s'&&me.tf<=0)sup(me);
           }
           state.active=false;state.id=null;
@@ -616,6 +629,9 @@
     document.addEventListener('visibilitychange',()=>{if(document.hidden)clearGameInput();});
     $('sup').setAttribute('aria-label', 'Super ability');
     $('gad').setAttribute('aria-label', 'Gadget ability');
+    // Super is a button, not a joystick. It must not inherit a leftover aim touch.
+    $('sup').style.touchAction='manipulation';
+    $('gad').style.touchAction='manipulation';
     // Ability buttons sit above the canvas: cancel browser gestures and never leak a press
     // into movement/aim input. Super aims at the nearest valid enemy without spending a normal shot.
     for(const button of [$('sup'),$('gad')]){
@@ -685,7 +701,7 @@
     $('modePickerBack').onclick=()=>show('menu');
     $('bk2').onclick = () => { clearInterval(mmI); clearTimeout(mmTimeout); mmI=null; mmTimeout=null; if(window.DaBrawlNet) window.DaBrawlNet.cancelMatchmaking(); show('menu'); };
     function aimAtNearestEnemy(p){
-      let bestDistance=600, bestAngle=null;
+      let bestDistance=600,bestAngle=null;
       for(const enemy of P){
         if(enemy===p||!enemy.alive||(gameMode!=='showdown'&&gameMode!=='duo'&&enemy.t===p.t)||!sees(p.t,enemy))continue;
         const distance=Math.hypot(enemy.x-p.x,enemy.y-p.y);
@@ -911,10 +927,16 @@ function gadget(p){
             if(ts.m.active){ ix = (ts.m.x-ts.m.ox)/60; iy = (ts.m.y-ts.m.oy)/60; }
             const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
             if(p.muiCharging<=0 && !isBeamShooting){
-              if(touch){ if(ts.a.active){ const s=ts.a; if(Math.hypot(s.x-s.ox,s.y-s.oy)>12){ p.a=Math.atan2(s.y-s.oy,s.x-s.ox); tryFire(p); } } else if(p.autoAimTimer<=0) autoAimAndShoot(p); }
-              else { if(p.rec<=0 && p.autoAimTimer<=0) p.a = Math.atan2(my/z+cam.y-p.y, mx/z+cam.x-p.x); }
+              if(touch){
+                if(ts.a.active&&Math.hypot(ts.a.x-ts.a.ox,ts.a.y-ts.a.oy)>18){
+                  p.a=Math.atan2(ts.a.y-ts.a.oy,ts.a.x-ts.a.ox);
+                  tryFire(p); // Fire only while the player deliberately drags the aim stick.
+                }
+              }else if(p.rec<=0&&p.autoAimTimer<=0){
+                p.a=Math.atan2(my/z+cam.y-p.y,mx/z+cam.x-p.x);
+              }
               step(p,ix,iy,dt);
-            } else step(p,0,0,dt);
+            }else step(p,0,0,dt);
             if(mdown&&!touch) tryFire(p); if(p.k.sy) syU(p,dt);
           } else ai(p,dt);
         }
@@ -1519,14 +1541,15 @@ function gadget(p){
         for(const p of P) drawUI(p);
         g.setTransform(DPR, 0, 0, DPR, 0, 0);
         if(touch && scr == 'game'){
-          // Mobile aim guide: translucent grey lane follows the right-hand aim joystick.
-          if(ts.a.active && Math.hypot(ts.a.x-ts.a.ox,ts.a.y-ts.a.oy)>12){
+          // Aim range is anchored to the brawler, not the joystick. It previews the shot lane.
+          if(ts.a.active && Math.hypot(ts.a.x-ts.a.ox,ts.a.y-ts.a.oy)>18 && me && me.alive){
             const aimAngle=Math.atan2(ts.a.y-ts.a.oy,ts.a.x-ts.a.ox);
-            const rangePx=Math.min(W*.52,Math.max(130,W*.34));
-            g.save(); g.translate(ts.a.ox,ts.a.oy); g.rotate(aimAngle);
-            g.fillStyle='rgba(205,213,225,0.24)'; g.beginPath();
-            g.moveTo(0,-13); g.lineTo(rangePx,-27); g.lineTo(rangePx,27); g.lineTo(0,13); g.closePath(); g.fill();
-            g.strokeStyle='rgba(226,232,240,0.65)'; g.lineWidth=2; g.beginPath(); g.moveTo(0,0); g.lineTo(rangePx,0); g.stroke(); g.restore();
+            const playerX=(me.x-cam.x)*z,playerY=(me.y-cam.y)*z;
+            const rangePx=Math.min(W*.62,Math.max(150,W*.42));
+            g.save();g.translate(playerX,playerY);g.rotate(aimAngle);
+            g.fillStyle='rgba(205,213,225,0.25)';g.beginPath();
+            g.moveTo(0,-11);g.lineTo(rangePx,-25);g.lineTo(rangePx,25);g.lineTo(0,11);g.closePath();g.fill();
+            g.strokeStyle='rgba(226,232,240,0.7)';g.lineWidth=2;g.beginPath();g.moveTo(0,0);g.lineTo(rangePx,0);g.stroke();g.restore();
           }
           const colors = {m:'#ffffff', a:'#2a7de0', s:'#ffd21f'}, stickCols = {m:'#ffffff', a:'#5cb6ff', s:'#ffe45c'};
           for(const k of ['m', 'a', 's']){
