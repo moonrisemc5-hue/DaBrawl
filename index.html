@@ -79,6 +79,8 @@
     body.mobile-controls #settingsScreen > div { flex-shrink:0; }
     body.mobile-controls #settingsScreen #keybindRows { grid-template-columns:1fr; }
     body.mobile-controls #sup { right:calc(18px + env(safe-area-inset-right,0px)); bottom:calc(100px + env(safe-area-inset-bottom,0px)); width:clamp(68px,18vw,88px); height:clamp(68px,18vw,88px); }
+    body.mobile-controls #sup, body.mobile-controls #gad { touch-action:none; user-select:none; -webkit-user-select:none; box-shadow:0 4px 0 #0008, inset 0 2px 0 #ffffff66; border:3px solid #fff9; }
+    body.mobile-controls #sup, body.mobile-controls #gad { border-radius:50%; font-weight:900; text-shadow:2px 2px #000; }
     body.mobile-controls #gad { right:calc(105px + env(safe-area-inset-right,0px)); bottom:calc(24px + env(safe-area-inset-bottom,0px)); width:clamp(54px,14vw,66px); height:clamp(54px,14vw,66px); }
     body.mobile-controls #leaveBtn { top:calc(8px + env(safe-area-inset-top,0px)); left:8px; }
     @media(max-width:600px){ body.mobile-controls #menu #bra { left:8px; } body.mobile-controls #menu .mid { gap:4px; } body.mobile-controls #menu #pv { width:min(42vw,220px); height:min(42vw,220px); } body.mobile-controls #menu #bn { font-size:24px; } body.mobile-controls #menu #play { right:8px!important; font-size:26px!important; padding:6px 18px!important; } body.mobile-controls #menu .menu-bottom-controls { bottom:calc(8px + env(safe-area-inset-bottom,0px))!important; } }
@@ -871,7 +873,7 @@ function gadget(p){
             if(ts.m.active){ ix = (ts.m.x-ts.m.ox)/60; iy = (ts.m.y-ts.m.oy)/60; }
             const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
             if(p.muiCharging<=0 && !isBeamShooting){
-              if(touch){ if(ts.a.active){ const s=ts.a; if(Math.hypot(s.x-s.ox,s.y-s.ox)>12) p.a=Math.atan2(ts.y-ts.ox,s.x-s.ox); } else if(p.autoAimTimer<=0) autoAimAndShoot(p); }
+              if(touch){ if(ts.a.active){ const s=ts.a; if(Math.hypot(s.x-s.ox,s.y-s.oy)>12){ p.a=Math.atan2(s.y-s.oy,s.x-s.ox); tryFire(p); } } else if(p.autoAimTimer<=0) autoAimAndShoot(p); }
               else { if(p.rec<=0 && p.autoAimTimer<=0) p.a = Math.atan2(my/z+cam.y-p.y, mx/z+cam.x-p.x); }
               step(p,ix,iy,dt);
             } else step(p,0,0,dt);
