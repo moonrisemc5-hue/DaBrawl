@@ -681,7 +681,7 @@
           // Start at the joystick's saved neutral centre. Attack fires on release after aiming.
           ts[side]={id:t.identifier,ox,oy,x:ox,y:oy,active:true};
         }else if(side==='m'&&ts.m.id!==t.identifier&&!ts.a.active){
-          ts.a={id:t.identifier,ox:Math.min(W-150,W*.78),oy:H*.76,x:Math.min(W-150,W*.78),y:H*.76,active:true};
+          const origin=stickOrigin('a');ts.a={id:t.identifier,ox:origin.x,oy:origin.y,x:origin.x,y:origin.y,active:true};
         }
       }
     },{passive:false});
@@ -733,6 +733,10 @@
     let superPointer=null,superStart=null,superCurrent=null,superDragged=false;
     function useSuperFromGesture(){
       if(scr!=='game'||!me||me.sc<1||me.tf>0)return;
+      // Saiyan's Super button is used for transformations before MUI. Only the
+      // mastered Ultra Instinct form gets drag-to-aim for its final beam.
+      const canAimSaiyan=!!(me.k?.sy&&me.form===5&&FM[me.form]?.isMUI);
+      if(me.k?.sy&&!canAimSaiyan){sup(me);return;}
       if(superDragged&&superStart&&superCurrent)me.a=Math.atan2(superCurrent.y-superStart.y,superCurrent.x-superStart.x);
       else aimAtNearestEnemy(me);
       sup(me);
@@ -2771,7 +2775,7 @@ function gadget(p){
     el('readyRoomBtn').addEventListener('click',toggleRoomReady);
     el('refreshRoomBtn').addEventListener('click',refreshRoom);
     el('leaveRoomLobbyBtn').addEventListener('click',()=>void leaveParty());
-    db.auth.onAuthStateChange(()=>{setTimeout(updateAuthUI,0);});
+    db.auth.onAuthStateChange(()=>{setTimeout(()=>{updateAuthUI();initAccountControlPositions();},0);});
   </script>
 
   <script>
