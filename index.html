@@ -2266,7 +2266,7 @@ function gadget(p){
       $('modeBtn').title=room.host_id===user?.id?'Choose the party game mode':'Only the party leader chooses the game mode';
       el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready) ? 'inline-block':'none';
       status('Lobby connected · '+players.length+'/3 players · '+roomMode.toUpperCase()+'. Everyone must be ready to start.');
-      if(user && room.host_id===user.id && players.length===3 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
+      if(user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready) && roomStartRequestedFor!==room.id){
         roomStartRequestedFor=room.id;
         void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
         setTimeout(()=>{if(!activeMatchId&&roomStartRequestedFor===room.id)roomStartRequestedFor=null;},5000);
@@ -2431,7 +2431,7 @@ function gadget(p){
             const matchId='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
             const roster=humans.map((p,i)=>({id:p.clientId,name:String(p.name||('Player '+(i+1))).slice(0,20),brawler:p.brawler||'kuku',bot:false}));
             const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax','Vex','Zane'];
-            while(roster.length<target){const i=roster.length;roster.push({id:null,name:botNames[Math.floor(Math.random()*botNames.length)]+' BOT',brawler:randomBrawler(),bot:true});}
+            while(roster.length<target){const i=roster.length;roster.push({id:'bot-'+matchId+'-'+i,name:botNames[Math.floor(Math.random()*botNames.length)]+' BOT',brawler:randomBrawler(),bot:true});}
             if(queueMode==='duel') roster.forEach((p,i)=>p.team=i);
             if(queueMode==='showdown') roster.forEach((p,i)=>p.team=i);
             if(queueMode==='duo') roster.forEach((p,i)=>p.team=Math.floor(i/2));
