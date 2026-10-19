@@ -2734,7 +2734,9 @@ function gadget(p){
     }
     const shownRoomInviteIds=new Set(),queuedRoomInviteIds=new Set();
     let invitePollBusy=false;
-    const screenIsGame=()=>!!document.getElementById('game')?.classList.contains('on');
+    // The playable screen's HUD is toggled by show('game'); there is no #game element.
+    // Checking a nonexistent element made incoming room invites pop over active matches.
+    const screenIsGame=()=>!!document.getElementById('hud')?.classList.contains('on');
     function setScreen(id){document.querySelectorAll('.scr').forEach(node=>node.classList.toggle('on',node.id===id));}
     function displayRoomInvite(inv){
       if(!inv)return;
