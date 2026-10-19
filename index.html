@@ -503,16 +503,13 @@
         MW=50; MH=32;
         M = Array.from({length:MH}, (_,j) => Array.from({length:MW}, (_,i) => {
           if(i==0||j==0||i==MW-1||j==MH-1) return '#';
-          // Three symmetric arena layouts; mapVariant is seeded from the match ID online.
-          if(mapVariant===0 && ((((i>=7&&i<=10)&&(j>=5&&j<=8)) || ((i>=32&&i<=36)&&(j>=18&&j<=21))))) return '#';
-          if(mapVariant===0 && ((((i>=15&&i<=18)&&(j>=4&&j<=8)) || ((i>=25&&i<=28)&&(j>=19&&j<=23))))) return '#';
-          if(mapVariant===1 && ((((i>=7&&i<=11)&&(j>=12&&j<=15)) || ((i>=32&&i<=36)&&(j>=9&&j<=13))))) return '#';
-          if(mapVariant===1 && ((((i>=15&&i<=18)&&(j>=18&&j<=22)) || ((i>=25&&i<=28)&&(j>=4&&j<=8))))) return '#';
-          if(mapVariant===2 && ((((i>=11&&i<=14)&&(j>=5&&j<=9)) || ((i>=29&&i<=33)&&(j>=17&&j<=21))))) return '#';
-          if(mapVariant===2 && ((((i>=19&&i<=22)&&(j>=3&&j<=7)) || ((i>=21&&i<=24)&&(j>=20&&j<=24))))) return '#';
-          if(mapVariant===0 && i>19&&i<25&&j>10&&j<17) return 'b';
-          if(mapVariant===1 && i>18&&i<26&&j>12&&j<16) return 'b';
-          if(mapVariant===2 && ((i>12&&i<17&&j>10&&j<17)||(i>27&&i<32&&j>10&&j<17))) return 'b';
+          // Smaller, separated cover islands leave clear lanes and avoid chunky wall blocks.
+          if(mapVariant===0 && (((i>=8&&i<=10)&&(j>=6&&j<=8)) || ((i>=38&&i<=40)&&(j>=22&&j<=24)) || ((i>=17&&i<=18)&&(j>=4&&j<=6)) || ((i>=29&&i<=30)&&(j>=25&&j<=27)) || ((i>=22&&i<=24)&&(j>=15&&j<=16)))) return '#';
+          if(mapVariant===1 && (((i>=8&&i<=10)&&(j>=22&&j<=24)) || ((i>=39&&i<=41)&&(j>=6&&j<=8)) || ((i>=17&&i<=19)&&(j>=24&&j<=26)) || ((i>=30&&i<=32)&&(j>=5&&j<=7)) || ((i>=24&&i<=25)&&(j>=15&&j<=17)))) return '#';
+          if(mapVariant===2 && (((i>=12&&i<=14)&&(j>=6&&j<=8)) || ((i>=36&&i<=38)&&(j>=23&&j<=25)) || ((i>=21&&i<=23)&&(j>=4&&j<=6)) || ((i>=29&&i<=31)&&(j>=25&&j<=27)) || ((i>=24&&i<=25)&&(j>=14&&j<=16)))) return '#';
+          if(mapVariant===0 && (((i>=15&&i<=17)&&(j>=13&&j<=14)) || ((i>=33&&i<=35)&&(j>=16&&j<=17)))) return 'b';
+          if(mapVariant===1 && (((i>=13&&i<=15)&&(j>=15&&j<=16)) || ((i>=35&&i<=37)&&(j>=14&&j<=15)))) return 'b';
+          if(mapVariant===2 && (((i>=15&&i<=17)&&(j>=16&&j<=17)) || ((i>=33&&i<=35)&&(j>=13&&j<=14)))) return 'b';
           return '.';
         }));
       } else {
@@ -537,7 +534,7 @@
     ];
     let K = BR.kuku;
     const NM = ["Pip","Rex","Mochi","Zed","Bolt","Nova","Juno","Taco","Blaze","Jax","Vex","Zane"];
-    let P=[], B=[], F=[], MT=[], KM=[], me, G, cam={x:0,y:0}, shake=0, wf=0, touch=false;
+    let P=[], B=[], F=[], MT=[], KM=[], me, G, cam={x:0,y:0}, shake=0, wf=0, touch=false, matchEliminations=0, teamEliminationOrder={};
     let selB='kuku'; try { selB = localStorage.getItem('dabrawl_b') || 'kuku'; if(!BR[selB]) selB='kuku'; } catch(e){}
     const brawlerKeys = Object.keys(BR);
     function cycleBrawler(dir){
@@ -578,7 +575,7 @@
     }
     function startGame(test=false){
       isTestMode = test; if(!test){try{localStorage.setItem('dabrawl_active_match','active');}catch(_){}} mapVariant=Math.floor(Math.random()*3); const n = [...NM].sort(() => Math.random()-.5);
-      P = []; build(); me = mk(0,0,1,'You',selB); P.push(me);
+      P = []; matchEliminations=0; teamEliminationOrder={}; build(); me = mk(0,0,1,'You',selB); P.push(me);
       if(test){
         P.push(mk(1,0,0,'Dummy Kuku','kuku',true)); P.push(mk(1,1,0,'Dummy Shachi','shachi',true));
         G = {ph:'play',t:0,w:[0,0],r:1,res:''};
@@ -940,7 +937,7 @@ function gadget(p){
       if(b.s){ const l=Math.hypot(b.vx,b.vy); mv(t, b.vx/l*13, b.vy/l*13); }
       beep(220,.08,.08,'square',-100); if(!t.isDummy && t.hp<=0) die(t);
     }
-    function die(t){ t.alive=false; t.hp=0; t.dt=0; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); shake=10; }
+    function die(t){ if(!t.alive)return; t.alive=false; t.hp=0; t.dt=0; if(gameMode==='showdown'||gameMode==='duo') t.elimOrder=++matchEliminations; if(gameMode==='duo'&&!P.some(p=>p.alive&&p.t===t.t)) teamEliminationOrder[t.t]=matchEliminations; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); shake=10; }
     function ai(b,dt){
       if(b.isDummy){
         let tg=null, bd=1e9;
@@ -1106,8 +1103,9 @@ function gadget(p){
       const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
       const totalTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].length : 0;
       const eliminatedTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].filter(team=>!aliveTeams.includes(team)).length : 0;
-      const place = gameMode==='showdown' ? Math.max(1, Math.min(10, P.filter(p=>!p.alive).length+1)) : gameMode==='duo' ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(totalTeams, eliminatedTeams+1))) : (G.w[me.t]>=2 ? 1 : 5);
-      const win = place===1, d = place===1 ? 10 : place===2 ? 8 : place===3 ? 5 : place===4 ? 0 : -5;
+      const place = gameMode==='showdown' ? (me.alive ? 1 : Math.max(2, Math.min(10, 11-(me.elimOrder||matchEliminations||1)))) : gameMode==='duo' ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(5, 6-(teamEliminationOrder[me.t]||matchEliminations||1)))) : (G.w[me.t]>=2 ? 1 : 5);
+      const d = (gameMode==='showdown'||gameMode==='duo') ? (place===1 ? 10 : place===2 ? 8 : place===3 ? 5 : place===4 ? 0 : -5) : (G.w[me.t]>=2 ? 8 : -4);
+      const win = (gameMode==='showdown'||gameMode==='duo') ? place===1 : G.w[me.t]>=2;
       // Online clients wait for the host's final result before changing trophies.
       if(!networkMode || isNetworkHost){
         tr = Math.max(0, tr + d); bTrophies[selB] = Math.max(0, (bTrophies[selB]||0) + d); saveTrophies();
