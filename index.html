@@ -586,20 +586,33 @@
     cv.addEventListener('mouseup', e => { if(e.button===0) mdown = false; });
     cv.addEventListener('contextmenu', e => e.preventDefault());
     const ts = {m:{id:null,ox:0,oy:0,x:0,y:0,active:false}, a:{id:null,ox:0,oy:0,x:0,y:0,active:false}, s:{id:null,ox:0,oy:0,x:0,y:0,active:false}};
-    const STICK_POS_KEY='dabrawl_stick_positions_v1';
-    let stickEditMode=false, stickPositions={m:{x:.16,y:.76},a:{x:.78,y:.76}};
-    try{const saved=JSON.parse(localStorage.getItem(STICK_POS_KEY)||'null');if(saved&&saved.m&&saved.a)stickPositions=saved;}catch(_){}
-    function stickOrigin(k){const p=stickPositions[k]||{x:k==='m'?.16:.78,y:.76};return {x:Math.max(65,Math.min(W-65,W*p.x)),y:Math.max(90,Math.min(H-80,H*p.y))};}
-    function syncStickEditButton(){const b=$('stickEditBtn');if(!b)return;const visible=!!(isTestMode&&touch&&scr==='game');b.style.display=visible?'block':'none';b.textContent=stickEditMode?'DONE MOVING STICKS':'MOVE STICKS';b.style.background=stickEditMode?'#b45309':'#252b40';}
-    $('stickEditBtn').addEventListener('click',()=>{stickEditMode=!stickEditMode;for(const k of ['m','a']){const p=stickOrigin(k);ts[k].ox=p.x;ts[k].oy=p.y;ts[k].x=p.x;ts[k].y=p.y;}syncStickEditButton();});
+    const STICK_POS_KEY='dabrawl_stick_positions_v2';
+    const CONTROL_KEYS=['m','a','s','sup','gad'];
+    let stickEditMode=false, stickPositions={m:{x:.16,y:.76},a:{x:.78,y:.76},s:{x:.84,y:.53},sup:{x:.91,y:.70},gad:{x:.91,y:.84}};
+    let stickPositionsUserId=null,stickPositionsLoaded=false;
+    function normalizeStickPositions(saved){if(!saved||typeof saved!=='object')return null;const out={...stickPositions};for(const k of CONTROL_KEYS){const p=saved[k];if(p&&Number.isFinite(p.x)&&Number.isFinite(p.y))out[k]={x:Math.max(.04,Math.min(.96,p.x)),y:Math.max(.08,Math.min(.92,p.y))};}return out;}
+    try{stickPositions=normalizeStickPositions(JSON.parse(localStorage.getItem(STICK_POS_KEY)||'null'))||stickPositions;}catch(_){}
+    function stickOrigin(k){const p=stickPositions[k]||{x:.8,y:.76};return {x:Math.max(50,Math.min(W-50,W*p.x)),y:Math.max(70,Math.min(H-65,H*p.y))};}
+    function saveStickPositions(){try{localStorage.setItem(STICK_POS_KEY,JSON.stringify(stickPositions));}catch(_){};void syncStickPositionsAccount();}
+    async function syncStickPositionsAccount(){try{if(typeof db==='undefined'||!db?.auth)return;const {data:{user}}=await db.auth.getUser();if(!user)return;const {error}=await db.from('player_settings').upsert({user_id:user.id,settings_key:'mobile_control_positions',settings:stickPositions,updated_at:new Date().toISOString()},{onConflict:'user_id,settings_key'});if(error)console.warn('Could not sync joystick layout to account:',error.message);else stickPositionsUserId=user.id;}catch(e){console.warn('Account joystick sync unavailable:',e?.message||e);}}
+    async function loadStickPositionsAccount(){try{if(typeof db==='undefined'||!db?.auth)return;const {data:{user}}=await db.auth.getUser();if(!user)return;stickPositionsUserId=user.id;const {data,error}=await db.from('player_settings').select('settings').eq('user_id',user.id).eq('settings_key','mobile_control_positions').maybeSingle();if(error){console.warn('Account joystick layout load unavailable:',error.message);return;}if(data?.settings){stickPositions=normalizeStickPositions(data.settings)||stickPositions;try{localStorage.setItem(STICK_POS_KEY,JSON.stringify(stickPositions));}catch(_){}}}catch(e){console.warn('Account joystick layout load unavailable:',e?.message||e);}}
+    function syncStickEditButton(){const b=$('stickEditBtn');if(!b)return;const visible=!!(isTestMode&&touch&&scr==='game');b.style.display=visible?'block':'none';b.textContent=stickEditMode?'DONE MOVING CONTROLS':'MOVE CONTROLS';b.style.background=stickEditMode?'#b45309':'#252b40';}
+    $('stickEditBtn').addEventListener('click',()=>{stickEditMode=!stickEditMode;for(const k of ['m','a','s']){const p=stickOrigin(k);ts[k].ox=p.x;ts[k].oy=p.y;ts[k].x=p.x;ts[k].y=p.y;}syncStickEditButton();});
+    function positionAbilityButtons(){for(const k of ['sup','gad']){const el=$(k);if(!el)continue;const p=stickOrigin(k);el.style.position='fixed';el.style.left=(p.x-30)+'px';el.style.top=(p.y-30)+'px';el.style.right='auto';el.style.bottom='auto';el.style.zIndex='80';el.style.touchAction='none';}}
+    function applyControlPositions(){positionAbilityButtons();syncStickEditButton();}
+    function initAccountControlPositions(){void loadStickPositionsAccount().then(applyControlPositions);}
+    window.addEventListener('resize',applyControlPositions);
     function getTouchPos(t){ const rect = cv.getBoundingClientRect(); return { x: (t.clientX - rect.left) * (W / rect.width), y: (t.clientY - rect.top) * (H / rect.height) }; }
     cv.addEventListener('touchstart', e => {
       e.preventDefault(); touch=true;
       for(const t of e.changedTouches){
-        const pos=getTouchPos(t),side=pos.x<W/2?'m':'a';
+        const pos=getTouchPos(t);
         if(stickEditMode){
-          const k=side, nx=Math.max(.06,Math.min(.94,pos.x/W)), ny=Math.max(.12,Math.min(.9,pos.y/H));
-          stickPositions[k]={x:nx,y:ny};try{localStorage.setItem(STICK_POS_KEY,JSON.stringify(stickPositions));}catch(_){}
+          const nearest=CONTROL_KEYS.map(k=>({k,p:stickOrigin(k)})).sort((a,b)=>Math.hypot(pos.x-a.p.x,pos.y-a.p.y)-Math.hypot(pos.x-b.p.x,pos.y-b.p.y))[0];
+          const editKey=nearest&&Math.hypot(pos.x-nearest.p.x,pos.y-nearest.p.y)<105?nearest.k:(pos.x<W/2?'m':'a');
+          const side=editKey==='m'?'m':'a';
+          const k=editKey, nx=Math.max(.04,Math.min(.96,pos.x/W)), ny=Math.max(.08,Math.min(.92,pos.y/H));
+          stickPositions[k]={x:nx,y:ny};saveStickPositions();applyControlPositions();
           ts[k].ox=pos.x;ts[k].oy=pos.y;ts[k].x=pos.x;ts[k].y=pos.y;continue;
         }
         if(!ts[side].active){
@@ -659,14 +672,14 @@
     $('sup').style.touchAction='none';$('gad').style.touchAction='manipulation';
     let superPointer=null,superStart=null,superCurrent=null,superDragged=false;
     function useSuperFromGesture(){
-      if(scr!=='game'||!me||me.sc<1||me.tf>0)return;
+      if(scr!=='game'||!me||me.sc<1||me.tf>0||(me.k.sy&&me.form<5))return;
       if(superDragged&&superStart&&superCurrent)me.a=Math.atan2(superCurrent.y-superStart.y,superCurrent.x-superStart.x);
       else aimAtNearestEnemy(me);
       sup(me);
     }
     $('sup').addEventListener('pointerdown',e=>{
       e.preventDefault();e.stopPropagation();
-      if(scr!=='game'||!me||me.sc<1||me.tf>0)return;
+      if(scr!=='game'||!me||me.sc<1||me.tf>0|| (me.k.sy&&me.form<5))return;
       superPointer=e.pointerId;superStart={x:e.clientX,y:e.clientY};superCurrent={...superStart};superDragged=false;
       try{$('sup').setPointerCapture(e.pointerId);}catch(_){}
     });
@@ -688,7 +701,7 @@
       button.addEventListener('keydown',e=>{
         if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();
         if(scr!=='game'||!me)return;
-        if(button.id==='sup'){aimAtNearestEnemy(me);sup(me);}else gadget(me);
+        if(button.id==='sup'){if(me.k.sy&&me.form<5)return;aimAtNearestEnemy(me);sup(me);}else gadget(me);
       });
       button.addEventListener('contextmenu',e=>e.preventDefault());
     }
@@ -1589,11 +1602,11 @@ function gadget(p){
               const playerX=(me.x-cam.x)*z,playerY=(me.y-cam.y)*z;
               const isBeam=!!me.k.sy;
               const holdingBeam=isBeam&&(ts.a.active||superPointer!==null)&&!KM.some(km=>km.o===me);
-              const holdAmount=holdingBeam?Math.max(me.chg||0,Math.min(1,((me.holdT||0)-.3)/1.4)):0;
-              const rawRange=isBeam?(me.form===5?MW*T:(me.k.mode===1?MW*T:MW*T*(.25+.75*holdAmount))):(manualAim?(me.k.rng||260):(me.k.sr||me.k.rng||300));
+              const holdAmount=holdingBeam?Math.max(0,Math.min(1,Math.hypot(ts.a.x-ts.a.ox,ts.a.y-ts.a.oy)/55)):0;
+              const rawRange=isBeam?(me.form===5?MW*T:(me.form===4?MW*T:MW*T*(.18+.82*holdAmount))):(manualAim?(me.k.rng||260):(me.k.sr||me.k.rng||300));
               const rangePx=Math.max(0,rawRange*z);
               const spread=(isBeam?(me.form===5?100:Math.max(16,20+holdAmount*me.k.w||20)):(manualAim?(me.k.spr||.12):(me.k.ss||me.k.spr||.16)));
-              const halfWidth=isBeam?Math.max(5,(me.form===5?100:10+holdAmount*42)*z):Math.max(4,Math.tan(Math.min(.7,spread/2))*rangePx+((me.k.rng||0)*z*.025));
+              const halfWidth=isBeam?Math.max(5,(me.form===5?100:(me.form===4?70:8+holdAmount*42))*z):Math.max(4,Math.tan(Math.min(.7,spread/2))*rangePx+((me.k.rng||0)*z*.025));
               const boundedRange=Math.min(rangePx,Math.max(W,H)*1.8);
               g.save();g.translate(playerX,playerY);g.rotate(aimAngle);
               g.fillStyle='rgba(205,213,225,0.22)';g.beginPath();g.moveTo(0,-4);g.lineTo(boundedRange,-halfWidth);g.lineTo(boundedRange,halfWidth);g.lineTo(0,4);g.closePath();g.fill();
@@ -1601,12 +1614,14 @@ function gadget(p){
             }
           }
           const colors = {m:'#ffffff', a:'#2a7de0', s:'#ffd21f'}, stickCols = {m:'#ffffff', a:'#5cb6ff', s:'#ffe45c'};
+          if(stickEditMode){const controls=[['sup','SUPER'],['gad','GADGET']];for(const [id,label] of controls){const p=stickOrigin(id);g.globalAlpha=.75;circ(p.x,p.y,31,id==='sup'?'#ffd21f':'#e879f9');g.globalAlpha=1;tx(label,p.x,p.y+48,12,'#ffffff');}}
           for(const k of ['m', 'a', 's']){
             const s = ts[k];
-            if(stickEditMode&&k!=='s'){
+            if(stickEditMode){
               const origin=stickOrigin(k);s.ox=origin.x;s.oy=origin.y;
-              g.globalAlpha=.32;circ(origin.x,origin.y,62,k==='m'?'#ffffff':'#2a7de0');
-              g.globalAlpha=.95;circ(origin.x,origin.y,26,k==='m'?'#ffffff':'#5cb6ff');
+              g.globalAlpha=.32;circ(origin.x,origin.y,k==='m'?62:52,k==='m'?'#ffffff':k==='a'?'#2a7de0':'#ffd21f');
+              g.globalAlpha=.95;circ(origin.x,origin.y,k==='m'?26:23,k==='m'?'#ffffff':k==='a'?'#5cb6ff':'#ffe45c');
+              if(k==='s')tx('SUPER',origin.x,origin.y+78,12,'#ffe45c');
               g.globalAlpha=1;
             }else if(s.active){
               const d = Math.hypot(s.x - s.ox, s.y - s.oy), m = Math.min(d, 55), a = Math.atan2(s.y - s.oy, s.x - s.ox);
@@ -1997,6 +2012,8 @@ function gadget(p){
     el('onlineSignUp').addEventListener('click', () => { void auth('up'); });
     el('onlinePassword').addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); void auth('in'); } });
     window.__daBrawlAuthReady = true;
+    window.__daBrawlControlLayoutAccountSync = {load:loadStickPositionsAccount,save:syncStickPositionsAccount};
+    db.auth.onAuthStateChange((event)=>{if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED')void loadStickPositionsAccount().then(applyControlPositions);});
     let authBusy = false;
     async function auth(mode){
       if(authBusy) return;
