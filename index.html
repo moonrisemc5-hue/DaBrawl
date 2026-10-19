@@ -575,6 +575,61 @@
     const tile = (x,y) => { const i=Math.floor(x/T), j=Math.floor(y/T); return i<0||j<0||i>=MW||j>=MH ? '#' : M[j][i]; };
     const solid = (x,y) => { const t = tile(x,y); return t=='#' || t=='~'; };
     const hitW = (x,y,r) => solid(x-r,y-r) || solid(x+r,y-r) || solid(x-r,y+r) || solid(x+r,y+r);
+    // Grid route planner: bots can navigate around solid walls/water instead of
+    // repeatedly pushing into the blocked direct line to their target.
+    function aiRouteVector(p,tx,ty,bushMode=false){
+      const sx=Math.max(1,Math.min(MW-2,Math.floor(p.x/T))), sy=Math.max(1,Math.min(MH-2,Math.floor(p.y/T)));
+      const gx=Math.max(1,Math.min(MW-2,Math.floor(tx/T))), gy=Math.max(1,Math.min(MH-2,Math.floor(ty/T)));
+      const key=[sx,sy,gx,gy,bushMode?1:0].join(':');
+      p.aiPathTimer=(p.aiPathTimer||0)-.016;
+      if(p.aiPathKey===key&&p.aiPathTimer>0&&p.aiPathDir)return p.aiPathDir;
+      const total=MW*MH,start=sy*MW+sx,prev=new Int32Array(total),dist=new Int32Array(total),queue=new Int32Array(total);
+      prev.fill(-2);dist.fill(1e9);let head=0,tail=0;queue[tail++]=start;prev[start]=-1;dist[start]=0;
+      const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+      while(head<tail){
+        const id=queue[head++],x=id%MW,y=Math.floor(id/MW);
+        for(const [dx,dy] of dirs){const nx=x+dx,ny=y+dy;if(nx<=0||ny<=0||nx>=MW-1||ny>=MH-1)continue;
+          const ni=ny*MW+nx;if(prev[ni]!==-2||solid(nx*T+T/2,ny*T+T/2))continue;
+          prev[ni]=id;dist[ni]=dist[id]+1;queue[tail++]=ni;
+        }
+      }
+      let goal=gy*MW+gx;
+      if(bushMode){
+        let score=-Infinity,found=-1;
+        for(let y=1;y<MH-1;y++)for(let x=1;x<MW-1;x++){
+          const id=y*MW+x;if(M[y]?.[x]!=='b'||dist[id]>=1e9)continue;
+          const enemyGap=Math.hypot((x+.5)*T-tx,(y+.5)*T-ty);
+          const candidate=enemyGap-dist[id]*T*.72;
+          if(candidate>score){score=candidate;found=id;}
+        }
+        p.aiBushFound=found>=0;
+        if(found>=0)goal=found;else goal=start;
+      }else p.aiBushFound=false;
+      if(prev[goal]===-2||goal===start){
+        // If a target is unreachable, move toward the nearest reachable tile.
+        let best=start,bestScore=Infinity;
+        for(let i=0;i<tail;i++){const id=queue[i],d=Math.hypot((id%MW-gx)*T,(Math.floor(id/MW)-gy)*T)+dist[id]*T*.2;if(d<bestScore){bestScore=d;best=id;}}
+        goal=best;
+      }
+      let first=goal,guard=0;while(prev[first]>=0&&prev[first]!==start&&guard++<total)first=prev[first];
+      const nx=(first%MW+.5)*T,ny=(Math.floor(first/MW)+.5)*T;
+      let vx=nx-p.x,vy=ny-p.y;
+      if(Math.hypot(vx,vy)<5){vx=tx-p.x;vy=ty-p.y;}
+      const l=Math.hypot(vx,vy)||1,dir={x:vx/l,y:vy/l};
+      p.aiPathKey=key;p.aiPathDir=dir;p.aiPathTimer=.22;return dir;
+    }
+    function aiDodgeVector(p){
+      let dx=0,dy=0,threat=0;
+      for(const shot of B){
+        if(!shot||shot.o===p||!shot.o?.alive||(gameMode!=='showdown'&&shot.t===p.t))continue;
+        const rx=p.x-shot.x,ry=p.y-shot.y,vl=shot.vx*shot.vx+shot.vy*shot.vy;
+        if(vl<1)continue;
+        const t=Math.max(0,Math.min(.42,-(rx*shot.vx+ry*shot.vy)/vl));
+        const cx=shot.x+shot.vx*t,cy=shot.y+shot.vy*t,gap=Math.hypot(p.x-cx,p.y-cy);
+        if(gap<48&&t<.42){const side=(rx*shot.vy-ry*shot.vx)>=0?1:-1;const weight=(48-gap)/48*(1-t*.8);dx+=(-shot.vy/Math.sqrt(vl))*side*weight;dy+=(shot.vx/Math.sqrt(vl))*side*weight;threat=Math.max(threat,weight);}
+      }
+      return {x:dx,y:dy,threat};
+    }
     const BR = {
       kuku: {nm:'KUKU', rarity:'COMMON', rarityCol:'#00c0ff', hp:7000, spd:135, pel:8, dmg:312.5, spr:.68, rng:230, bs:550, rel:1.6, sd:333.3, sp:12, ss:.72, sr:340, w:140, z:2.5, cm:0.6, cls:'DAMAGE DEALER', atkNm:'2500 DMG', supNm:'WALL BREAKER', info:'Kuku fires 8 rapid buckshot pellets!'},
       shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:8000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2000, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
@@ -1037,7 +1092,21 @@ function gadget(p){
       if(!tg){ step(b,0,0,dt); return; }
       const a = Math.atan2(tg.y-b.y, tg.x-b.x); b.sw-=dt; if(b.sw<=0){ b.sw=.7+Math.random()*1.4; b.sd=Math.random()<.5?-1:1; }
       const low = b.hp<b.mh*.3, want = low?270:K.w, f = bd>want+40?1:bd<want-40?-1:0;
-      step(b, Math.cos(a)*f + Math.cos(a+1.57)*b.sd*.7, Math.sin(a)*f + Math.sin(a+1.57)*b.sd*.7, dt); b.a = a + (Math.random()-.5)*.06;
+      let route=aiRouteVector(b,tg.x,tg.y,false), moveX=route.x*f,moveY=route.y*f;
+      // At critical health, retreat to the best reachable bush when the map has one.
+      if(low){
+        let bush=aiRouteVector(b,tg.x,tg.y,true);
+        const onBush=tile(b.x,b.y)==='b';
+        if(onBush){const bx=(Math.floor(b.x/T)+.5)*T,by=(Math.floor(b.y/T)+.5)*T;moveX=bx-b.x;moveY=by-b.y;}
+        else if(b.aiBushFound){moveX=bush.x;moveY=bush.y;}
+        else {moveX=-route.x;moveY=-route.y;}
+      }else{
+        moveX+=route.y*b.sd*.42;moveY-=route.x*b.sd*.42;
+      }
+      // Predict incoming shots and add a perpendicular sidestep before impact.
+      const dodge=aiDodgeVector(b);
+      if(dodge.threat>0){moveX+=dodge.x*1.8;moveY+=dodge.y*1.8;}
+      step(b,moveX,moveY,dt); b.a = a + (Math.random()-.5)*.06;
       if(b.cd<=0){ if(b.sc>=1 && bd<K.sr-40){ sup(b); b.cd=.8; } else if(b.am>=1 && bd<K.rng-15){ tryFire(b); b.cd=.45+Math.random()*.5; } }
       if(b.gcd<=0 && bd>190 && bd<330 && Math.random()<dt*.5){ b.mx=Math.cos(a); b.my=Math.sin(a); b.dd=a; gadget(b); }
     }
@@ -1414,17 +1483,8 @@ function gadget(p){
         if(!isMax && tile(p.x+c*len, p.y+s*len)=='#') break;
         len+=8;
       }
-      // Fully charged Kamehameha destroys each wall in its path. Every client
-      // resolves the same line, while the firing client broadcasts tile changes.
-      if(isMax){
-        const broken=new Set();
-        for(let d=0;d<len;d+=8){
-          const ti=Math.floor((p.x+c*d)/T), tj=Math.floor((p.y+s*d)/T), key=ti+','+tj;
-          if(broken.has(key)||ti<=0||tj<=0||ti>=MW-1||tj>=MH-1||M[tj]?.[ti]!=='#') continue;
-          broken.add(key); M[tj][ti]='.'; puff((ti+.5)*T,(tj+.5)*T,6,'#8a5a2b',1.2);
-          if(networkMode && p===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj});
-        }
-      }
+      // A fully charged Kamehameha pierces walls visually and for damage,
+      // but it must never mutate the arena tiles or desync collision with rendering.
       p.chg=0; p.kcd = (p.form<=1?3:5); p.burst=0;
       const startDmg = K.kd||700, maxDmg = K.kmax||2200, actualDmg = startDmg + ch*(maxDmg - startDmg);
       let kameCol = K.aura || '#4cf'; if(p.form === 2) kameCol = '#ff3a3a'; else if(p.form === 3) kameCol = '#38bdf8';
@@ -1432,7 +1492,7 @@ function gadget(p){
         if(p===me) window.DaBrawlNet.sendAction('kame',p.a,{charge:ch,x:p.x,y:p.y,len,w:14+ch*40,damage:actualDmg,col:kameCol,isMaxChg:isMax});
         else if(isNetworkHost && p.isBot) window.DaBrawlNet.sendAction('kame',p.a,{charge:ch,x:p.x,y:p.y,len,w:14+ch*40,damage:actualDmg,col:kameCol,isMaxChg:isMax,playerId:p.netId});
       }
-      KM.push({o:p, a:p.a, x:p.x, y:p.y, len, w:14+ch*40, d:actualDmg, t:.6, m:.6, tk:0, col:kameCol, destroys:isMax, isMaxChg:isMax});
+      KM.push({o:p, a:p.a, x:p.x, y:p.y, len, w:14+ch*40, d:actualDmg, t:.6, m:.6, tk:0, col:kameCol, destroys:false, isMaxChg:isMax});
       shake = 8+ch*12; playKameSound();
     }
     function beamHit(k){
