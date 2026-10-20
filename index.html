@@ -211,6 +211,10 @@
         </div><h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">SOLO SHOWDOWN</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">Every brawler for themselves. Be the last one standing.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#fca5a5">SOLO MODE · FREE FOR ALL</div>
       </button>
       <button class="mode-card" data-mode="duo" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer"><div style="height:100px;border:2px solid #000;border-radius:9px;background:linear-gradient(135deg,#647b45,#c0ad72 48%,#476b43);position:relative"><div style="position:absolute;left:18%;top:25%;width:19px;height:19px;background:#3b82f6;border:2px solid #111;border-radius:5px;box-shadow:18px 13px 0 #60a5fa,125px 35px 0 #ef4444,143px 48px 0 #f87171,205px 8px 0 #c084fc,223px 21px 0 #d8b4fe"></div></div><h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">DUO SHOWDOWN</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">Team up with a partner. Five duos fight until one team remains.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#86efac">TEAM MODE · 5 TEAMS OF 2</div></button>
+      <button class="mode-card" data-mode="trio" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer">
+        <div style="height:100px;border:2px solid #000;border-radius:9px;overflow:hidden;background:linear-gradient(135deg,#315b49,#a8c76b 48%,#314f3d);position:relative"><div style="position:absolute;left:18%;top:25%;width:18px;height:18px;background:#3b82f6;border:2px solid #111;border-radius:5px;box-shadow:22px 12px 0 #60a5fa,44px 24px 0 #93c5fd,125px 35px 0 #ef4444,147px 47px 0 #f87171,169px 59px 0 #fca5a5"></div></div>
+        <h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">TRIO SHOWDOWN</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">Four teams of three fight to be the last trio standing.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#86efac">TEAM MODE · 4 TEAMS OF 3</div>
+      </button>
       <button class="mode-card" data-mode="duel" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer">
         <div style="height:100px;border:2px solid #000;border-radius:9px;overflow:hidden;background:linear-gradient(90deg,#314f3d 0 32%,#b6a66c 32% 68%,#314f3d 68%);position:relative">
           <div style="position:absolute;left:23%;top:32%;width:23px;height:23px;background:#3b82f6;border:2px solid #111;border-radius:5px;box-shadow:100px 0 0 #ef4444"></div><div style="position:absolute;left:48%;top:0;height:100%;width:8px;background:#456044"></div>
@@ -535,7 +539,7 @@
     let M, gasDist=0, mapVariant=0;
     function build(){
       gasDist = 0;
-      if(gameMode == 'showdown' || gameMode === 'duo'){
+      if(gameMode == 'showdown' || gameMode === 'duo' || gameMode === 'trio'){
         MW=50; MH=32;
         M = Array.from({length:MH}, (_,j) => Array.from({length:MW}, (_,i) => {
           if(i==0||j==0||i==MW-1||j==MH-1) return '#';
@@ -673,7 +677,7 @@
     const BR = {
       kuku: {nm:'KUKU', rarity:'COMMON', rarityCol:'#00c0ff', hp:7000, spd:135, pel:8, dmg:312.5, spr:.68, rng:230, bs:550, rel:1.6, sd:333.3, sp:12, ss:.72, sr:340, w:140, z:2.5, cm:0.6, cls:'DAMAGE DEALER', atkNm:'2500 DMG', supNm:'WALL BREAKER', info:'Kuku fires 8 rapid buckshot pellets!'},
       shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:8000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2000, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
-      saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'FIGHTER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'},
+      saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'TRANSFORMER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'},
       deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b86b3d', hp:7600, spd:138, pel:1, dmg:1062, spr:0, rng:300, bs:430, rel:2.4, sd:1375.5, sr:110, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'1062 DMG', supNm:'BEER BARRAGE', info:'Hooded masked gangster in a black puffer and grey joggers; his cigar splashes healing green beer!'}
     };
     const FM = [
@@ -702,11 +706,11 @@
     function mk(t,i,human,name,b='kuku',isDummy=false){
       let xPos, yPos;
       if(isDummy){ xPos = (MW*T)/2 + (i===0?-60:60); yPos = (MH*T)/2 + (i===0?-40:40); }
-      else if(gameMode == 'showdown' || gameMode === 'duo'){
+      else if(gameMode == 'showdown' || gameMode === 'duo' || gameMode === 'trio'){
         let valid = false, attempts = 0;
         while(!valid && attempts < 500){
           attempts++;
-          const angle = gameMode==='duo' ? (t/5)*Math.PI*2 + (i===0?-0.045:0.045) : (i / 10) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+          const angle = gameMode==='duo' ? (t/5)*Math.PI*2 + (i===0?-0.045:0.045) : (i / (gameMode==='trio'?12:10)) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
           xPos = (MW * T) / 2 + Math.cos(angle) * (MW * 0.42) * T;
           yPos = (MH * T) / 2 + Math.sin(angle) * (MH * 0.42) * T;
           if(tile(xPos, yPos) == '.') valid = true;
@@ -748,6 +752,9 @@
         G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       } else if(gameMode === 'duo'){
         for(let i=1; i<10; i++) P.push(mk(Math.floor(i/2), i%2, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
+        G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
+      } else if(gameMode === 'trio'){
+        for(let i=1; i<12; i++) P.push(mk(Math.floor(i/3), i%3, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
         G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       } else if(gameMode == 'showdown'){
         for(let i=1; i<10; i++) P.push(mk(i, i, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
@@ -936,7 +943,7 @@
       button.addEventListener('contextmenu',e=>e.preventDefault());
     }
     $('leaveBtn').onclick = () => { if(scr==='game' && gameMode==='showdown' && me && !me.alive && (G?.ph==='play'||G?.ph==='end')){ finish(); return; } show('menu'); isTestMode = false; };
-    $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ if(isNetworkHost) void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
+    $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
     $('home').onclick = () => { try{localStorage.removeItem('dabrawl_active_match');}catch(_){} beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
     $('play').onclick = () => {
       if(window.DaBrawlNet?.isInParty()){window.DaBrawlNet.toggleReady?.();return;}
@@ -966,10 +973,10 @@
     $('resetKeybinds').onclick = () => { keyBinds={...DEFAULT_BINDS};waitingForBind=null;$('keybindHint').textContent='Default controls restored.';saveKeyBinds(); };
     $('bk1').onclick = () => show('menu');
     function applyGameMode(mode){
-      if(!['knockout','showdown','duo','duel'].includes(mode))return;
+      if(!['knockout','showdown','duo','trio','duel'].includes(mode))return;
       gameMode=mode;
-      $('modeTxt').textContent=mode==='knockout'?'KNOCKOUT 3v3':mode==='showdown'?'SOLO SHOWDOWN':mode==='duo'?'DUO SHOWDOWN':'1v1 DUEL';
-      $('modeBtn').title=mode==='knockout'?'Knockout: 3v3':mode==='showdown'?'Solo Showdown: every player for themselves':mode==='duo'?'Duo Showdown: five teams of two':'1v1 Duel: you versus one bot';
+      $('modeTxt').textContent=mode==='knockout'?'KNOCKOUT 3v3':mode==='showdown'?'SOLO SHOWDOWN':mode==='duo'?'DUO SHOWDOWN':mode==='trio'?'TRIO SHOWDOWN':'1v1 DUEL';
+      $('modeBtn').title=mode==='knockout'?'Knockout: 3v3':mode==='showdown'?'Solo Showdown: every player for themselves':mode==='duo'?'Duo Showdown: five teams of two':mode==='trio'?'Trio Showdown: four teams of three':'1v1 Duel: you versus one bot';
       document.querySelectorAll('.mode-card').forEach(card=>{const active=card.dataset.mode===mode;card.style.borderColor=active?'#ffd21f':'#64748b';card.style.boxShadow=active?'0 0 0 2px #ffd21f':'none';});
     }
     $('modeBtn').onclick = () => {
@@ -1002,7 +1009,7 @@
       aimAtNearestEnemy(p);
       if(p.k.sy)sTap(p);else tryFire(p);
     }
-    const sees = (tm,p) => gameMode=='showdown' || gameMode=='duo' || p.t==tm || tile(p.x,p.y)!='b' || P.some(a => a.alive && a.t==tm && Math.hypot(a.x-p.x, a.y-p.y)<2.5*T);
+    const sees = (tm,p) => gameMode=='showdown' || gameMode=='duo' || gameMode=='trio' || p.t==tm || tile(p.x,p.y)!='b' || P.some(a => a.alive && a.t==tm && Math.hypot(a.x-p.x, a.y-p.y)<2.5*T);
     function degesImpactVisual(x,y,b){
       const radius=b.splashRadius||(b.superBeer?110:72), greenBeer=!!b.greenBeer, isBeer=!!b.beer||greenBeer;
       const color=greenBeer?'#82d856':isBeer?'#d99a42':'#c4a484', puddleColor=greenBeer?'#398b35':isBeer?'#9b5b22':'#806b59';
@@ -1028,13 +1035,13 @@
       const radius=b.splashRadius||(b.superBeer?110:72), isBeer=!!b.beer;
       degesImpactVisual(x,y,b);
       if(b.greenBeer){
-        const now=Date.now();Z.push({x,y,radius,owner:b.o,team:b.o?.t??b.t,damage:0,heal:b.heal||1000,greenBeer:true,expires:now+3000,nextTick:now,tickMs:1000,lastHit:new Map()});
+        const now=Date.now();Z.push({x,y,radius,owner:b.o,team:b.o?.t??b.t,damage:0,heal:800,greenBeer:true,expires:now+3000,nextTick:now+500,tickMs:1000,lastHit:new Map()});
       }else if(b.beer){
-        Z.push({x,y,radius,owner:b.o,team:b.o?.t??b.t,damage:b.d||0,heal:b.heal||2250,superBeer:!!b.superBeer,expires:Date.now()+1800,nextTick:Date.now(),lastHit:new Map()});
+        Z.push({x,y,radius,owner:b.o,team:b.o?.t??b.t,damage:b.d||0,heal:800,superBeer:!!b.superBeer,expires:Date.now()+3000,nextTick:Date.now()+500,tickMs:1000,lastHit:new Map()});
       }else{
         for(const target of P){
           if(!target.alive||target===b.o||Math.hypot(target.x-x,target.y-y)>radius)continue;
-          const ally=(gameMode==='knockout'||gameMode==='duo')&&target.t===(b.o?.t??b.t);
+          const ally=(gameMode==='knockout'||gameMode==='duo'||gameMode==='trio')&&target.t===(b.o?.t??b.t);
           if(!ally)dmg(target,{...b,o:b.o,t:b.o?.t??b.t});
         }
       }
@@ -1191,7 +1198,7 @@ function gadget(p){
       if(b.s){ const l=Math.hypot(b.vx,b.vy); mv(t, b.vx/l*13, b.vy/l*13); }
       beep(220,.08,.08,'square',-100); if(!t.isDummy && t.hp<=0) die(t);
     }
-    function die(t){ if(!t.alive)return; t.alive=false; t.hp=0; t.dt=0; t.respawnPending=gameMode==='duo' && !isTestMode; if(gameMode==='showdown'||gameMode==='duo') t.elimOrder=++matchEliminations; if(gameMode==='duo'&&!P.some(p=>p!==t&&p.alive&&p.t===t.t)) teamEliminationOrder[t.t]=++teamEliminations; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); shake=10; }
+    function die(t){ if(!t.alive)return; t.alive=false; t.hp=0; t.dt=0; t.respawnPending=gameMode==='duo' && !isTestMode; if(gameMode==='showdown'||gameMode==='duo'||gameMode==='trio') t.elimOrder=++matchEliminations; if((gameMode==='duo'||gameMode==='trio')&&!P.some(p=>p!==t&&p.alive&&p.t===t.t)) teamEliminationOrder[t.t]=++teamEliminations; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); shake=10; }
     function tryBotDegešGadget(b,dt){
       if(b.b!=='deges'||b.gcd>0)return false;
       const allies=P.filter(p=>p.alive&&p.t===b.t&&p.hp<p.mh-250&&Math.hypot(p.x-b.x,p.y-b.y)<=356&&!aiLineBlocked(b.x,b.y,p.x,p.y));
@@ -1202,7 +1209,7 @@ function gadget(p){
     function ai(b,dt){
       if(b.isDummy){
         let tg=null,bd=1e9;
-        for(const e of P){if(e===b||!e.alive||(gameMode==='duo'&&e.t===b.t)||(gameMode!=='showdown'&&gameMode!=='duo'&&e.t===b.t))continue;const d=Math.hypot(e.x-b.x,e.y-b.y);if(d<bd){bd=d;tg=e;}}
+        for(const e of P){if(e===b||!e.alive||((gameMode==='duo'||gameMode==='trio')&&e.t===b.t)||(gameMode!=='showdown'&&gameMode!=='duo'&&gameMode!=='trio'&&e.t===b.t))continue;const d=Math.hypot(e.x-b.x,e.y-b.y);if(d<bd){bd=d;tg=e;}}
         if(tg){b.a=Math.atan2(tg.y-b.y,tg.x-b.x);if(b.cd<=0&&bd<b.k.rng+25&&b.am>=1){b.am--;fire(b,0);b.cd=.6;}}
         return;
       }
@@ -1322,7 +1329,7 @@ function gadget(p){
       wf = Math.max(0, wf);
       for(let i=KM.length-1;i>=0;i--){ const k=KM[i]; k.t-=dt; if(!k.remoteVisual){ k.x=k.o.x; k.y=k.o.y; } k.tk-=dt; if(k.tk<=0){ k.tk=.1; beamHit(k); } if(k.t<=0) KM.splice(i,1); }
       if(G.ph=='count'){ G.t=Math.max(0,((G.endAt||Date.now())-Date.now())/1000); if(G.t<=0) G.ph='play'; }
-      else if(G.ph=='end'){ G.t-=dt; if(G.t<=0){ if(G.w[0]>=2||G.w[1]>=2||gameMode=='showdown'||gameMode==='duo') finish(); else { G.r++; resetRound(); } } }
+      else if(G.ph=='end'){ G.t-=dt; if(G.t<=0){ if(G.w[0]>=2||G.w[1]>=2||gameMode=='showdown'||gameMode==='duo'||gameMode==='trio') finish(); else { G.r++; resetRound(); } } }
       if(G.ph=='play'){
         for(const p of P){
           if(!p.alive) continue;
@@ -1375,7 +1382,7 @@ function gadget(p){
             const ti=Math.floor(b.x/T), tj=Math.floor(b.y/T);
             if(b.r<=0){ dead=true; if(b.remoteVisual&&!b.greenBeer){degesImpactVisual(b.x,b.y,b);}else if(b.beer||b.cigar) degesSplash(b.x,b.y,b); else puff(b.x,b.y,1,'#ffe9a0',.3); }
             else if(b.bn>0 && tile(b.x,b.y)=='#'){ b.x-=b.vx*k; b.y-=b.vy*k; if(tile(b.x+b.vx*k,b.y)=='#') b.vx=-b.vx; else b.vy=-b.vy; b.bn--; }
-            else if(!b.beer&&tile(b.x,b.y)=='#'){ dead=true; if(b.cigar) degesSplash(b.x,b.y,b); if(b.s && ti>0 && tj>0 && ti<MW-1 && tj<MH-1){ M[tj][ti]='.'; if(networkMode && b.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
+            else if(tile(b.x,b.y)=='#'){ dead=true; if(b.remoteVisual&&!b.greenBeer)degesImpactVisual(b.x,b.y,b);else if(b.cigar||b.beer)degesSplash(b.x,b.y,b); if(b.s && ti>0 && tj>0 && ti<MW-1 && tj<MH-1){ M[tj][ti]='.'; if(networkMode && b.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
             else if(networkMode && b.o?.netRemote){ /* remote owner's browser resolves hits */ }
           else for(const e of P){ if(!b.beer && !b.greenBeer && e!==b.o && e.alive && !e.lp && !(e.tf>0) && Math.hypot(e.x-b.x,e.y-b.y)<20+(b.z>9?b.z-9:0)){
             const sameTeam=e.t===b.t;
@@ -1404,7 +1411,7 @@ function gadget(p){
                 if(healed>0){target.hp+=healed;puff(target.x,target.y,7,'#a5e978',.9);F.push({k:'bubble',x:target.x,y:target.y-10,vx:(Math.random()-.5)*12,vy:-28,l:.55,m:.55,r:3+Math.random()*3,phase:Math.random()*6.28,c:'#dcffc2'});}
                 continue;
               }
-              if(isOwner||((gameMode==='knockout'||gameMode==='duo')&&target.t===zone.team)){
+              if(isOwner||((gameMode==='knockout'||gameMode==='duo'||gameMode==='trio')&&target.t===zone.team)){
                 const healed=Math.min(target.mh-target.hp,zone.heal);
                 if(healed>0){target.hp+=healed;puff(target.x,target.y,5,'#7df9a5',.7);}
               }else{
@@ -1418,11 +1425,11 @@ function gadget(p){
           }
         }
         if(!isTestMode){
-          if(gameMode == 'showdown' || gameMode == 'duel' || gameMode === 'duo'){
+          if(gameMode == 'showdown' || gameMode == 'duel' || gameMode === 'duo' || gameMode === 'trio'){
             const aliveCount = P.filter(p=>p.alive).length;
-            const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
-            if(gameMode==='duo' ? aliveTeams.filter(team=>P.some(p=>p.t===team&&p.alive)).length<=1 && !(P.some(p=>!p.alive&&p.respawnPending&&P.some(q=>q!==p&&q.t===p.t&&q.alive))) : (gameMode==='showdown' ? aliveCount<=1 : (aliveCount<=1 || !me.alive))){
-              const win = gameMode==='duo' ? aliveTeams[0]===me.t : me.alive && aliveCount==1;
+            const aliveTeams = (gameMode==='duo'||gameMode==='trio') ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
+            if((gameMode==='duo'||gameMode==='trio') ? aliveTeams.filter(team=>P.some(p=>p.t===team&&p.alive)).length<=1 && !(P.some(p=>!p.alive&&p.respawnPending&&P.some(q=>q!==p&&q.t===p.t&&q.alive))) : (gameMode==='showdown' ? aliveCount<=1 : (aliveCount<=1 || !me.alive))){
+              const win = (gameMode==='duo'||gameMode==='trio') ? aliveTeams[0]===me.t : me.alive && aliveCount==1;
               if(gameMode==='duel'){
                 const winnerTeam=win?me.t:(me.t===0?1:0);
                 if(winnerTeam===0 || winnerTeam===1) G.w[winnerTeam]++;
@@ -1444,7 +1451,7 @@ function gadget(p){
     function matchmake(){
       if(window.DaBrawlNet){ window.DaBrawlNet.beginMatchmaking(gameMode); return; }
       show('mm'); let remaining=10; clearInterval(mmI); clearTimeout(mmTimeout);
-      const target = gameMode==='duel' ? 2 : (gameMode==='showdown'||gameMode==='duo') ? 10 : 6;
+      const target = gameMode==='duel' ? 2 : gameMode==='trio' ? 12 : (gameMode==='showdown'||gameMode==='duo') ? 10 : 6;
       $('mmTxt').textContent = 'PLAYERS JOINED: 1/'+target+' · '+remaining+'s';
       $('mmHint').textContent = 'Waiting up to 10 seconds for players to join…';
       mmI = setInterval(() => {
@@ -1460,13 +1467,13 @@ function gadget(p){
       if(scr==='res') return;
       try{localStorage.removeItem('dabrawl_active_match');}catch(_){}
       lastMatchWasOnline=!!networkMode; lastQueueMode=gameMode;
-      const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
+      const aliveTeams = (gameMode==='duo'||gameMode==='trio') ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
       const totalTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].length : 0;
       const eliminatedTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].filter(team=>!aliveTeams.includes(team)).length : 0;
-      const place = gameMode==='showdown' ? (me.alive ? 1 : Math.max(2, Math.min(10, 11-(me.elimOrder||matchEliminations||1)))) : gameMode==='duo' ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(5, 6-(teamEliminationOrder[me.t]||teamEliminations||1)))) : (G.w[me.t]>=2 ? 1 : 5);
+      const place = gameMode==='showdown' ? (me.alive ? 1 : Math.max(2, Math.min(10, 11-(me.elimOrder||matchEliminations||1)))) : (gameMode==='duo'||gameMode==='trio') ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(gameMode==='trio'?4:5, (gameMode==='trio'?5:6)-(teamEliminationOrder[me.t]||teamEliminations||1)))) : (G.w[me.t]>=2 ? 1 : 5);
       const soloShowdownTrophies = [10, 8, 5, 0, -2, -5, -8, -10];
-      const d = gameMode==='showdown' ? (soloShowdownTrophies[place-1] ?? -10) : gameMode==='duo' ? (place===1 ? 10 : place===2 ? 8 : place===3 ? 5 : place===4 ? 0 : -5) : (G.w[me.t]>=2 ? 8 : -4);
-      const win = (gameMode==='showdown'||gameMode==='duo') ? place===1 : G.w[me.t]>=2;
+      const d = gameMode==='showdown' ? (soloShowdownTrophies[place-1] ?? -10) : gameMode==='trio' ? ([10,5,0,-4][place-1] ?? -4) : gameMode==='duo' ? (place===1 ? 10 : place===2 ? 8 : place===3 ? 5 : place===4 ? 0 : -5) : (G.w[me.t]>=2 ? 8 : -4);
+      const win = (gameMode==='showdown'||gameMode==='duo'||gameMode==='trio') ? place===1 : G.w[me.t]>=2;
       // Online clients wait for the host's final result before changing trophies.
       if(!networkMode || isNetworkHost){
         tr = Math.max(0, tr + d); bTrophies[selB] = Math.max(0, (bTrophies[selB]||0) + d); saveTrophies();
@@ -1474,7 +1481,7 @@ function gadget(p){
       $('rt').textContent = win ? 'VICTORY!' : 'DEFEAT'; $('rt').style.color = win ? '#ffd21f' : '#ff5a5a'; $('rd').textContent = (d>0?'+':'')+d+' 🏆';
       if(networkMode){
         // Rematch stays host-only; every player can leave a completed match.
-        $('again').style.display=isNetworkHost?'':'none'; $('home').style.display=''; $('home').textContent='LEAVE MATCH';
+        $('again').style.display=''; $('home').style.display=''; $('home').textContent='LEAVE MATCH';
         $('mmHint').textContent='';
         if(isNetworkHost && window.DaBrawlNet) void window.DaBrawlNet.announceMatchEnd(win);
         if(!isNetworkHost){$('rt').textContent='MATCH OVER';$('rd').textContent='Match ended. You can leave whenever you are ready.';}
@@ -1550,7 +1557,7 @@ function gadget(p){
     }
     function det(id){
       show('det'); const bInfo = BR[id], bT = bTrophies[id]||0, bR = getRank(bT), bStyle = getRankBadgeColor(bR);
-      $('dTitle').textContent = bInfo.nm; $('dClass').textContent = bInfo.cls; $('dRarity').textContent = bInfo.rarity; $('dRarity').style.color = bInfo.rarityCol;
+      $('dTitle').textContent = bInfo.nm; $('dTitle').style.background = bInfo.rarityCol; $('dClass').textContent = bInfo.cls; $('dRarity').textContent = bInfo.rarity; $('dRarity').style.color = bInfo.rarityCol;
       $('dLore').textContent = bInfo.info; $('dHp').textContent = bInfo.hp; $('dAtk').textContent = bInfo.atkNm; $('dSup').textContent = bInfo.supNm; $('dTro').textContent = bT;
       $('dRankIcon').textContent = 'RANK ' + bR; $('dRankIcon').style.background = bStyle.bg; $('dRankIcon').style.borderColor = bStyle.border;
       startShowcaseAnimation(id);
@@ -2212,15 +2219,16 @@ function gadget(p){
         }
         if(wf>0){ g.fillStyle='rgba(255,255,255,'+wf*.85+')'; g.fillRect(0,0,W,H); wf = Math.max(0, wf-.025); }
         g.fillStyle='#000a'; g.beginPath(); g.roundRect(W/2-90, 8, 180, 40, 20); g.fill();
-        if(gameMode == 'showdown' || gameMode === 'duo'){
-          const aliveLeft = gameMode==='duo' ? new Set(P.filter(p=>p.alive).map(p=>p.t)).size : P.filter(p=>p.alive).length;
-          tx(gameMode==='duo'?'TEAMS LEFT: '+aliveLeft:'LEFT: '+aliveLeft, W/2, 36, 20, '#ffd21f');
+        if(gameMode == 'showdown' || gameMode === 'duo' || gameMode === 'trio'){
+          const aliveLeft = (gameMode==='duo'||gameMode==='trio') ? new Set(P.filter(p=>p.alive).map(p=>p.t)).size : P.filter(p=>p.alive).length;
+          tx((gameMode==='duo'||gameMode==='trio')?'TEAMS LEFT: '+aliveLeft:'LEFT: '+aliveLeft, W/2, 36, 20, '#ffd21f');
         } else {
           tx(G.w[0], W/2-50, 38, 30, '#6bb6ff'); tx(isTestMode?'∞':'VS', W/2, 36, 20, '#ffd21f'); tx(G.w[1], W/2+50, 38, 30, '#ff7a7a');
           for(const t of[0,1]) P.filter(p=>p.t==t).forEach((p,i) => circ(W/2+(t?1:-1)*(110+i*22), 28, 8, p.alive?(t?'#f44':'#39f'):'#555', 1));
         }
-        tx(isTestMode?'PRACTICE':gameMode==='showdown'?'SOLO SHOWDOWN':gameMode==='duo'?'DUO SHOWDOWN':gameMode==='duel'?'1V1 DUEL':'KNOCKOUT', 14, 32, 22, '#fff', 'left');
-        tx(gameMode==='showdown'?'10 Players':gameMode==='duel'?'1v1':'Round '+G.r, 14, 56, 16, '#ffd21f', 'left');
+        tx(isTestMode?'PRACTICE':gameMode==='showdown'?'SOLO SHOWDOWN':gameMode==='duo'?'DUO SHOWDOWN':gameMode==='trio'?'TRIO SHOWDOWN':gameMode==='duel'?'1V1 DUEL':'KNOCKOUT', 14, 32, 22, '#fff', 'left');
+        tx(gameMode==='showdown'?'10 Players':gameMode==='trio'?'12 Players':gameMode==='duel'?'1v1':'Round '+G.r, 14, 56, 16, '#ffd21f', 'left');
+        if(gameMode==='duo'&&!me.alive&&me.respawnPending&&P.some(p=>p!==me&&p.alive&&p.t===me.t)){g.save();g.fillStyle='#000b';g.fillRect(W*.18,H*.42,W*.64,H*.16);tx('RESPAWN IN '+Math.max(0,Math.ceil(10-me.dt))+'s',W/2,H*.51,Math.min(48,W/12),'#fff');g.restore();}
         const s = $('sup'), r = Math.round(me.sc*100);
         s.style.background = me.sc>=1 ? 'linear-gradient(#ffe45c,#ff9a00)' : 'linear-gradient(to top,#d9a900 '+r+'%,#444 '+r+'%)';
         s.textContent = me.sc>=1 ? 'SUPER' : r+'%';
@@ -2285,12 +2293,12 @@ function gadget(p){
     window.DaBrawlGame = {
       startNetworkGame(roster, matchId, mode, localId, hostId=localId,startAt=Date.now()+2500){
         networkMode = true; isTestMode = false; isNetworkHost=(localId===hostId); networkResultApplied=false; gameMode = mode || 'knockout';
-        $('modeTxt').textContent = gameMode === 'showdown' ? 'SOLO SHOWDOWN' : gameMode === 'duo' ? 'DUO SHOWDOWN' : gameMode === 'duel' ? '1v1 DUEL' : 'KNOCKOUT 3v3';
+        $('modeTxt').textContent = gameMode === 'showdown' ? 'SOLO SHOWDOWN' : gameMode === 'duo' ? 'DUO SHOWDOWN' : gameMode === 'trio' ? 'TRIO SHOWDOWN' : gameMode === 'duel' ? '1v1 DUEL' : 'KNOCKOUT 3v3';
         mapVariant=0; for(const ch of String(matchId)) mapVariant=(mapVariant*31+ch.charCodeAt(0))%3;
         P=[]; me=null; build(); B=[]; F=[]; Z=[]; MT=[]; KM=[];
         roster.forEach((entry,idx)=>{
-          const team = entry.team!==undefined ? entry.team : gameMode === 'showdown' ? idx : gameMode === 'duo' ? Math.floor(idx/2) : gameMode === 'duel' ? idx % 2 : (idx < 3 ? 0 : 1);
-          const slot = gameMode === 'showdown' ? idx : gameMode === 'duo' ? idx % 3 : gameMode === 'duel' ? idx % 2 : idx % 3;
+          const team = entry.team!==undefined ? entry.team : gameMode === 'showdown' ? idx : gameMode === 'duo' ? Math.floor(idx/2) : gameMode === 'trio' ? Math.floor(idx/3) : gameMode === 'duel' ? idx % 2 : (idx < 3 ? 0 : 1);
+          const slot = gameMode === 'showdown' ? idx : gameMode === 'duo' ? idx % 3 : gameMode === 'trio' ? idx % 3 : gameMode === 'duel' ? idx % 2 : idx % 3;
           const brawler = BR[entry.brawler] ? entry.brawler : 'kuku';
           const p = mk(team,slot,!entry.bot,entry.name,brawler,false);
           p.netId = entry.id;
@@ -2695,7 +2703,7 @@ function gadget(p){
       roomExit.title=room.host_id===user?.id?'Close this waiting room for everyone':'Leave this waiting room';
       const roomMode=room.game_mode||'knockout';
       gameMode=roomMode;
-      $('modeTxt').textContent=roomMode==='knockout'?'KNOCKOUT 3v3':roomMode==='showdown'?'SOLO SHOWDOWN':roomMode==='duo'?'DUO SHOWDOWN':'1v1 DUEL';
+      $('modeTxt').textContent=roomMode==='knockout'?'KNOCKOUT 3v3':roomMode==='showdown'?'SOLO SHOWDOWN':roomMode==='duo'?'DUO SHOWDOWN':roomMode==='trio'?'TRIO SHOWDOWN':'1v1 DUEL';
       $('modeBtn').disabled=!!user && room.host_id!==user.id;
       $('modeBtn').title=room.host_id===user?.id?'Choose the party game mode':'Only the party leader chooses the game mode';
       el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready) ? 'inline-block':'none';
@@ -2707,7 +2715,7 @@ function gadget(p){
       }
       if(roomReadyToStart && roomStartRequestedFor!==room.id){
         roomStartRequestedFor=room.id;
-        const target=roomMode==='duel'?2:(roomMode==='showdown'||roomMode==='duo')?10:6;
+        const target=roomMode==='duel'?2:roomMode==='trio'?12:(roomMode==='showdown'||roomMode==='duo')?10:6;
         const countdownEnds=Date.now()+10000;
         const updateRoomCountdown=()=>{
           if(!currentRoom||currentRoom.id!==room.id||roomStartRequestedFor!==room.id){
@@ -2779,6 +2787,16 @@ function gadget(p){
           const b=el('play');b.textContent='PLAY';b.classList.remove('ready');b.onclick=()=>{beep(500,.1);matchmake();};
           window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';show('menu');status('You were removed from the party.');
         })
+        .on('broadcast',{event:'party-queue-start'},async({payload})=>{
+          if(!payload||!payload.mode||!Array.isArray(payload.members))return;
+          const partyGroup={partyId:payload.partyId,members:payload.members};
+          await leaveMatch();
+          void beginMatchmaking(payload.mode,partyGroup);
+        })
+        .on('broadcast',{event:'party-rematch-request'},async()=>{
+          const {data:{user}}=await db.auth.getUser();
+          if(user&&currentRoom?.host_id===user.id)void startRoomGame();
+        })
         .on('broadcast',{event:'room-match-start'},async({payload})=>{
           if(!payload || !Array.isArray(payload.roster) || activeMatchId) return;
           const {data:{user}}=await db.auth.getUser();
@@ -2788,7 +2806,7 @@ function gadget(p){
           if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'){status('Room live connection failed. Check Supabase Realtime settings.',true);return;}
           if(statusValue==='SUBSCRIBED'){
             const {data:{user}}=await db.auth.getUser();
-            if(user && roomChannel) await roomChannel.track({userId:user.id,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler:localStorage.getItem('dabrawl_b')||'kuku'});
+            if(user && roomChannel) await roomChannel.track({userId:user.id,clientId,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler:localStorage.getItem('dabrawl_b')||'kuku'});
             await refreshRoom();
           }
         });
@@ -2803,32 +2821,30 @@ function gadget(p){
       const {data:players,error}=await db.from('game_room_players').select('player_slot,character_id,user_id,is_ready').eq('room_id',currentRoom.id).order('player_slot');
       if(error){status('Could not load room players: '+error.message,true);return;}
       if(players.length<2||players.length>3){status('A room match needs 2 or 3 players.',true);return;}
-      if(!players.every(p=>p.is_ready)){status('Everyone in the party must press READY before the match can start.',true);return;}
+      if(!players.every(p=>p.is_ready)){status('Everyone in the party must press READY before matchmaking.',true);return;}
       const {data:room,error:roomError}=await db.from('game_rooms').select('game_mode').eq('id',currentRoom.id).single();
       if(roomError){status('Could not read the leader’s game mode: '+roomError.message,true);return;}
       const mode=room?.game_mode||'knockout';
+      if(mode==='duel'){status('1v1 Duel does not support parties. Choose Knockout, Solo Showdown, Duo Showdown, or Trio Showdown.',true);return;}
+      if(mode==='trio'&&players.length!==3){status('Trio Showdown requires exactly 3 party members.',true);return;}
+      if(mode==='duo'&&players.length>2){status('Duo Showdown supports a party of 2. Use Trio Showdown for 3 party members.',true);return;}
       const presence=roomChannel?.presenceState?.()||{};
       const live=Object.values(presence).flat().filter(p=>p&&p.userId);
-      const roster=players.map((p,i)=>({id:p.user_id,name:live.find(x=>x.userId===p.user_id)?.name||(p.user_id===user.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Player '+p.player_slot),brawler:p.character_id||'kuku',bot:false,team:(mode==='knockout'||mode==='duo')?0:(mode==='showdown'?i:i%2)}));
-      const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax'];
-      const botBrawlers=['kuku','shachi','saiyan','deges'];
-      const target=mode==='knockout'?6:mode==='showdown'?10:mode==='duo'?(players.length===3?9:10):2;
-      let seed=0; for(const ch of String(currentRoom.id)) seed=(seed*31+ch.charCodeAt(0))>>>0;
-      const seeded=()=>{seed=(seed*1664525+1013904223)>>>0;return seed;};
-      while(roster.length<target){
-        const i=roster.length, botIndex=i-players.length;
-        const team=mode==='knockout'?(i<3?0:1):mode==='duo'?(players.length===3?Math.floor((i-players.length)/2)+1:Math.floor(i/2)):i;
-        roster.push({id:'bot-'+currentRoom.id+'-'+i,name:botNames[botIndex%botNames.length]+' BOT',brawler:botBrawlers[seeded()%botBrawlers.length],bot:true,team});
-      }
-      const matchId='room-'+currentRoom.id+'-'+Date.now().toString(36);
-      const startAt=Date.now()+2500;
-      const payload={matchId,mode,roster,hostId:user.id,startAt};
-      status('Starting '+mode.toUpperCase()+'…');
-      try {
-        const sent=await roomChannel.send({type:'broadcast',event:'room-match-start',payload});
-        if(sent?.status && sent.status!=='ok'){roomStartRequestedFor=null;status('Could not notify your friend: '+(sent.status||'Realtime send failed')+'. Check Supabase Realtime settings.',true);return;}
-        await startOnlineMatch(roster,matchId,mode,user.id,user.id,startAt);
-      } catch(err){roomStartRequestedFor=null;status('Could not start room match: '+(err?.message||String(err)),true);}
+      const partyJoinedAt=Date.now();
+      const partyMembers=players.map((p,i)=>{
+        const online=live.find(x=>x.userId===p.user_id);
+        if(!online?.clientId)return null;
+        return {clientId:online.clientId,name:online.name||('Player '+(i+1)),brawler:p.character_id||'kuku',partyId:currentRoom.id,partyOrder:i,joinedAt:partyJoinedAt};
+      }).filter(Boolean);
+      if(partyMembers.length!==players.length){status('A party member is reconnecting. Wait until everyone is online, then try again.',true);return;}
+      const hostClientId=live.find(x=>x.userId===user.id)?.clientId;
+      const leaderIndex=partyMembers.findIndex(p=>p.clientId===hostClientId);
+      if(leaderIndex>0){const [leader]=partyMembers.splice(leaderIndex,1);partyMembers.unshift(leader);partyMembers.forEach((p,i)=>p.partyOrder=i);}
+      const partyGroup={partyId:currentRoom.id,members:partyMembers};
+      const sent=await roomChannel.send({type:'broadcast',event:'party-queue-start',payload:{partyId:partyGroup.partyId,mode,members:partyMembers}});
+      if(sent?.status&&sent.status!=='ok'){status('Could not send your party to matchmaking. Check Realtime settings.',true);return;}
+      status('Party ready — finding players together…');
+      await beginMatchmaking(mode,partyGroup);
     }
 
     // Public quick-play queue: Presence tracks who is waiting; Broadcast carries game state/actions.
@@ -2837,15 +2853,23 @@ function gadget(p){
     let queueChannel=null, matchChannel=null, queueTimer=null, stateTimer=null, queueStartedAt=0, queueMode='knockout', queueDone=false, localDisplayName='Brawler', activeMatchId=null, activeMatchRoster=null, activeMatchHostId=null, activeMatchLocalId=null;
     const seenAt = new Map();
     const randomBrawler = () => ['kuku','shachi','saiyan','deges'][Math.floor(Math.random()*4)];
-    function queueTarget(mode=queueMode){ return mode==='duel' ? 2 : (mode==='showdown'||mode==='duo') ? 10 : 6; }
+    function queueTarget(mode=queueMode){ return mode==='duel' ? 2 : mode==='trio' ? 12 : (mode==='showdown'||mode==='duo') ? 10 : 6; }
     function queuePlayers(){
       const state=queueChannel ? queueChannel.presenceState() : {};
       const all=Object.values(state).flat().filter(p=>p && p.clientId);
-      const unique=new Map(); for(const p of all) if(!unique.has(p.clientId)) unique.set(p.clientId,p);
-      return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,queueTarget());
+      const unique=new Map();
+      for(const p of all){
+        const members=Array.isArray(p.partyMembers)&&p.partyMembers.length?p.partyMembers:[p];
+        members.forEach((member,index)=>{
+          if(!member?.clientId||unique.has(member.clientId))return;
+          unique.set(member.clientId,{...member,partyId:member.partyId||p.partyId||null,partyOrder:Number.isFinite(member.partyOrder)?member.partyOrder:index,joinedAt:member.joinedAt||p.joinedAt||0});
+        });
+      }
+      return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)||(a.partyId===b.partyId?(a.partyOrder||0)-(b.partyOrder||0):0));
     }
-    async function beginMatchmaking(mode){
-      // A completed private-room duel can queue again just like any other online match.
+    async function beginMatchmaking(mode, partyGroup=null){
+      // Requeue only after closing the previous match connection; never launch a rematch directly.
+      if(activeMatchId) await leaveMatch();
       cancelMatchmaking(false); queueMode=mode||'knockout'; queueDone=false; queueStartedAt=Date.now();
       show('mm'); $('mmTxt').textContent='CONNECTING TO PLAYERS…'; $('mmHint').textContent='Connecting to DaBrawl online matchmaking…';
       try {
@@ -2865,7 +2889,7 @@ function gadget(p){
         if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){ $('mmTxt').textContent='CONNECTION ERROR'; $('mmHint').textContent='Online matchmaking could not connect. Check Supabase Realtime settings, then try again.'; status('Online matchmaking connection failed: '+statusValue,true); return; }
         if(statusValue!=='SUBSCRIBED') return;
         try {
-          await queueChannel.track({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
+          await queueChannel.track({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt,partyId:partyGroup?.partyId||null,partyMembers:partyGroup?.members||null});
           $('mmHint').textContent='Waiting up to 10 seconds for real players. Bots fill every remaining slot.';
           const target=queueTarget();
           let deadline=Date.now()+10000;
@@ -2877,18 +2901,37 @@ function gadget(p){
             // real players, then fill any remaining slots with bots.
             if(humansNow.length<target && Date.now()<deadline) return;
             finalized=true; queueDone=true; clearInterval(queueTimer); queueTimer=null;
-            let humans=humansNow;
-            if(!humans.some(p=>p.clientId===clientId)) humans.push({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
-            humans=humans.sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,target);
-            if(humans[0]?.clientId!==clientId){ $('mmTxt').textContent='WAITING FOR MATCH HOST…'; $('mmHint').textContent='The first player in the queue is starting the match…'; queueDone=false; return; }
+            const groupsByKey=new Map();
+            for(const p of humansNow){
+              const key=p.partyId?'party:'+p.partyId:'player:'+p.clientId;
+              if(!groupsByKey.has(key))groupsByKey.set(key,[]);
+              groupsByKey.get(key).push(p);
+            }
+            const groups=[...groupsByKey.values()].map(group=>group.sort((a,b)=>(a.partyOrder||0)-(b.partyOrder||0))).sort((a,b)=>(a[0]?.joinedAt||0)-(b[0]?.joinedAt||0));
+            let humans=[];
+            for(const group of groups){if(humans.length+group.length<=target)humans.push(...group);}
+            if(!humans.some(p=>p.clientId===clientId)){
+              const ownGroup=partyGroup?.members?.length?partyGroup.members:[{clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt}];
+              if(humans.length+ownGroup.length<=target)humans.push(...ownGroup);
+            }
+            if(!humans.length){ $('mmTxt').textContent='WAITING FOR PLAYERS…'; $('mmHint').textContent='Your party is larger than the remaining slots. Waiting for a suitable match.'; queueDone=false; finalized=false; return; }
+            if(humans[0]?.clientId!==clientId){ $('mmTxt').textContent='WAITING FOR MATCH HOST…'; $('mmHint').textContent='The first player or party leader in the queue is starting the match…'; queueDone=false; return; }
             const matchId='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-            const roster=humans.map((p,i)=>({id:p.clientId,name:String(p.name||('Player '+(i+1))).slice(0,20),brawler:p.brawler||'kuku',bot:false}));
+            const roster=humans.map((p,i)=>({id:p.clientId,name:String(p.name||('Player '+(i+1))).slice(0,20),brawler:p.brawler||'kuku',bot:false,partyId:p.partyId||null,partyOrder:p.partyOrder||0}));
             const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax','Vex','Zane'];
             while(roster.length<target){const i=roster.length;roster.push({id:'bot-'+matchId+'-'+i,name:botNames[Math.floor(Math.random()*botNames.length)]+' BOT',brawler:randomBrawler(),bot:true});}
-            if(queueMode==='duel') roster.forEach((p,i)=>p.team=i);
-            if(queueMode==='showdown') roster.forEach((p,i)=>p.team=i);
-            if(queueMode==='duo') roster.forEach((p,i)=>p.team=Math.floor(i/2));
-            if(queueMode==='knockout'){const teams=[0,0,0,1,1,1];for(let i=teams.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[teams[i],teams[j]]=[teams[j],teams[i]];}roster.forEach((p,i)=>p.team=teams[i]);}
+            if(queueMode==='duel'||queueMode==='showdown') roster.forEach((p,i)=>p.team=i);
+            else {
+              const capacity=queueMode==='duo'?2:3, counts=[];
+              const groups=new Map();
+              roster.forEach(p=>{const key=p.bot?'bot:'+p.id:(p.partyId?'party:'+p.partyId:'player:'+p.id);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p);});
+              for(const group of groups.values()){
+                let team=counts.findIndex(n=>n+group.length<=capacity);
+                if(team<0)team=counts.length;
+                counts[team]=(counts[team]||0)+group.length;
+                group.forEach(p=>p.team=team);
+              }
+            }
             const payload={matchId,mode:queueMode,roster,hostId:clientId};
             $('mmTxt').textContent='MATCH FOUND!'; $('mmHint').textContent='Starting with '+humans.length+' real player(s) and '+(target-humans.length)+' bots…';
             try {
@@ -2923,6 +2966,11 @@ function gadget(p){
       matchChannel.on('broadcast',{event:'match-ended'},({payload})=>{ if(!payload || activeMatchId!==matchId) return; window.DaBrawlGame?.applyMatchResult?.(payload); });
       matchChannel.on('broadcast',{event:'match-control'},async({payload})=>{
         if(!payload || activeMatchId!==matchId || payload.hostId!==activeMatchHostId) return;
+        if(payload.action==='queue-again'){
+          await leaveMatch();
+          void beginMatchmaking(lastQueueMode);
+          return;
+        }
         if(payload.action==='leave'){
           // Reset only this signed-in player's ready flag so the same party can queue again.
           if(currentRoom && activeMatchLocalId){
@@ -2957,11 +3005,18 @@ function gadget(p){
     }
     async function announceMatchEnd(win){ if(!matchChannel || !activeMatchId || !isNetworkHost) return; const local=window.DaBrawlGame?.getLocalState?.(); await matchChannel.send({type:'broadcast',event:'match-ended',payload:{win:!!win,hostTeam:local?.t,hostId:activeMatchHostId,matchId:activeMatchId}}); }
     async function requestRematch(){
-      if(!isNetworkHost || !matchChannel || !activeMatchRoster) return;
-      const nextId='rematch-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6), startAt=Date.now()+3000;
-      const payload={action:'rematch',matchId:nextId,mode:lastQueueMode,roster:activeMatchRoster,hostId:activeMatchHostId,startAt};
-      const ch=matchChannel; await ch.send({type:'broadcast',event:'match-control',payload});
-      await leaveMatch(); await startOnlineMatch(payload.roster,payload.matchId,payload.mode,activeMatchLocalId,payload.hostId,payload.startAt);
+      if(!activeMatchId||!matchChannel)return;
+      if(currentRoom){
+        const {data:{user}}=await db.auth.getUser();
+        if(user&&currentRoom.host_id===user.id){await startRoomGame();return;}
+        await roomChannel?.send({type:'broadcast',event:'party-rematch-request',payload:{at:Date.now()}});
+        status('Asked the party leader to find a new match.');
+        return;
+      }
+      const ch=matchChannel;
+      await ch.send({type:'broadcast',event:'match-control',payload:{action:'queue-again',hostId:activeMatchHostId}});
+      await leaveMatch();
+      void beginMatchmaking(lastQueueMode);
     }
     async function hostLeaveMatch(){
       if(!isNetworkHost || !matchChannel) return;
@@ -3279,7 +3334,7 @@ function gadget(p){
       const {data:{user}}=await db.auth.getUser();if(!user)return;
       const {error}=await db.from('game_room_players').update({character_id:brawler,is_ready:false}).eq('room_id',currentRoom.id).eq('user_id',user.id);
       if(error){status('Brawler selection sync failed: '+error.message,true);return;}
-      await roomChannel?.track({userId:user.id,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler});
+      await roomChannel?.track({userId:user.id,clientId,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler});
       await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
       await roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler,userId:user.id}});
       await refreshRoom();
@@ -3291,10 +3346,16 @@ function gadget(p){
       
       
       next=next||'knockout';
+      if(!['knockout','showdown','duo','trio'].includes(next)){status('This game mode does not support parties.',true);return;}
+      if(next==='duel'){status('1v1 Duel does not support parties. Choose another mode.',true);return;}
+      const {data:partyPlayers,error:partyPlayersError}=await db.from('game_room_players').select('user_id').eq('room_id',currentRoom.id);
+      if(partyPlayersError){status('Could not check party size: '+partyPlayersError.message,true);return;}
+      if(next==='trio'&&partyPlayers.length!==3){status('Trio Showdown requires a party of 3.',true);return;}
+      if(next==='duo'&&partyPlayers.length>2){status('Duo Showdown supports a party of 2. Choose Trio Showdown for 3 members.',true);return;}
       const {error}=await db.from('game_rooms').update({game_mode:next}).eq('id',currentRoom.id).eq('host_id',user.id);
       if(error){status('Could not change party mode: '+error.message,true);return;}
       currentRoom.game_mode=next;gameMode=next;
-      $('modeTxt').textContent=next==='knockout'?'KNOCKOUT 3v3':next==='showdown'?'SOLO SHOWDOWN':next==='duo'?'DUO SHOWDOWN':'1v1 DUEL';
+      $('modeTxt').textContent=next==='knockout'?'KNOCKOUT 3v3':next==='showdown'?'SOLO SHOWDOWN':next==='duo'?'DUO SHOWDOWN':next==='trio'?'TRIO SHOWDOWN':'1v1 DUEL';
       status('Party leader selected '+next.toUpperCase()+'.');
       await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
       await refreshRoom();
