@@ -74,16 +74,50 @@ test("Saiyan form stats include browser-aligned Kame beam damage scaling", () =>
 });
 
 
-test("Degeš has stronger support lobs and a healing green-beer cigar gadget", () => {
+test("Degeš keeps 1.5x damage and uses a two-second smoke-to-full-heal gadget", () => {
   assert.equal(BRAWLERS.deges.hp, 7600);
   assert.equal(BRAWLERS.deges.damage, 1062);
   assert.equal(BRAWLERS.deges.cooldown, 2400);
   assert.equal(BRAWLERS.deges.heal, 2250);
   assert.equal(BRAWLERS.deges.superDamage, 1375.5);
   assert.equal(BRAWLERS.deges.superHeal, 3750);
-  assert.equal(BRAWLERS.deges.gadgetDamage, 0);
-  assert.equal(BRAWLERS.deges.gadgetSpeed, 256);
-  assert.equal(BRAWLERS.deges.gadgetHeal, 1000);
-  assert.equal(BRAWLERS.deges.gadgetDuration, 3000);
+  assert.equal(BRAWLERS.deges.gadgetKind, "smoke-heal");
+  assert.equal(BRAWLERS.deges.gadgetChannelMs, 2000);
+  assert.equal(BRAWLERS.deges.gadgetCooldownMs, 17000);
   assert.equal(getBrawlerStats({ brawler: "deges" }).superKind, "projectile");
+});
+
+test("Ramu has 1000-damage ice balls, a fire mode, and mode-specific gadgets", () => {
+  assert.equal(BRAWLERS.ramu.hp, 8000);
+  assert.equal(BRAWLERS.ramu.speed, 142);
+  assert.equal(BRAWLERS.ramu.damage, 1000);
+  assert.equal(BRAWLERS.ramu.bulletSpeed, 480);
+  assert.equal(BRAWLERS.ramu.superKind, "transform");
+  assert.equal(BRAWLERS.ramu.iceBurstShots, 3);
+  assert.equal(BRAWLERS.ramu.iceBurstIntervalMs, 170);
+  assert.equal(BRAWLERS.ramu.cooldown, 750);
+  assert.equal(BRAWLERS.ramu.fireDamage, 1000);
+  assert.equal(BRAWLERS.ramu.fireTickMs, 350);
+  assert.equal(BRAWLERS.ramu.fireInitialReachMs, 400);
+  assert.equal(BRAWLERS.ramu.fireReachSpeed, 720);
+  assert.equal(BRAWLERS.ramu.fireSuperCharge, 6.6);
+  assert.equal(BRAWLERS.ramu.fireRange, 285);
+  assert.equal(BRAWLERS.ramu.fireEnergyDrainPerSecond, 0.18);
+  assert.equal(BRAWLERS.ramu.fireEnergyRegenPerSecond, 0.13);
+  assert.equal(BRAWLERS.ramu.fireLockMs, 200);
+  assert.equal(BRAWLERS.ramu.freezeHits, 8);
+  assert.equal(BRAWLERS.ramu.freezeDurationMs, 2000);
+  assert.equal(BRAWLERS.ramu.gadgetKind, "crystal-shield");
+  assert.equal(BRAWLERS.ramu.fireGadgetKind, "flame-dive");
+  assert.equal(BRAWLERS.ramu.gadgetDiveLiftMs, 220);
+  assert.equal(BRAWLERS.ramu.gadgetDiveMs-BRAWLERS.ramu.gadgetDiveLiftMs, 5000);
+  assert.equal(BRAWLERS.ramu.gadgetDiveCooldownMs, 20000);
+});
+
+test("Ramu's full Fire bar deals 15000 direct damage and lasts long enough to heat a wall",()=>{
+  const r=BRAWLERS.ramu,barSeconds=1/r.fireEnergyDrainPerSecond;
+  const hits=Math.floor((barSeconds-r.fireInitialReachMs/1000)/(r.fireTickMs/1000))+1;
+  assert.equal(hits,15);
+  assert.equal(hits*r.fireDamage,15000);
+  assert.ok(r.fireInitialReachMs/1000+5<barSeconds);
 });

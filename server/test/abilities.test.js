@@ -23,6 +23,10 @@ test("gadget charge refills at the exact cooldown boundary", () => {
 test("gadget cooldown matches browser form-specific cooldowns", () => {
   assert.equal(getGadgetCooldownMs({ brawler: "kuku" }), 10000);
   assert.equal(getGadgetCooldownMs({ brawler: "shachi" }), 10000);
+  assert.equal(getGadgetCooldownMs({ brawler: "deges" }), 17000);
+  assert.equal(getGadgetCooldownMs({ brawler: "ramu", ramuMode: "ice" }), 12000);
+  assert.equal(getGadgetCooldownMs({ brawler: "ramu", ramuMode: "fire" }), 0);
+  assert.equal(getGadgetCooldownMs({ brawler: "ramu" }), 12000);
   assert.equal(getGadgetCooldownMs({ brawler: "saiyan", form: 1 }), 10000);
   assert.equal(getGadgetCooldownMs({ brawler: "saiyan", form: 2 }), 7000);
   assert.equal(getGadgetCooldownMs({ brawler: "saiyan", form: 3 }), 14000);
