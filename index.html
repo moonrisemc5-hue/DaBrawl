@@ -1083,6 +1083,12 @@
     function fire(p,s){
       if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet) window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,super:false});
       K=p.k; if(s&&K.lg){ leap(p,0); return; }
+      if(p.b==='ramu'){
+        if(s){p.ramuMode=p.ramuMode?0:1;p.am=p.ramuMode?1:3;p.sc=0;p.tf=.65;for(let i=0;i<38;i++){const a=Math.random()*Math.PI*2,v=70+Math.random()*220;F.push({k:'p',x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.8,m:.8,c:p.ramuMode?(i%2?'#ff672e':'#ffe36b'):(i%2?'#8ceeff':'#e4fbff'),s:4+Math.random()*7});}F.push({k:'t',x:p.x,y:p.y-42,vx:0,vy:-36,l:1,m:1,tx:p.ramuMode?'FIRE MODE':'ICE MODE',c:p.ramuMode?'#ff8b3d':'#a5edff'});return;}
+        if(p.ramuMode===0){if(p.am<=0||p.rec>0)return;for(let i=0;i<3;i++)B.push({x:p.x+Math.cos(p.a)*24,y:p.y+Math.sin(p.a)*24,vx:Math.cos(p.a)*520,vy:Math.sin(p.a)*520,r:260,d:700,t:p.t,o:p,s:false,z:6,col:'#9cecff',iceBall:true,delay:i*.17});p.am--;p.rec=.5;}
+        else{if(p.fireAmmo<=0||p.fireRegen>0)return;B.push({x:p.x+Math.cos(p.a)*24,y:p.y+Math.sin(p.a)*24,vx:Math.cos(p.a)*600,vy:Math.sin(p.a)*600,r:260,d:200,t:p.t,o:p,s:false,z:9,col:'#ff6a22',fireStream:true});p.fireAmmo=0;p.fireRegen=5.3;}
+        return;
+      }
       if(p.b==='deges'){
         const big=!!s,maxRange=big?330:300,speed=big?300:430,target=degesAimTarget(p,maxRange),a=target.angle,range=target.range;
         B.push({x:p.x+Math.cos(a)*24,y:p.y+Math.sin(a)*24,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,r:range,flightRange:range,flightT:0,flightDuration:range/speed,arcHeight:big?105:82,targetX:target.x,targetY:target.y,d:big?1375.5:1062,t:p.t,o:p,s:big,z:big?15:9,col:'#d99a42',beer:true,heal:big?3750:2250,splashRadius:big?110:72,superBeer:big,remoteVisual:networkMode&&p!==me});
@@ -1107,6 +1113,11 @@ function gadget(p){
       if(G.ph!='play'||!p.alive||p.gcd>0||p.dash>0||p.lp||p.tf>0||p.muiCharging>0) return;
       let gadgetTarget=null;
       if(p.b==='deges'){gadgetTarget=degesAimTarget(p,230);p.a=gadgetTarget.angle;}
+      if(p.b==='ramu'){
+        if(p.ramuMode===0){p.ramuShield=2;p.shieldTimer=2;p.tf=2;p.gcd=17;F.push({k:'t',x:p.x,y:p.y-40,vx:0,vy:-28,l:1,m:1,tx:'ICE IMMUNITY',c:'#a8f4ff'});}
+        else{p.ramuLeap=4;p.ramuLand={x:p.x,y:p.y};p.tf=4;p.gcd=18;F.push({k:'p',x:p.x,y:p.y,vx:0,vy:-50,l:.7,m:.7,c:'#ff8b32',s:32});}
+        return;
+      }
       if(networkMode && (p===me||(isNetworkHost&&p.isBot&&p.netId)) && window.DaBrawlNet){
         const extra=p!==me?{playerId:p.netId}:{};
         if(gadgetTarget)window.DaBrawlNet.sendAction('gadget',gadgetTarget.angle,{...extra,targetX:gadgetTarget.x,targetY:gadgetTarget.y,beerRange:gadgetTarget.range});
@@ -1158,7 +1169,7 @@ function gadget(p){
       if(p.muiCharging>0 || isBeamShooting || isMaxCharging){ p.mx=p.my=0; return; }
       const l = Math.hypot(ix,iy); p.mx = l?ix/l:0; p.my = l?iy/l:0;
       if(p.dash>0){ p.dash-=dt; mv(p, Math.cos(p.dd)*780*dt, Math.sin(p.dd)*780*dt); if(Math.random()<.6) puff(p.x,p.y,1,'#fff',.3); }
-      else if(l>.05){ const m = Math.min(1,l); mv(p, p.mx*m*K.spd*dt, p.my*m*K.spd*dt); p.walk+=dt*12; }
+      else if(l>.05&&!(p.freeze>0)&&!(p.ramuShield>0)&&!(p.ramuLeap>0)){ const m = Math.min(1,l); mv(p, p.mx*m*K.spd*dt, p.my*m*K.spd*dt); p.walk+=dt*12; }
     }
     function dmg(t,b){
       // Only the target's browser changes their health. The attacker's browser sends a hit request.
@@ -1193,7 +1204,15 @@ function gadget(p){
         F.push({k:'p', x:t.x, y:t.y, vx:0, vy:0, l:.3, m:.3, c:'#ffffff', s:20});
         playInstantTransmissionSound(); return;
       }
-      t.lastHitAt=performance.now(); if(!t.isDummy) t.hp-=b.d;
+      t.lastHitAt=performance.now();
+      if(b.iceBall&&b.o?.b==='ramu'){
+        t.iceHits=t.iceHits instanceof Map?t.iceHits:new Map();
+        const hits=(t.iceHits.get(b.o)||0)+1;t.iceHits.set(b.o,hits);
+        F.push({k:'t',x:t.x+22,y:t.y-42,vx:0,vy:-20,l:.6,m:.6,tx:'❄ '+Math.min(6,hits)+'/6',c:'#9cecff'});
+        if(hits>=6){t.freeze=2;t.iceHits.set(b.o,0);}
+      }
+      if(b.fireStream&&b.o?.b==='ramu')t.fireBurn=2;
+      if(!t.isDummy) t.hp-=b.d;
       t.nh=0; t.fl=.1; if(!b.s && b.o && b.o!==t) b.o.sc = Math.min(1, b.o.sc + b.d*.0004*(b.o.k.cm||0.5));
       F.push({k:'t', x:t.x+(Math.random()-.5)*20, y:t.y-30, vx:0, vy:-60, l:.7, m:.7, tx:Math.round(b.d)});
       if(b.s){ const l=Math.hypot(b.vx,b.vy); mv(t, b.vx/l*13, b.vy/l*13); }
@@ -1275,7 +1294,16 @@ function gadget(p){
       shake = Math.max(0, shake - dt*30);
       if(G.ph=='play' && !isTestMode){ gasDist += (Math.max(MW, MH) / 960) * dt; }
       for(const p of P){
-        p.fl-=dt; p.rec-=dt; p.cd-=dt; p.gcd-=dt; p.kcd-=dt; p.bt-=dt; p.shieldTimer=Math.max(0,(p.shieldTimer||0)-dt); p.kaioken=Math.max(0,(p.kaioken||0)-dt); if(p.ss2>0){ p.ss2=Math.max(0,p.ss2-dt); if(p.ss2===0){ p.ss2Cooldown=15; p.gcd=Math.max(p.gcd,15); } } if(p.ss2Cooldown>0) p.ss2Cooldown=Math.max(0,p.ss2Cooldown-dt);
+        p.fl-=dt; p.rec-=dt; p.cd-=dt; p.gcd-=dt; p.kcd-=dt;
+        if(p.b==='ramu'){
+          p.fireRegen=Math.max(0,(p.fireRegen||0)-dt);
+          if(p.ramuMode===1&&p.fireAmmo<1&&p.fireRegen<=5){p.fireAmmo=Math.min(1,(p.fireAmmo||0)+dt/5);}
+          p.ramuShield=Math.max(0,(p.ramuShield||0)-dt);p.ramuLeap=Math.max(0,(p.ramuLeap||0)-dt);
+          if(p.ramuLeap>0){p.ramuLand=p.ramuLand||{x:p.x,y:p.y};p.x=p.ramuLand.x;p.y=p.ramuLand.y;p.mx=p.my=0;if(p.ramuLeap<=1){F.push({k:'p',x:p.x,y:p.y,vx:0,vy:0,l:.8,m:.8,c:'#ff6a22',s:42});for(const q of P){if(q!==p&&q.alive&&Math.hypot(q.x-p.x,q.y-p.y)<100){dmg(q,{d:2000,o:p,s:1,vx:0,vy:0,fireStream:true});q.fireBurn=2;}}p.ramuLeap=0;p.tf=0;}}
+        }
+        if(p.freeze>0){p.freeze=Math.max(0,p.freeze-dt);p.mx=p.my=0;}
+        if(p.fireBurn>0){p.fireBurn=Math.max(0,p.fireBurn-dt);p.burnTick=(p.burnTick||0)-dt;if(p.burnTick<=0&&p.alive){p.burnTick=.5;dmg(p,{d:100,o:null,s:0,vx:0,vy:0});F.push({k:'p',x:p.x,y:p.y,vx:0,vy:-22,l:.3,m:.3,c:'#ff632e',s:12});}}
+ p.bt-=dt; p.shieldTimer=Math.max(0,(p.shieldTimer||0)-dt); p.kaioken=Math.max(0,(p.kaioken||0)-dt); if(p.ss2>0){ p.ss2=Math.max(0,p.ss2-dt); if(p.ss2===0){ p.ss2Cooldown=15; p.gcd=Math.max(p.gcd,15); } } if(p.ss2Cooldown>0) p.ss2Cooldown=Math.max(0,p.ss2Cooldown-dt);
         p.dodgeFx = Math.max(0, p.dodgeFx-dt); p.autoAimTimer = Math.max(0, (p.autoAimTimer||0)-dt);
         if(p.muiCharging>0) p.muiCharging-=dt;
         if(!p.alive) p.dt+=dt;
