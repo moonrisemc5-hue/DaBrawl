@@ -1553,7 +1553,7 @@ function gadget(p){
             fallback.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-34%);width:min(180px,28vw);height:min(180px,28vw);display:none;align-items:center;justify-content:center;font-size:min(120px,22vw);z-index:230;pointer-events:none;filter:drop-shadow(0 8px 0 #0008)';
             $('featuredBrawler').appendChild(fallback);
           }
-          fallback.textContent=({kuku:'🐔',saiyan:'⚡',shachi:'🦈',pip:'🐧',rex:'🦖',mochi:'🐱',zed:'👾',bolt:'🤖',nova:'🌟',juno:'🦊',taco:'🌮',blaze:'🔥',jax:'🥊',vex:'👻',zane:'😎'})[selB]||'⭐';
+          fallback.textContent=({kuku:'🐔',saiyan:'⚡',shachi:'🦈',deges:'🍺',ramu:'🧊🔥',pip:'🐧',rex:'🦖',mochi:'🐱',zed:'👾',bolt:'🤖',nova:'🌟',juno:'🦊',taco:'🌮',blaze:'🔥',jax:'🥊',vex:'👻',zane:'😎'})[selB]||'⭐';
           // The mobile-mode regression can leave a cleared canvas while the
           // canvas API still reports success. Keep a visible portrait fallback
           // in the lobby whenever mobile layout is enabled.
@@ -2050,6 +2050,18 @@ function gadget(p){
         g.fillStyle='#b8792f';g.strokeStyle='#563616';g.lineWidth=1.8;g.beginPath();g.roundRect(-3,-7,9,17,2);g.fill();g.stroke();
         g.fillStyle='#f8dc91';g.fillRect(-2,-5,7,3);g.fillStyle='#f3c34f';g.fillRect(-1,0,5,7);
         g.fillStyle='#fff8e7';g.beginPath();g.ellipse(1,-7,4.4,2,0,0,Math.PI*2);g.fill();g.restore();
+      }
+      else if(p.b==='ramu'){
+        const bob=1+Math.sin(p.walk)*.035;g.scale(1,bob);
+        // Ramu's own portrait: dark beard, swept silver hair, and split ice/fire armor.
+        g.fillStyle='#111827';g.strokeStyle='#020617';g.lineWidth=2.5;g.beginPath();g.moveTo(-13,4);g.lineTo(-11,17);g.lineTo(-5,22);g.lineTo(0,28);g.lineTo(5,22);g.lineTo(11,17);g.lineTo(13,4);g.closePath();g.fill();g.stroke();
+        g.fillStyle='#d7e0e8';g.strokeStyle='#64748b';g.beginPath();g.moveTo(-14,-19);g.quadraticCurveTo(-21,-27,-11,-30);g.lineTo(-2,-25);g.lineTo(8,-31);g.quadraticCurveTo(20,-27,14,-17);g.lineTo(11,-8);g.lineTo(-12,-8);g.closePath();g.fill();g.stroke();
+        g.fillStyle='#c98e68';g.strokeStyle='#6b4535';g.beginPath();g.ellipse(0,-7,13,15,0,0,Math.PI*2);g.fill();g.stroke();
+        g.fillStyle='#111827';g.beginPath();g.moveTo(-13,-9);g.lineTo(-17,-22);g.lineTo(-5,-18);g.lineTo(0,-24);g.lineTo(8,-17);g.lineTo(15,-21);g.lineTo(12,-7);g.closePath();g.fill();
+        for(const o of[-5,5]){g.fillStyle='#f8fafc';g.beginPath();g.ellipse(o,-7,3.5,2.7,0,0,Math.PI*2);g.fill();g.fillStyle=p.ramuMode?'#ff7a1c':'#38bdf8';g.beginPath();g.arc(o,-7,1.8,0,Math.PI*2);g.fill();}
+        g.fillStyle='#111827';g.strokeStyle='#020617';g.lineWidth=1.8;g.beginPath();g.moveTo(-12,-1);g.lineTo(-9,7);g.lineTo(-5,12);g.lineTo(0,15);g.lineTo(5,12);g.lineTo(9,7);g.lineTo(12,-1);g.lineTo(6,3);g.lineTo(0,6);g.lineTo(-6,3);g.closePath();g.fill();g.stroke();
+        g.fillStyle='#0f172a';g.strokeStyle='#020617';g.lineWidth=2;g.beginPath();g.moveTo(-15,8);g.lineTo(-10,4);g.lineTo(0,11);g.lineTo(10,4);g.lineTo(15,8);g.lineTo(13,20);g.lineTo(2,24);g.lineTo(-13,20);g.closePath();g.fill();g.stroke();
+        g.fillStyle=p.ramuMode?'#ff6a22':'#9cecff';g.fillRect(-13,11,12,5);g.fillStyle=p.ramuMode?'#9cecff':'#ff6a22';g.fillRect(1,11,12,5);
       }
       else {
         const bob = 1 + Math.sin(p.walk)*.05; g.scale(1, bob);
