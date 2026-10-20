@@ -1551,8 +1551,9 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       }
       if(!aiSafeStep(b,moveX,moveY)&&aiSafeStep(b,route.x,route.y)){moveX=route.x;moveY=route.y;}
       step(b,moveX,moveY,dt);
-      const shotSpeed=b.b==='deges'?430:(b.k.bs||550),pred=aiPredictPoint(b,tg,shotSpeed,b.b==='deges'?.85:.65);
+      const shotSpeed=b.b==='deges'?430:(b.k.bs||550),pred=aiPredictPoint(b,tg,shotSpeed,b.b==='deges'?.45:.65);
       b.a=Math.atan2(pred.y-b.y,pred.x-b.x)+(Math.random()-.5)*.025;
+      if(b.b==='deges')b.remoteBeerTarget={x:pred.x,y:pred.y};
       const clearShot=!aiLineBlocked(b.x,b.y,tg.x,tg.y),attackRange=b.b==='deges'?300:(K.rng||230),superRange=b.b==='deges'?330:(K.sr||attackRange);
       if(b.b==='ramu'&&b.ramuMode==='fire'){
         const flameTarget=clearShot&&bd<attackRange-15&&(b.fireEnergy||0)>0&&(b.fireLock||0)<=0;
@@ -1578,7 +1579,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
           else if(!attackHeld&&p.fireLock<=0)p.fireEnergy=Math.min(1,(p.fireEnergy||0)+dt*.13);
           setRamuFireActive(p,canFlame&&p.fireEnergy>0);
         }
-        if(p.b==='ramu'&&p.ramuMode==='fire'){
+        if(p.b==='ramu'&&p.ramuMode==='fire'&&(p.ramuFireActive||(p.ramuFireLength||0)>0)){
           const targetLength=ramuFlameTargetRange(p).range;p.ramuFireLengthMax=targetLength;
           if(p.ramuFireActive)p.ramuFireLength=Math.min(targetLength,(p.ramuFireLength||0)+dt*720);
           else p.ramuFireLength=Math.max(0,(p.ramuFireLength||0)-dt*1500);
@@ -1702,7 +1703,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
           for(let s=0;s<3&&!dead;s++){
             const k=dt/3; b.x+=b.vx*k; b.y+=b.vy*k; b.r-=sp*k; if(b.beer)b.flightT=(b.flightT||0)+k;
             const ti=Math.floor(b.x/T), tj=Math.floor(b.y/T);
-            if(b.r<=0){ dead=true; if(b.remoteVisual){degesImpactVisual(b.x,b.y,b);}else if(b.beer)degesSplash(b.x,b.y,b); else puff(b.x,b.y,1,'#ffe9a0',.3); }
+            if(b.r<=0){ dead=true; if(b.remoteVisual){degesImpactVisual(b.x,b.y,b);if(b.beer){const now=Date.now();Z.push({x:b.x,y:b.y,radius:b.splashRadius||(b.superBeer?110:72),owner:b.o,team:b.o?.t??b.t,damage:0,heal:0,superBeer:!!b.superBeer,expires:now+1800,nextTick:now+500,tickMs:1000,lastHit:new Map(),remoteVisual:true});}}else if(b.beer)degesSplash(b.x,b.y,b); else puff(b.x,b.y,1,'#ffe9a0',.3); }
             else if(b.bn>0 && tile(b.x,b.y)=='#'){ b.x-=b.vx*k; b.y-=b.vy*k; if(tile(b.x+b.vx*k,b.y)=='#') b.vx=-b.vx; else b.vy=-b.vy; b.bn--; }
             else if(!b.beer&&tile(b.x,b.y)=='#'){
               dead=true;
@@ -3030,6 +3031,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         }
         else if(msg.action==='bot-fire'){
           p.a=Number.isFinite(msg.angle)?msg.angle:p.a;
+          if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY};
           if(msg.super && p.sc<1) p.sc=1;
           fire(p,!!msg.super);
         }
