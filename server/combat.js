@@ -32,7 +32,9 @@ export function isTargetDamageable(target, attacker, atTime) {
     target.id !== attacker.id &&
     target.team !== attacker.team &&
     !(Number.isFinite(target.invulnerableUntil) && target.invulnerableUntil > atTime) &&
-    !(Number.isFinite(target.transformUntil) && target.transformUntil > atTime));
+    !(Number.isFinite(target.transformUntil) && target.transformUntil > atTime) &&
+    !(Number.isFinite(target.ramuDiveUntil) && target.ramuDiveUntil > atTime) &&
+    !(Number.isFinite(target.ramuShieldUntil) && target.ramuShieldUntil > atTime));
 }
 
 export function findProjectileContact(projectile, players, atTime, radius = 19) {
@@ -90,4 +92,55 @@ export function projectileStillInRange(projectile, worldWidth, worldHeight) {
   return projectile.traveled < projectile.range &&
     projectile.x >= 0 && projectile.x <= worldWidth &&
     projectile.y >= 0 && projectile.y <= worldHeight;
+}
+
+
+/** Updates Ramu's continuous Fire-mode reservoir. The active flame drains steadily;
+ * its short lock starts exactly when the reservoir empties, and recharge only runs
+ * while the player is not holding the flame button. */
+export function advanceRamuFireEnergy(player, dt, atTime, stats = {}) {
+  if (!player || player.brawler !== "ramu" || player.ramuMode !== "fire" ||
+      !Number.isFinite(dt) || dt <= 0 || !Number.isFinite(atTime)) return { changed: false, depleted: false };
+  const lockUntil = Number.isFinite(player.fireLockUntil) ? player.fireLockUntil : 0;
+  const drain = Number.isFinite(stats.fireEnergyDrainPerSecond) ? stats.fireEnergyDrainPerSecond : 0.18;
+  const regen = Number.isFinite(stats.fireEnergyRegenPerSecond) ? stats.fireEnergyRegenPerSecond : 0.13;
+  const lockMs = Number.isFinite(stats.fireLockMs) ? stats.fireLockMs : 200;
+  const energy = Math.max(0, Math.min(1, Number.isFinite(player.fireEnergy) ? player.fireEnergy : 1));
+  if (player.ramuFlameHeld && energy > 0 && lockUntil <= atTime) {
+    player.fireEnergy = Math.max(0, energy - dt * drain);
+    if (player.fireEnergy <= 0.001) {
+      player.fireEnergy = 0;
+      player.fireLockUntil = atTime + lockMs;
+      player.ramuFlameHeld = false;
+      return { changed: true, depleted: true };
+    }
+    return { changed: true, depleted: false };
+  }
+  if (!player.ramuFlameHeld && lockUntil <= atTime && energy < 1) {
+    player.fireEnergy = Math.min(1, energy + dt * regen);
+    return { changed: true, depleted: false };
+  }
+  return { changed: false, depleted: false };
+}
+
+/** Consume a Ramu Super to switch between Ice and Fire, resetting the Fire stream. */
+export function consumeRamuModeSuper(player, atTime, cooldownMs = 1200) {
+  if (!player || player.brawler !== "ramu" || !Number.isFinite(atTime) ||
+      !["ice", "fire"].includes(player.ramuMode) || !Number.isFinite(player.meter) || player.meter < 100) return null;
+  const lastSuper = Number.isFinite(player.lastSuper) ? player.lastSuper : 0;
+  if (atTime - lastSuper < cooldownMs) return null;
+  const previousMode = player.ramuMode;
+  const mode = previousMode === "ice" ? "fire" : "ice";
+  const durationMs = mode === "fire" ? 1550 : 1050;
+  player.meter = 0;
+  player.lastSuper = atTime;
+  player.ramuMode = mode;
+  player.fireEnergy = 1;
+  player.fireLockUntil = 0;
+  player.ramuFlameHeld = false;
+  player.ramuFlameStartedAt = 0;
+  player.ramuFlameNextHitAt = 0;
+  player.ramuFlameLength = 0;
+  player.transformUntil = atTime + durationMs;
+  return { previousMode, mode, durationMs };
 }
