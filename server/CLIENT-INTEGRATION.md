@@ -11,9 +11,9 @@ The current match client joins a Supabase Realtime channel named `dabrawl-match-
 - `player-action`: action payloads consumed by `DaBrawlGame.applyRemoteAction`
 - `match-ended` and `match-control`: match UI / rematch lifecycle
 
-Game state uses fields such as `id`, `x`, `y`, `a`, `hp`, `mh`, `alive`, `sc`, `am`, `cd`, `gcd`, `kcd`, `tf`, `tfn`, `form`, `chg`, `holdT`, `hw`, `muiCharging`, `burst`, `bt`, `dash`, `dodge`, `kaioken`, `ss2`, `ss2Cooldown`, `walk`, `rec`, `fl`, `sw`, `sd`, `nh`, `mx`, and `my`. The game exposes `startNetworkGame(roster, matchId, mode, localId, hostId, startAt)`, `getLocalState()`, `getNetworkStates()`, `applyRemoteState(state)`, and `applyRemoteAction(msg)`.
+Game state uses fields such as `id`, `x`, `y`, `a`, `hp`, `mh`, `alive`, `sc`, `am`, `cd`, `gcd`, `kcd`, `tf`, `tfn`, `form`, `chg`, `holdT`, `hw`, `muiCharging`, `burst`, `bt`, `dash`, `dodge`, `kaioken`, `ss2`, `ss2Cooldown`, `walk`, `rec`, `fl`, `sw`, `sd`, `nh`, `mx`, and `my`. The game exposes `startNetworkGame(roster, matchId, mode, localId, hostId, startAt)`, `getLocalState()`, `getNetworkStates()`, `applyRemoteState(state)`, `applyRemoteAction(msg)`, `getNetworkWorldState()`, and `applyRemoteWorldState(world)`. The host broadcasts world snapshots alongside player states so wall heat, Ice-wall hits, and breaks remain consistent across peers.
 
-The new service instead sends `state` snapshots shaped as `{ state: { mode, phase, startedAt, endsAt, winner, ownerId, tick, players, projectiles } }`, plus `event` packets. Its player schema currently uses `id`, `name`, `brawler`, `team`, `slot`, `x`, `y`, `aim`, `hp`, `maxHp`, `alive`, `meter`, `form`, `transforming`, `connected`, and `ready`. These are not interchangeable without a mapping layer.
+The new service instead sends `state` snapshots shaped as `{ state: { mode, phase, startedAt, endsAt, winner, ownerId, tick, players, projectiles, destroyedWalls, wallStates } }`, plus `event` packets. The browser also exposes `getNetworkWorldState()` and `applyRemoteWorldState(world)` for the separate Supabase host-broadcast path. Its player schema currently uses `id`, `name`, `brawler`, `team`, `slot`, `x`, `y`, `aim`, `hp`, `maxHp`, `alive`, `meter`, `form`, `transforming`, `connected`, and `ready`. These are not interchangeable without a mapping layer.
 
 ## Required adapter mappings
 
@@ -26,11 +26,11 @@ The new service instead sends `state` snapshots shaped as `{ state: { mode, phas
 | Character identity | roster brawler id / `p.b` | `brawler`; normalize ids explicitly rather than defaulting unknown characters |
 | Transform state | `tf`, `tfn`, `form`, and character-specific fields | `transforming`, `form`; preserve character-specific forms only after rules are ported |
 | Display name | Roster/player display name | Adapter preserves `name`; confirm roster ownership and fallback behavior before UI integration |
-| Gadget state | `chg` and `gcd` (browser-specific units) | Adapter preserves `gadgetCharges` and `gadgetCooldownMs` as explicitly named values; convert units only after verifying the browser's exact contract |
+| Gadget state | `chg` and `gcd` (browser-specific units) | Adapter preserves `gadgetCharges` and `gadgetCooldownMs` as explicitly named values; Ramu Fire Dive reports no cooldown while airborne, then starts 20,000 ms at the authoritative landing event |
 | Projectiles and hits | `applyRemoteAction` action names such as `damage`, `wall-break`, `transform`, `hit-feedback` | Server `event` names such as `attack-fired`, `super-fired`, `hit`, `knockout`, `transform`, `gadget`; map each intentionally |
 | Lifecycle | channel events `match-ended`, `match-control` | Server phases `waiting`, `countdown`, `playing`, `ended`; provide client-side UI translation |
 | Bot simulation | host browser includes bots in `getNetworkStates()` | Server has no bot AI yet; do not assume parity |
-| Terrain | browser can broadcast `wall-break` | server uses tile-based walls/water for movement and projectile collision; wall-break events must be mapped into browser terrain updates |
+| Terrain | `getNetworkWorldState()` / `applyRemoteWorldState()` carry `destroyedWalls` and per-wall `{row,col,heat,iceHits,iced,melt}`; `applyRemoteAction` handles `wall-break` and `wall-state` | server snapshots include `destroyedWalls` and `wallStates`; 12 Ice-ball impacts freeze a wall, five seconds of sustained Fire melts it, and normal walls break after five seconds of Fire heat |
 
 ## Safe integration sequence
 
