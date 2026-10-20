@@ -1684,7 +1684,22 @@ function gadget(p){
       startShowcaseAnimation(id);
       $('dsel').textContent = id == selB ? 'SELECTED' : 'SELECT';
       $('dsel').onclick = () => { selB = id; try { localStorage.setItem('dabrawl_b', id); } catch(e){} window.DaBrawlNet?.updateBrawler?.(id); show('menu'); updateMenuUI(); playMenuShowcase(id,true); };
-      $('dTry').onclick = () => { selB = id; try { localStorage.setItem('dabrawl_b', id); } catch(e){} window.DaBrawlNet?.updateBrawler?.(id); startLoadingScreen(true); };
+      $('dTry').onclick = () => {
+        selB = id;
+        try { localStorage.setItem('dabrawl_b', id); } catch(e){}
+        window.DaBrawlNet?.updateBrawler?.(id);
+        // Practice mode is local-only; start immediately rather than using the
+        // loading timer, which can strand practice on GET READY.
+        try {
+          startGame(true);
+        } catch(err) {
+          console.error('Practice mode failed to start:',err);
+          $('mmTxt').textContent='PRACTICE START ERROR';
+          $('mmHint').textContent='Could not start practice mode: '+String(err?.message||err);
+          show('mm');
+          status('Practice mode failed to start. Check the browser console for details.',true);
+        }
+      };
     }
     // One-shot character showcase choreography.
     let showcaseFrame=0,showcaseToken=0,menuShowcaseFrame=0,menuShowcaseToken=0;
