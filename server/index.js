@@ -291,7 +291,7 @@ function stepRoom(room, dt) {
       event(room,"projectile-splash",{projectileId:b.id,ownerId:b.ownerId,x:b.x,y:b.y,radius,kind:b.greenBeer?"green-beer":b.cigar?"cigar":"beer",super:!!b.superBeer,durationMs:b.greenBeer?(b.durationMs||3000):b.cigar?0:1800,healPerSecond:b.greenBeer?(b.heal||1000):undefined});
       if(owner && b.superBeer) owner.meter=0;
     };
-    const wallHit = b.friendlySupport && !b.cigar ? null : findProjectileObstacleHit(b, room.world.obstacles, 2);
+    const wallHit = (b.friendlySupport || b.cigar || b.greenBeer) ? null : findProjectileObstacleHit(b, room.world.obstacles, 2);
     let contact = findProjectileContact(b, room.players.values(), t, 19);
     if (b.friendlySupport && !b.cigar) contact = null; // Beer passes over players and splashes only when it lands.
     if (b.greenBeer) contact = null; // Lobbed support cigar lands at its range instead of colliding with players.
