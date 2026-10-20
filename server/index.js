@@ -122,7 +122,7 @@ function doFire(room, p, isSuper = false, options = {}) {
   if(isSuper&&p.brawler==="hacker"){
     const target=room.players.get(options.targetId||"");
     if(p.meter<100||t-p.lastSuper<1200||!target||!isTargetDamageable(target,p,t)||Math.hypot(target.x-p.x,target.y-p.y)>stats.superRange)return;
-    p.meter=0;p.lastSuper=t;p.hackTargetId=target.id;p.hackUntil=t+4000;target.hackedById=p.id;target.input={x:0,y:0};
+    p.meter=0;p.lastSuper=t;p.hackerDroneControl=false;p.hackTargetId=target.id;p.hackUntil=t+4000;target.hackedById=p.id;target.input={x:0,y:0};
     event(room,"system-takeover-start",{playerId:p.id,targetId:target.id,durationMs:4000});sendState(room);return;
   }
   if (p.brawler === "ramu" && isSuper) {
