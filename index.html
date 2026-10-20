@@ -1319,7 +1319,7 @@
     }
     function fire(p,s){
       p.nh=0;p.hc=0;
-      if(p.b==='hacker'&&!s){if(p.hackerDroneControl||p.am<1||p.cd>0||p.tf>0)return;const ox=p.hackerDroneX,oy=p.hackerDroneY,target=degesAimTarget({...p,x:ox,y:oy},p.k.rng),a=target.angle,level=p.hackerUpgrades||0,damage=p.k.dmg+level*85;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',a);B.push({x:ox+Math.cos(a)*16,y:oy+Math.sin(a)*16,vx:Math.cos(a)*p.k.bs,vy:Math.sin(a)*p.k.bs,r:p.k.rng,flightRange:p.k.rng,d:damage,t:p.t,o:p,s:false,z:8+level*.5,col:'#39ffb6',malware:true,malwareType:['MALWARE DETECTED','RANSOMWARE','SPYWARE','CORRUPTED DATA'][Math.floor(Math.random()*4)],remoteVisual:networkMode&&p!==me});p.hackerUpgrades=Math.min(10,level+1);p.am--;p.cd=p.k.rel;p.rec=.12;shake=Math.max(shake,2);beep(520,.08,.035,'square',90);for(let i=0;i<7;i++)puff(ox+Math.cos(a)*14,oy+Math.sin(a)*14,1,'#39ffb6',.7);return;}
+      if(p.b==='hacker'&&!s){if(p.hackerDroneControl||p.am<1||p.cd>0||p.tf>0)return;const ox=p.hackerDroneX,oy=p.hackerDroneY,target=degesAimTarget({...p,x:ox,y:oy},p.k.rng),a=target.angle,level=p.hackerUpgrades||0,damage=p.k.dmg+level*85;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',a,{droneX:ox,droneY:oy});B.push({x:ox+Math.cos(a)*16,y:oy+Math.sin(a)*16,vx:Math.cos(a)*p.k.bs,vy:Math.sin(a)*p.k.bs,r:p.k.rng,flightRange:p.k.rng,d:damage,t:p.t,o:p,s:false,z:8+level*.5,col:'#39ffb6',malware:true,malwareType:['MALWARE DETECTED','RANSOMWARE','SPYWARE','CORRUPTED DATA'][Math.floor(Math.random()*4)],remoteVisual:networkMode&&p!==me});p.hackerUpgrades=Math.min(10,level+1);p.am--;p.cd=p.k.rel;p.rec=.12;shake=Math.max(shake,2);beep(520,.08,.035,'square',90);for(let i=0;i<7;i++)puff(ox+Math.cos(a)*14,oy+Math.sin(a)*14,1,'#39ffb6',.7);return;}
       if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet){
         const target=p.b==='deges'?degesAimTarget(p,300):null;
         window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,...(target?{targetX:target.x,targetY:target.y,beerRange:target.range}:{})});
@@ -1400,7 +1400,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     }
     function gadget(p){
       if(G.ph!='play'||!p.alive||p.gcd>0||p.dash>0||p.lp||p.tf>0||p.muiCharging>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
-      if(p.b==='hacker'){p.hackerDroneControl=!p.hackerDroneControl;p.gcd=3;p.chg=0;p.holdT=0;beep(p.hackerDroneControl?720:420,.12,.04,'triangle',p.hackerDroneControl?180:-100);return;}
+      if(p.b==='hacker'){if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('gadget',p.a);p.hackerDroneControl=!p.hackerDroneControl;p.gcd=3;p.chg=0;p.holdT=0;beep(p.hackerDroneControl?720:420,.12,.04,'triangle',p.hackerDroneControl?180:-100);return;}
       if(networkMode&&(p===me||(isNetworkHost&&p.isBot&&p.netId))&&window.DaBrawlNet){const extra=p!==me?{playerId:p.netId}:{};window.DaBrawlNet.sendAction('gadget',p.a,extra);}
       p.chg=0; p.holdT=0;
       if(p.b==='ramu'){
@@ -1451,7 +1451,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     function mv(p,dx,dy){ const r=15;if(p.ramuDiveTimer>0&&p.ramuDiveLift<=0){p.x=Math.max(r,Math.min(MW*T-r,p.x+dx));p.y=Math.max(r,Math.min(MH*T-r,p.y+dy));return;}if(!hitW(p.x+dx,p.y,r))p.x+=dx;if(!hitW(p.x,p.y+dy,r))p.y+=dy; }
     function step(p,ix,iy,dt){
       K=p.k;
-      if(p.b==='hacker'&&p.hackerDroneControl){const l=Math.hypot(ix,iy);p.mx=l?ix/l:0;p.my=l?iy/l:0;if(l>.05){const m=Math.min(1,l);p.hackerDroneX=Math.max(18,Math.min(MW*T-18,p.hackerDroneX+p.mx*m*220*dt));p.hackerDroneY=Math.max(18,Math.min(MH*T-18,p.hackerDroneY+p.my*m*220*dt));}return;}
+      if(p.b==='hacker'&&p.hackerDroneControl){const l=Math.hypot(ix,iy);p.mx=l?ix/l:0;p.my=l?iy/l:0;if(l>.05){const m=Math.min(1,l);p.hackerDroneX=Math.max(18,Math.min(MW*T-18,p.hackerDroneX+p.mx*m*220*dt));p.hackerDroneY=Math.max(18,Math.min(MH*T-18,p.hackerDroneY+p.my*m*220*dt));}if(networkMode){p.mx=p.my=0;}return;}
       const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
       if(p.muiCharging>0||isBeamShooting||isMaxCharging||(p.ramuShieldTimer||0)>0||(p.smokeTimer||0)>0||(p.ramuDiveLift||0)>0){p.mx=p.my=0;return;}
       const l = Math.hypot(ix,iy); p.mx = l?ix/l:0; p.my = l?iy/l:0;
@@ -1707,7 +1707,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
                 p.autoAimTarget=null;p.a=Math.atan2(my/z+cam.y-p.y,mx/z+cam.x-p.x);
               }
               if(p.b==='hacker'&&p.hackerDroneControl)step(p,ix,iy,dt);
-              else if(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive){step(p,0,0,dt);if(networkMode){if(mdown&&!touch)tryFire(p);}else{step(hackerHackTarget,ix,iy,dt);hackerHackTarget.a=p.a;if(mdown&&!touch)tryFire(hackerHackTarget);}}
+              else if(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive){step(p,0,0,dt);if(networkMode){const inputLen=Math.hypot(ix,iy);p.mx=inputLen?ix/inputLen:0;p.my=inputLen?iy/inputLen:0;if(mdown&&!touch)tryFire(p);}else{step(hackerHackTarget,ix,iy,dt);hackerHackTarget.a=p.a;if(mdown&&!touch)tryFire(hackerHackTarget);}}
               else step(p,ix,iy,dt);
             }else step(p,0,0,dt);
             if(!(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive)){if(mdown&&!touch) tryFire(p); if(p.k.sy) syU(p,dt);}
