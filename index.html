@@ -1297,7 +1297,7 @@
     function sup(p){
       if(G.ph!='play'||!p.alive||p.sc<1||p.tf>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
       p.nh=0;p.hc=0;
-      if(p.b==='hacker'){const target=hackerSelectedTarget;if(!target||!target.alive||target===p||(gameMode!=='showdown'&&target.t===p.t)||Math.hypot(target.x-p.x,target.y-p.y)>430){beep(160,.16,.05,'square',-30);return;}if(networkMode){beep(160,.16,.05,'square',-30);return;}hackerHackTarget=target;hackerHackTimer=4;hackerBinaryRain=4;target.hackerControlledBy=p;target.hackerControlTimer=4;p.hackerDroneControl=false;p.sc=0;p.chg=0;p.holdT=0;shake=Math.max(shake,12);beep(880,.22,.06,'sawtooth',-260);for(let i=0;i<30;i++)puff(target.x+(Math.random()-.5)*36,target.y+(Math.random()-.5)*42,1,'#39ffb6',1.4);return;}
+      if(p.b==='hacker'){const target=hackerSelectedTarget;if(!target||!target.alive||target===p||(gameMode!=='showdown'&&target.t===p.t)||Math.hypot(target.x-p.x,target.y-p.y)>430){beep(160,.16,.05,'square',-30);return;}if(networkMode&&window.DaBrawlNet)window.DaBrawlNet.sendAction('super',p.a,{targetId:target.netId||target.id});hackerHackTarget=target;hackerHackTimer=4;hackerBinaryRain=4;target.hackerControlledBy=p;target.hackerControlTimer=4;p.hackerDroneControl=false;p.sc=0;p.chg=0;p.holdT=0;shake=Math.max(shake,12);beep(880,.22,.06,'sawtooth',-260);for(let i=0;i<30;i++)puff(target.x+(Math.random()-.5)*36,target.y+(Math.random()-.5)*42,1,'#39ffb6',1.4);return;}
       if(p.b==='ramu'){
         const nextMode=p.ramuMode==='fire'?'ice':'fire';
         if(networkMode&&window.DaBrawlNet){if(p===me)window.DaBrawlNet.sendAction('super',p.a,{ramuMode:nextMode});else if(isNetworkHost&&p.isBot)window.DaBrawlNet.sendAction('super',p.a,{playerId:p.netId,ramuMode:nextMode});}
@@ -1706,7 +1706,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
                 p.autoAimTarget=null;p.a=Math.atan2(my/z+cam.y-p.y,mx/z+cam.x-p.x);
               }
               if(p.b==='hacker'&&p.hackerDroneControl)step(p,ix,iy,dt);
-              else if(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive){step(p,0,0,dt);step(hackerHackTarget,ix,iy,dt);hackerHackTarget.a=p.a;if(mdown&&!touch)tryFire(hackerHackTarget);}
+              else if(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive){step(p,0,0,dt);if(networkMode){if(mdown&&!touch)tryFire(p);}else{step(hackerHackTarget,ix,iy,dt);hackerHackTarget.a=p.a;if(mdown&&!touch)tryFire(hackerHackTarget);}}
               else step(p,ix,iy,dt);
             }else step(p,0,0,dt);
             if(!(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive)){if(mdown&&!touch) tryFire(p); if(p.k.sy) syU(p,dt);}
@@ -2656,7 +2656,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         drawArenaTerrain(now);
         for(const p of P)if(p.b==='hacker'&&p.alive){g.save();g.translate(p.hackerDroneX,p.hackerDroneY);g.shadowColor='#39ffb6';g.shadowBlur=14;g.fillStyle='#102a29';g.strokeStyle='#39ffb6';g.lineWidth=2;g.beginPath();g.roundRect(-13,-8,26,16,5);g.fill();g.stroke();g.shadowBlur=0;g.fillStyle='#b4fff0';g.fillRect(-5,-3,10,6);g.strokeStyle='#39ffb6';for(const d of [-1,1]){g.beginPath();g.moveTo(d*8,-5);g.lineTo(d*18,-12);g.moveTo(d*8,5);g.lineTo(d*18,12);g.stroke();g.beginPath();g.arc(d*19,-13,4,0,Math.PI*2);g.arc(d*19,13,4,0,Math.PI*2);g.stroke();}g.restore();}
         if(me?.b==='hacker'&&hackerSelectedTarget?.alive){g.save();g.strokeStyle='#39ffb6';g.lineWidth=3;g.setLineDash([7,5]);g.beginPath();g.arc(hackerSelectedTarget.x,hackerSelectedTarget.y,28,0,Math.PI*2);g.stroke();g.setLineDash([]);g.fillStyle='#39ffb6';g.font='bold 12px monospace';g.fillText('TARGET LOCKED',hackerSelectedTarget.x-43,hackerSelectedTarget.y-36);g.restore();}
-        if(hackerBinaryRain>0){g.save();g.setTransform(1,0,0,1,0,0);g.fillStyle='rgba(0,10,18,.72)';g.fillRect(0,0,cv.width,cv.height);g.fillStyle='#39ffb6';g.font='bold 17px monospace';g.textAlign='center';g.fillText('SYSTEM TAKEOVER // '+hackerBinaryRain.toFixed(1)+'s',cv.width/2,cv.height*.18);for(let i=0;i<70;i++){const x=(i*137)%cv.width,y=((performance.now()/12+i*61)%cv.height);g.fillText(i%2?'1':'0',x,y);}g.restore();}
+        if(hackerBinaryRain>0||(me?.hackedById&&me.hackUntil>Date.now())){const remain=hackerBinaryRain>0?hackerBinaryRain:Math.max(0,(me.hackUntil-Date.now())/1000);g.save();g.setTransform(1,0,0,1,0,0);g.fillStyle='rgba(0,10,18,.72)';g.fillRect(0,0,cv.width,cv.height);g.fillStyle='#39ffb6';g.font='bold 17px monospace';g.textAlign='center';g.fillText('SYSTEM TAKEOVER // '+remain.toFixed(1)+'s',cv.width/2,cv.height*.18);for(let i=0;i<70;i++){const x=(i*137)%cv.width,y=((performance.now()/12+i*61)%cv.height);g.fillText(i%2?'1':'0',x,y);}g.restore();}
         if(gasDist > 0){
           g.fillStyle='rgba(34, 197, 94, 0.45)'; g.fillRect(0, 0, MW*T, gasDist*T); g.fillRect(0, (MH-gasDist)*T, MW*T, gasDist*T);
           g.fillRect(0, gasDist*T, gasDist*T, (MH-gasDist*2)*T); g.fillRect((MW-gasDist)*T, gasDist*T, gasDist*T, (MH-gasDist*2)*T);
@@ -2971,7 +2971,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         const maxSpeed=900, speed=Math.hypot(p.netVx,p.netVy);
         if(speed>maxSpeed){p.netVx=p.netVx/speed*maxSpeed;p.netVy=p.netVy/speed*maxSpeed;}
         p.netTarget = {x:nx,y:ny,a:state.a ?? p.a}; p.netTargetAt=now;
-        for(const k of ['hp','mh','alive','sc','am','cd','gcd','kcd','tf','tfn','form','ramuMode','ramuTransform','ramuTransformTarget','fireEnergy','fireLock','ramuDiveTimer','ramuDiveLift','ramuWaterHop','ramuFireActive','ramuShieldTimer','smokeTimer','freezeMeter','frozenTimer','burnTimer','chg','holdT','hw','muiCharging','burst','bt','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my','shieldTimer','lp','h']) if(state[k]!==undefined) p[k]=state[k];
+        for(const k of ['hp','mh','alive','sc','am','cd','gcd','kcd','tf','tfn','form','ramuMode','ramuTransform','ramuTransformTarget','fireEnergy','fireLock','ramuDiveTimer','ramuDiveLift','ramuWaterHop','ramuFireActive','ramuShieldTimer','smokeTimer','freezeMeter','frozenTimer','burnTimer','chg','holdT','hw','muiCharging','burst','bt','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my','shieldTimer','lp','h','hackTargetId','hackedById','hackUntil']) if(state[k]!==undefined) p[k]=state[k];
         if(p.b==='saiyan' && Number.isFinite(state.form)) p.k=Object.assign({},BR.saiyan,FM[state.form]||{});
         p.netLast=now;
       },
