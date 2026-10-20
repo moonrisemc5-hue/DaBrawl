@@ -230,6 +230,18 @@
         <div id="keybindRows" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
         <p id="keybindHint" style="font:13px Arial,sans-serif;color:#cbd5e1;margin:10px 0 0">Choose a control, then press the key you want to use.</p>
         <button class="btn" id="resetKeybinds" style="font-size:18px;margin-top:10px">RESET DEFAULTS</button>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid #334155">
+          <h4 style="margin:0 0 8px;color:#fff;font-size:18px">Mouse buttons</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <label style="font:14px Arial,sans-serif;color:#cbd5e1;display:flex;flex-direction:column;gap:5px">Attack / Shoot
+              <select id="mouseAttackBind" style="padding:9px;border-radius:8px;background:#0b132b;color:#fff;border:2px solid #475569;font:15px Arial,sans-serif"><option value="0">Left click</option><option value="2">Right click</option><option value="1">Mouse 3 (middle)</option></select>
+            </label>
+            <label style="font:14px Arial,sans-serif;color:#cbd5e1;display:flex;flex-direction:column;gap:5px">Super
+              <select id="mouseSuperBind" style="padding:9px;border-radius:8px;background:#0b132b;color:#fff;border:2px solid #475569;font:15px Arial,sans-serif"><option value="2">Right click</option><option value="0">Left click</option><option value="1">Mouse 3 (middle)</option></select>
+            </label>
+          </div>
+          <p id="mouseBindHint" style="font:13px Arial,sans-serif;color:#93c5fd;margin:8px 0 0">Mouse controls are saved on this device.</p>
+        </div>
       </section>
       <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
         <h3 style="margin:0 0 6px;color:var(--y);font-size:24px">ACCOUNT</h3>
@@ -840,7 +852,18 @@
     const DEFAULT_BINDS = {up:'w',down:'s',left:'a',right:'d',super:' ',gadget:'e',autoAim:'f'};
     let keyBinds = {...DEFAULT_BINDS};
     try { const saved = JSON.parse(localStorage.getItem('dabrawl_keybinds')||'{}'); for(const k of Object.keys(DEFAULT_BINDS)) if(typeof saved[k]==='string'&&saved[k]) keyBinds[k]=saved[k].toLowerCase(); } catch(_){}
-    const bindLabels = {up:'Move up',down:'Move down',left:'Move left',right:'Move right',super:'Use Super',gadget:'Use Gadget',autoAim:'Auto-aim target'};
+    const bindLabels = {up:'Move up',down:'Move down',left:'Move left',right:'Move right',super:'Use Super',gadget:'Use Gadget',autoAim:'Auto-aim + shoot'};
+    const DEFAULT_MOUSE_BINDS={attack:0,super:2};
+    let mouseBinds={...DEFAULT_MOUSE_BINDS};
+    try{const saved=JSON.parse(localStorage.getItem('dabrawl_mousebinds')||'{}');for(const k of Object.keys(DEFAULT_MOUSE_BINDS))if([0,1,2].includes(Number(saved[k])))mouseBinds[k]=Number(saved[k]);if(mouseBinds.attack===mouseBinds.super)mouseBinds={...DEFAULT_MOUSE_BINDS};}catch(_){}
+    const mouseButtonNames={0:'Left click',1:'Mouse 3 (middle)',2:'Right click'};
+    const mouseAttackBindValue=()=>mouseBinds.attack, mouseSuperBindValue=()=>mouseBinds.super;
+    function saveMouseBinds(){try{localStorage.setItem('dabrawl_mousebinds',JSON.stringify(mouseBinds));}catch(_){}}
+    function renderMouseBinds(){const attack=$('mouseAttackBind'),superBtn=$('mouseSuperBind');if(attack)attack.value=String(mouseBinds.attack);if(superBtn)superBtn.value=String(mouseBinds.super);}
+    function onMouseBindChange(){const attack=Number($('mouseAttackBind')?.value),superBtn=Number($('mouseSuperBind')?.value);if(attack===superBtn){renderMouseBinds();$('mouseBindHint').textContent='Attack and Super need different mouse buttons.';return;}mouseBinds={attack,super:superBtn};saveMouseBinds();$('mouseBindHint').textContent='Saved: Attack = '+mouseButtonNames[attack]+' · Super = '+mouseButtonNames[superBtn]+'.';}
+    $('mouseAttackBind')?.addEventListener('change',onMouseBindChange);
+    $('mouseSuperBind')?.addEventListener('change',onMouseBindChange);
+    renderMouseBinds();
     let waitingForBind = null;
     function keyName(k){return k===' '?'SPACE':k==='control'?'CTRL':k==='shift'?'SHIFT':k==='alt'?'ALT':k==='meta'?'WIN':k.startsWith('arrow')?('ARROW '+k.slice(5).toUpperCase()):k.length===1?k.toUpperCase():k.toUpperCase();}
     function saveKeyBinds(){try{localStorage.setItem('dabrawl_keybinds',JSON.stringify(keyBinds));}catch(_){} renderKeybinds();}
@@ -867,12 +890,12 @@
       keys[e.key.toLowerCase()] = 1; if(scr != 'game') return;
       if(e.key.toLowerCase() === keyBinds.super){ e.preventDefault(); sup(me); }
       if(e.key.toLowerCase() === keyBinds.gadget) { e.preventDefault(); gadget(me); }
-      if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); autoAimTarget(me); }
+      if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); if(autoAimTarget(me)){mdown=true;tryFire(me);} }
     });
-    addEventListener('keyup', e => keys[e.key.toLowerCase()] = 0);
+    addEventListener('keyup', e => {keys[e.key.toLowerCase()] = 0;if(e.key.toLowerCase()===keyBinds.autoAim)mdown=false;});
     addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive&&me.smokeTimer<=0&&me.ramuShieldTimer<=0){const wx=mx/Math.max(.01,z)+cam.x,wy=my/Math.max(.01,z)+cam.y;me.a=Math.atan2(wy-me.y,wx-me.x);me.autoAimTimer=0;me.autoAimTarget=null;} });
-    cv.addEventListener('mousedown', e => { touch = false; if(e.button===2){ e.preventDefault(); if(me.tf <= 0) sup(me); } else if(e.button===0){ mdown = true; tryFire(me); } });
-    cv.addEventListener('mouseup', e => { if(e.button===0) mdown = false; });
+    cv.addEventListener('mousedown', e => { touch = false; if(e.button===mouseSuperBindValue()){e.preventDefault();if(me&&me.tf<=0)sup(me);} else if(e.button===mouseAttackBindValue()){e.preventDefault();mdown=true;tryFire(me);} });
+    cv.addEventListener('mouseup', e => { if(e.button===mouseAttackBindValue()) mdown = false; });
     cv.addEventListener('contextmenu', e => e.preventDefault());
     const ts = {m:{id:null,ox:0,oy:0,x:0,y:0,active:false}, a:{id:null,ox:0,oy:0,x:0,y:0,active:false}, s:{id:null,ox:0,oy:0,x:0,y:0,active:false}};
     const STICK_POS_KEY='dabrawl_stick_positions_v2';
@@ -1072,8 +1095,8 @@
       p.autoAimTarget=null;p.autoAimTimer=0;return false;
     }
     function autoAimTarget(p){
-      if(p.muiCharging>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0||KM.some(k=>k.o===p))return;
-      aimAtNearestEnemy(p);
+      if(!p||p.muiCharging>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0||KM.some(k=>k.o===p))return false;
+      return aimAtNearestEnemy(p);
     }
     const sees = (tm,p) => gameMode=='showdown' || gameMode=='duo' || p.t==tm || tile(p.x,p.y)!='b' || P.some(a => a.alive && a.t==tm && Math.hypot(a.x-p.x, a.y-p.y)<2.5*T);
     function degesImpactVisual(x,y,b){
@@ -1087,7 +1110,7 @@
     }
     function degesSplash(x,y,b){
       const radius=b.splashRadius||(b.superBeer?110:72);degesImpactVisual(x,y,b);
-      if(b.beer){Z.push({x,y,radius,owner:b.o,team:b.o?.t??b.t,damage:b.d||0,heal:b.heal||2250,superBeer:!!b.superBeer,expires:Date.now()+1800,nextTick:Date.now(),lastHit:new Map()});}
+      if(b.beer){const now=Date.now();Z.push({x,y,radius,owner:b.o,team:b.o?.t??b.t,damage:b.d||0,heal:500,superBeer:!!b.superBeer,expires:now+1800,nextTick:now+500,tickMs:1000,lastHit:new Map()});}
       else for(const target of P){if(!target.alive||target===b.o||Math.hypot(target.x-x,target.y-y)>radius)continue;const ally=(gameMode==='knockout'||gameMode==='duo')&&target.t===(b.o?.t??b.t);if(!ally)dmg(target,{...b,o:b.o,t:b.o?.t??b.t});}
       shake=Math.max(shake,b.superBeer?10:4);
     }
@@ -1098,8 +1121,8 @@
       let tx=sx+Math.cos(p.a)*maxRange,ty=sy+Math.sin(p.a)*maxRange;
       if(p===me&&!touch&&p.autoAimTimer<=0&&scr==='game'&&Number.isFinite(mx)&&Number.isFinite(my)){tx=mx/Math.max(.01,z)+cam.x;ty=my/Math.max(.01,z)+cam.y;}
       else if(p.remoteBeerTarget&&Number.isFinite(p.remoteBeerTarget.x)&&Number.isFinite(p.remoteBeerTarget.y)){tx=p.remoteBeerTarget.x;ty=p.remoteBeerTarget.y;}
-      const dx=tx-sx,dy=ty-sy,dist=Math.hypot(dx,dy),ux=dx/(dist||1),uy=dy/(dist||1),range=Math.max(70,Math.min(maxRange,dist));
-      // Bottles are lofted projectiles and intentionally fly over map walls.
+      const dx=tx-sx,dy=ty-sy,dist=Math.hypot(dx,dy),ux=dx/(dist||1),uy=dy/(dist||1),range=Math.max(0,Math.min(maxRange,dist));
+      // Allow close/self-targeted pools instead of forcing every bottle to travel at least 70px.
       return {x:sx+ux*range,y:sy+uy*range,range,angle:Math.atan2(dy,dx)};
     }
     function spawnRamuIceBall(p,angle,index=1){
@@ -1259,6 +1282,7 @@
     function tryFire(p){
       const ramuFlame=p?.b==='ramu'&&p.ramuMode==='fire';
       if(G.ph!='play'||!p.alive||(!ramuFlame&&p.am<1)||(!ramuFlame&&p.cd>0)||p.lp||p.k.sy||p.tf>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
+      p.nh=0;p.hc=0;
       if(ramuFlame){if(p!==me&&p.aiFireHeld&&(p.fireLock||0)<=0&&(p.fireEnergy||0)>0)p.ramuFireActive=true;return;}
       if(p.b==='deges'){const target=degesAimTarget(p,300);p.a=target.angle;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',target.angle,{targetX:target.x,targetY:target.y,beerRange:target.range});}
       else if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',p.a);
@@ -1266,6 +1290,7 @@
     }
     function sup(p){
       if(G.ph!='play'||!p.alive||p.sc<1||p.tf>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
+      p.nh=0;p.hc=0;
       if(p.b==='ramu'){
         const nextMode=p.ramuMode==='fire'?'ice':'fire';
         if(networkMode&&window.DaBrawlNet){if(p===me)window.DaBrawlNet.sendAction('super',p.a,{ramuMode:nextMode});else if(isNetworkHost&&p.isBot)window.DaBrawlNet.sendAction('super',p.a,{playerId:p.netId,ramuMode:nextMode});}
@@ -1273,7 +1298,7 @@
       }
       if(networkMode && window.DaBrawlNet){
         if(p===me){if(p.b==='deges'){const target=degesAimTarget(p,330);window.DaBrawlNet.sendAction('super',target.angle,{targetX:target.x,targetY:target.y,beerRange:target.range});}else window.DaBrawlNet.sendAction('super',p.a);}
-        else if(isNetworkHost && p.isBot) window.DaBrawlNet.sendAction('super',p.a,{playerId:p.netId});
+        else if(isNetworkHost && p.isBot){const target=p.b==='deges'?degesAimTarget(p,330):null;window.DaBrawlNet.sendAction('super',p.a,{playerId:p.netId,...(target?{targetX:target.x,targetY:target.y,beerRange:target.range}:{})});}
       }
       p.chg=0; p.holdT=0;
       if(p.k.sy){ if(p.form<5&&!(p.tf>0)&&!p.lp) xform(p); else if(p.form==5&&!(p.tf>0)) superUltraKame(p); return; }
@@ -1285,7 +1310,11 @@
       setTimeout(()=>{ p.muiCharging=0; KM.push({o:p,a:p.a,x:p.x,y:p.y,len:MW*T,w:100,d:7000,t:.8,m:.8,tk:0,col:'#ffffff',destroys:true}); shake=35; playKameSound(); }, 1200);
     }
     function fire(p,s){
-      if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet) window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,super:false});
+      p.nh=0;p.hc=0;
+      if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet){
+        const target=p.b==='deges'?degesAimTarget(p,300):null;
+        window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,...(target?{targetX:target.x,targetY:target.y,beerRange:target.range}:{})});
+      }
       K=p.k; if(s&&K.lg){ leap(p,0); return; }
       if(p.b==='ramu'){
         if(p.ramuMode==='fire'){p.ramuFireActive=true;return;}
@@ -1638,10 +1667,10 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
             continue;
           }
           K=p.k; p.am = Math.min(3, p.am + dt/K.rel); p.nh+=dt;
-          if(p.nh>3 && p.hp<p.mh && !p.isDummy){
+          if(p.nh>3.5 && p.hp<p.mh && !p.isDummy){
             p.hc = (p.hc||0) + dt;
             if(p.hc>=.7){ p.hc=0; const h=Math.min(p.mh-p.hp, p.mh*.2); p.hp+=h; F.push({k:'t',x:p.x,y:p.y-30,vx:0,vy:-50,l:.7,m:.7,tx:'+'+Math.round(h),c:'#5f5'}); puff(p.x,p.y,6,'#7f7',.6); beep(700,.12,.06,'triangle',200); }
-          } else if(p.nh<=3) p.hc=0;
+          } else if(p.nh<=3.5) p.hc=0;
           if(p.dodge>0){ p.dodge-=dt; F.push({k:'p',x:p.x+(Math.random()-.5)*10,y:p.y,vx:0,vy:0,l:.3,m:.3,c:'#cfd8ff',s:14}); }
           if(p.tf>0){ tfx(p,dt); continue; }
           if(p.lp){ air(p,dt); continue; }
