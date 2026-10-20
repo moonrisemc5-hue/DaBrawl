@@ -112,7 +112,7 @@
     .bar-fill { height: 100%; width: 0%; background: linear-gradient(#ff9a00, #ffe45c); transition: width .1s linear; }
     .det-layout { display: flex; width: 100%; max-width: 960px; justify-content: space-between; align-items: center; padding: 10px; gap: 20px; }
     .det-left { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; max-width: 320px; text-align: left; }
-    .det-title { background: #ffe45c; color: #000; padding: 4px 16px; border: 3px solid #000; border-radius: 8px; font-size: 28px; box-shadow: 0 4px 0 #000; }
+    .det-title { background: var(--brawler-rarity, #ffe45c); color: #000; padding: 4px 16px; border: 3px solid #000; border-radius: 8px; font-size: 28px; box-shadow: 0 4px 0 #000; }
     .det-class { font-size: 18px; color: #fff; text-shadow: 2px 2px 0 #000; }
     .det-rarity { font-size: 16px; color: #00c0ff; text-transform: uppercase; }
     .det-lore { background: #1c2541; border: 3px solid #000; border-radius: 12px; padding: 12px; font-size: 14px; line-height: 1.3; box-shadow: 0 4px 0 #000; }
@@ -413,7 +413,7 @@
       if(s == 'brs'){ requestAnimationFrame(() => { grid(); }); }
     }
     let tr = 0; try { tr = +localStorage.getItem('dabrawl_tr') || 0; } catch(e){}
-    let bTrophies = {kuku:0, shachi:0, saiyan:0};
+    let bTrophies={kuku:0,shachi:0,saiyan:0,deges:0,ramu:0};
     try { const savedBT = localStorage.getItem('dabrawl_bt'); if(savedBT) bTrophies = Object.assign(bTrophies, JSON.parse(savedBT)); } catch(e){}
     let trophyAccountKey = 'guest';
     function loadTrophiesForAccount(key,legacyKey=''){
@@ -426,16 +426,16 @@
         if(saved){
           const profile=JSON.parse(saved);
           tr=Math.max(0,Number(profile.tr)||0);
-          bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},profile.bt||{});
+          bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0,deges:0,ramu:0},profile.bt||{});
           loaded=true;
         }
       }catch(_){}
       if(!loaded&&trophyAccountKey==='guest'){
-        try{tr=Math.max(0,Number(localStorage.getItem('dabrawl_tr'))||0);const legacy=localStorage.getItem('dabrawl_bt');bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},legacy?JSON.parse(legacy):{});}catch(_){}
+        try{tr=Math.max(0,Number(localStorage.getItem('dabrawl_tr'))||0);const legacy=localStorage.getItem('dabrawl_bt');bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0,deges:0,ramu:0},legacy?JSON.parse(legacy):{});}catch(_){}
       }else if(!loaded&&trophyAccountKey!=='guest'){
         // One-time recovery for progress saved by the older, non-account-scoped build.
         // Save it under this signed-in account immediately so other accounts cannot inherit it later.
-        try{tr=Math.max(0,Number(localStorage.getItem('dabrawl_tr'))||0);const legacy=localStorage.getItem('dabrawl_bt');bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0},legacy?JSON.parse(legacy):{});}catch(_){tr=0;bTrophies={kuku:0,shachi:0,saiyan:0};}
+        try{tr=Math.max(0,Number(localStorage.getItem('dabrawl_tr'))||0);const legacy=localStorage.getItem('dabrawl_bt');bTrophies=Object.assign({kuku:0,shachi:0,saiyan:0,deges:0,ramu:0},legacy?JSON.parse(legacy):{});}catch(_){tr=0;bTrophies={kuku:0,shachi:0,saiyan:0,deges:0,ramu:0};}
       }
       $('tro').textContent=tr;
       saveTrophies();
@@ -530,6 +530,21 @@
       gain.gain.setValueAtTime(0.35, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
       osc.connect(gain); gain.connect(AC.destination); osc.start(); osc.stop(now + 1.5);
     }
+    function playRamuModeSound(mode){
+      initAudio(); if(!AC) return;
+      const fire=mode==='fire',now=AC.currentTime,duration=fire ? 0.48 : 0.58,size=Math.floor(AC.sampleRate*duration),buffer=AC.createBuffer(1,size,AC.sampleRate),data=buffer.getChannelData(0);
+      for(let i=0;i<size;i++){const t=i/AC.sampleRate,envelope=Math.exp(-t*(fire?5.4:7.2));data[i]=(Math.random()*2-1)*envelope*(fire ? 0.62 : 0.28);}
+      const noise=AC.createBufferSource();noise.buffer=buffer;
+      const filter=AC.createBiquadFilter();filter.type=fire?'lowpass':'highpass';filter.frequency.setValueAtTime(fire?1450:7200,now);filter.frequency.exponentialRampToValueAtTime(fire?240:1250,now+duration);filter.Q.value=fire?.7:1.4;
+      const ng=AC.createGain();ng.gain.setValueAtTime(.0001,now);ng.gain.exponentialRampToValueAtTime(fire ? 0.24 : 0.18,now+.018);ng.gain.exponentialRampToValueAtTime(.0001,now+duration);
+      noise.connect(filter);filter.connect(ng);ng.connect(AC.destination);noise.start(now);noise.stop(now+duration);
+      const osc=AC.createOscillator(),og=AC.createGain();osc.type=fire?'sawtooth':'triangle';
+      if(fire){osc.frequency.setValueAtTime(105,now);osc.frequency.exponentialRampToValueAtTime(48,now+.42);}
+      else{osc.frequency.setValueAtTime(1180,now);osc.frequency.exponentialRampToValueAtTime(430,now+.32);osc.frequency.exponentialRampToValueAtTime(760,now+.56);}
+      og.gain.setValueAtTime(.0001,now);og.gain.exponentialRampToValueAtTime(fire ? 0.13 : 0.12,now+.02);og.gain.exponentialRampToValueAtTime(.0001,now+duration);
+      osc.connect(og);og.connect(AC.destination);osc.start(now);osc.stop(now+duration);
+      if(!fire){const chime=AC.createOscillator(),cg=AC.createGain();chime.type='sine';chime.frequency.setValueAtTime(1650,now+.02);chime.frequency.exponentialRampToValueAtTime(920,now+.42);cg.gain.setValueAtTime(.0001,now);cg.gain.exponentialRampToValueAtTime(.07,now+.035);cg.gain.exponentialRampToValueAtTime(.0001,now+.46);chime.connect(cg);cg.connect(AC.destination);chime.start(now);chime.stop(now+.47);}
+    }
     function playKameSound(){
       initAudio(); if(!AC) return;
       const now = AC.currentTime, osc = AC.createOscillator(), gain = AC.createGain();
@@ -579,8 +594,60 @@
       } else {
         MW=28; MH=16; const h = Q.map(r=>r+[...r].reverse().join('')); M = [...h,...[...h].reverse()].map(r=>[...r]);
       }
+      originalWallCells=new Set();
+      for(let j=1;j<MH-1;j++)for(let i=1;i<MW-1;i++)if(M[j]?.[i]==='#')originalWallCells.add(wallKey(i,j));
+      for(let j=0;j<MH;j++)for(let i=0;i<MW;i++){if(M[j][i]==='b')bushTiles.push({i,j});else if(M[j][i]==='~')waterTiles.push({i,j});}
     }
     const tile = (x,y) => { const i=Math.floor(x/T), j=Math.floor(y/T); return i<0||j<0||i>=MW||j>=MH ? '#' : M[j][i]; };
+    const wallKey=(i,j)=>`${j}:${i}`;
+    function localWallState(i,j,create=false){
+      if(M?.[j]?.[i]!=='#')return null;
+      const key=wallKey(i,j);let state=localWallStates.get(key);
+      if(!state&&create){state={i,j,heat:0,iceHits:0,iced:false,melt:0,lastSentAt:0};localWallStates.set(key,state);}
+      return state||null;
+    }
+    function sendLocalWallState(state){
+      if(!state)return;
+      if(networkMode&&isNetworkHost&&window.DaBrawlNet)window.DaBrawlNet.sendAction('wall-state',0,{i:state.i,j:state.j,row:state.j,col:state.i,heat:state.heat,iceHits:state.iceHits,iced:state.iced,melt:state.melt});
+    }
+    function setLocalWallState(i,j,data){
+      if(!Number.isInteger(i)||!Number.isInteger(j)||M?.[j]?.[i]!=='#')return null;
+      const state=localWallState(i,j,true);
+      state.heat=Math.max(0,Math.min(RAMU_WALL_RULES.heatSeconds,Number(data?.heat)||0));
+      state.iceHits=Math.max(0,Math.min(RAMU_WALL_RULES.iceHits,Math.floor(Number(data?.iceHits)||0)));
+      state.iced=data?.iced===true;state.melt=Math.max(0,Math.min(RAMU_WALL_RULES.meltSeconds,Number(data?.melt)||0));
+      if(state.iced){state.iceHits=RAMU_WALL_RULES.iceHits;state.heat=0;}
+      if(!state.iced&&state.iceHits===0&&state.heat===0&&state.melt===0)localWallStates.delete(wallKey(i,j));
+      return state;
+    }
+    function breakLocalWall(i,j){
+      if(i<=0||j<=0||i>=MW-1||j>=MH-1||M?.[j]?.[i]!=='#'||localWallState(i,j)?.iced)return false;
+      M[j][i]='.';localWallStates.delete(wallKey(i,j));localDestroyedWalls.add(wallKey(i,j));terrainCacheDirty=true;return true;
+    }
+    function registerLocalIceWallHit(i,j){
+      if(i<=0||j<=0||i>=MW-1||j>=MH-1||M?.[j]?.[i]!=='#')return false;
+      const state=localWallState(i,j,true);if(state.iced)return false;
+      state.heat=0;state.melt=0;state.iceHits=Math.min(RAMU_WALL_RULES.iceHits,state.iceHits+1);
+      if(state.iceHits>=RAMU_WALL_RULES.iceHits)state.iced=true;
+      puff((i+.5)*T,(j+.5)*T,5,state.iced?'#bdfaff':'#65eaff',.55);
+      if(networkMode&&isNetworkHost)sendLocalWallState(state);
+      return true;
+    }
+    function localWorldState(){
+      return {destroyedWalls:[...localDestroyedWalls].map(key=>{const [row,col]=key.split(':').map(Number);return {row,col};}),wallStates:[...localWallStates.values()].filter(w=>w.heat>0||w.iceHits>0||w.iced||w.melt>0).map(w=>({row:w.j,col:w.i,heat:w.heat,iceHits:w.iceHits,iced:w.iced,melt:w.melt}))};
+    }
+    function applyLocalWorldState(world){
+      if(!world||typeof world!=='object')return;
+      if(Array.isArray(world.destroyedWalls)){
+        const destroyed=new Set();
+        for(const w of world.destroyedWalls){const row=Number(w?.row),col=Number(w?.col);if(Number.isInteger(row)&&Number.isInteger(col)&&row>0&&col>0&&row<MH-1&&col<MW-1)destroyed.add(wallKey(col,row));}
+        let changed=false;
+        for(const key of originalWallCells){const [row,col]=key.split(':').map(Number),next=destroyed.has(key)?'.':'#';if(M?.[row]?.[col]!==undefined&&M[row][col]!==next){M[row][col]=next;changed=true;}}
+        localDestroyedWalls.clear();for(const key of destroyed)localDestroyedWalls.add(key);
+        if(changed)terrainCacheDirty=true;
+      }
+      if(Array.isArray(world.wallStates)){localWallStates.clear();for(const w of world.wallStates){const row=Number(w?.row),col=Number(w?.col);if(Number.isInteger(row)&&Number.isInteger(col)&&row>0&&col>0&&row<MH-1&&col<MW-1)setLocalWallState(col,row,w);}}
+    }
     const solid = (x,y) => { const t = tile(x,y); return t=='#' || t=='~'; };
     const hitW = (x,y,r) => solid(x-r,y-r) || solid(x+r,y-r) || solid(x-r,y+r) || solid(x+r,y+r);
     // Wall/cover-aware visibility and route planning for bot navigation.
@@ -781,7 +848,7 @@
     const DEFAULT_BINDS = {up:'w',down:'s',left:'a',right:'d',super:' ',gadget:'e',autoAim:'f'};
     let keyBinds = {...DEFAULT_BINDS};
     try { const saved = JSON.parse(localStorage.getItem('dabrawl_keybinds')||'{}'); for(const k of Object.keys(DEFAULT_BINDS)) if(typeof saved[k]==='string'&&saved[k]) keyBinds[k]=saved[k].toLowerCase(); } catch(_){}
-    const bindLabels = {up:'Move up',down:'Move down',left:'Move left',right:'Move right',super:'Use Super',gadget:'Use Gadget',autoAim:'Auto-aim / shoot'};
+    const bindLabels = {up:'Move up',down:'Move down',left:'Move left',right:'Move right',super:'Use Super',gadget:'Use Gadget',autoAim:'Auto-aim target'};
     let waitingForBind = null;
     function keyName(k){return k===' '?'SPACE':k==='control'?'CTRL':k==='shift'?'SHIFT':k==='alt'?'ALT':k==='meta'?'WIN':k.startsWith('arrow')?('ARROW '+k.slice(5).toUpperCase()):k.length===1?k.toUpperCase():k.toUpperCase();}
     function saveKeyBinds(){try{localStorage.setItem('dabrawl_keybinds',JSON.stringify(keyBinds));}catch(_){} renderKeybinds();}
@@ -808,10 +875,10 @@
       keys[e.key.toLowerCase()] = 1; if(scr != 'game') return;
       if(e.key.toLowerCase() === keyBinds.super){ e.preventDefault(); sup(me); }
       if(e.key.toLowerCase() === keyBinds.gadget) { e.preventDefault(); gadget(me); }
-      if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); autoAimAndShoot(me); }
+      if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); autoAimTarget(me); }
     });
     addEventListener('keyup', e => keys[e.key.toLowerCase()] = 0);
-    addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive){ const wx=mx/Math.max(.01,z)+cam.x, wy=my/Math.max(.01,z)+cam.y; me.a=Math.atan2(wy-me.y,wx-me.x); me.autoAimTimer=0; } });
+    addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive&&me.smokeTimer<=0&&me.ramuShieldTimer<=0){const wx=mx/Math.max(.01,z)+cam.x,wy=my/Math.max(.01,z)+cam.y;me.a=Math.atan2(wy-me.y,wx-me.x);me.autoAimTimer=0;me.autoAimTarget=null;} });
     cv.addEventListener('mousedown', e => { touch = false; if(e.button===2){ e.preventDefault(); if(me.tf <= 0) sup(me); } else if(e.button===0){ mdown = true; tryFire(me); } });
     cv.addEventListener('mouseup', e => { if(e.button===0) mdown = false; });
     cv.addEventListener('contextmenu', e => e.preventDefault());
@@ -869,7 +936,7 @@
           if(!state.active||state.id!==t.identifier)continue;
           // A system interruption (notification, app switch, gesture) must release the
           // joystick cleanly and must never fire an accidental shot or Super.
-          if(!cancelled&&scr==='game'&&me){
+          if(!cancelled&&scr==='game'&&me&&(me.smokeTimer||0)<=0&&(me.ramuShieldTimer||0)<=0){
             if(k==='a'){
               if(Math.hypot(state.x-state.ox,state.y-state.oy)>18){
                 me.a=Math.atan2(state.y-state.oy,state.x-state.ox);
@@ -887,7 +954,7 @@
                 else if(me.muiCharging<=0&&!KM.some(km=>km.o===me)){if(me.sc>0&&me.k.lg){}else tryFire(me);}
               }else{
                 // A tap / press in the neutral centre is the mobile equivalent of F.
-                autoAimAndShoot(me);
+                autoAimTarget(me);
               }
             }
             }
@@ -1191,7 +1258,7 @@ function gadget(p){
         const canRequestHit = b?.o===me || (isNetworkHost && b?.o?.isBot);
         if(canRequestHit && t.netId && window.DaBrawlNet){
           const damage=Math.max(0,Number(b.d)||0);
-          window.DaBrawlNet.sendAction('damage',0,{targetId:t.netId,damage,vx:Number(b.vx)||0,vy:Number(b.vy)||0});
+          window.DaBrawlNet.sendAction('damage',0,{targetId:t.netId,damage,vx:Number(b.vx)||0,vy:Number(b.vy)||0,knockback:Number(b.knockback)||0,iceBall:!!b.iceBall,fireBall:!!b.fireBall,fireStream:!!b.fireStream});
           // Give the attacker immediate hit confirmation; health remains authoritative on the victim.
           t.fl=.12;
           F.push({k:'t',x:t.x,y:t.y-30,vx:0,vy:-60,l:.7,m:.7,tx:String(Math.round(damage)),c:'#ffe45c'});
@@ -1200,14 +1267,14 @@ function gadget(p){
           // Charge Super on the attacker's owning simulation as soon as a real hit
           // is confirmed locally. Remote human targets return above before the normal
           // damage path, which previously meant Kuku never gained Super against friends.
-          if(b?.o && (b.o===me || (isNetworkHost && b.o.isBot)) && !b.s){
-            b.o.sc=Math.min(1,(b.o.sc||0)+damage*.0004*(b.o.k?.cm||0.5));
+          if(b?.o&&(b.o===me||(isNetworkHost&&b.o.isBot))&&!b.s&&(!(b.o.b==='ramu'&&b.o.ramuMode==='fire')||b.fireStream||b.fireBall)){
+            b.o.sc=Math.min(1,(b.o.sc||0)+(b.fireStream?(b.o.k?.fireSuperCharge||6.6)/100:damage*.0004*(b.o.k?.cm||0.5)));
           }
         }
         return;
       }
       if(t.tf>0) return;
-      if((t.shieldTimer||0)>0){F.push({k:'p',x:t.x+(Math.random()-.5)*24,y:t.y+(Math.random()-.5)*30,vx:0,vy:0,l:.18,m:.18,c:'#8be9ff',s:18});return;}
+      if((t.shieldTimer||0)>0||(t.ramuShieldTimer||0)>0){F.push({k:'p',x:t.x+(Math.random()-.5)*24,y:t.y+(Math.random()-.5)*30,vx:0,vy:0,l:.18,m:.18,c:'#8be9ff',s:18});return;}
       if(t.dodge>0){
         t.dodgeFx=0.25; if(!t.afterimages) t.afterimages=[];
         t.afterimages.push({x:t.x, y:t.y, a:t.a, form:t.form, t:0.5, maxT:0.5});
@@ -1294,7 +1361,11 @@ function gadget(p){
       const shotSpeed=b.b==='deges'?430:(b.k.bs||550),pred=aiPredictPoint(b,tg,shotSpeed,b.b==='deges'?.85:.65);
       b.a=Math.atan2(pred.y-b.y,pred.x-b.x)+(Math.random()-.5)*.025;
       const clearShot=!aiLineBlocked(b.x,b.y,tg.x,tg.y),attackRange=b.b==='deges'?300:(K.rng||230),superRange=b.b==='deges'?330:(K.sr||attackRange);
-      if(b.cd<=0&&clearShot){
+      if(b.b==='ramu'&&b.ramuMode==='fire'){
+        const flameTarget=clearShot&&bd<attackRange-15&&(b.fireEnergy||0)>0&&(b.fireLock||0)<=0;
+        b.aiFireHeld=flameTarget;
+        if(flameTarget&&b.cd<=0){tryFire(b);b.cd=.16;}
+      }else if(b.cd<=0&&clearShot){
         if(b.sc>=1&&bd<superRange-30){sup(b);b.cd=.8;}
         else if(b.am>=1&&bd<attackRange-15){tryFire(b);b.cd=.45+Math.random()*.5;}
       }
@@ -1407,12 +1478,16 @@ function gadget(p){
             if(ts.m.active){ ix = (ts.m.x-ts.m.ox)/60; iy = (ts.m.y-ts.m.oy)/60; }
             const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
             if(p.muiCharging<=0 && !isBeamShooting){
+              const touchAiming=touch&&ts.a.active&&Math.hypot(ts.a.x-ts.a.ox,ts.a.y-ts.a.oy)>18;
+              if(p.b==='ramu'&&p.autoAimTimer>0&&!touchAiming){
+                const target=p.autoAimTarget;
+                if(target?.alive&&(gameMode==='showdown'||target.t!==p.t)&&sees(p.t,target)&&!aiLineBlocked(p.x,p.y,target.x,target.y))p.a=Math.atan2(target.y-p.y,target.x-p.x);
+                else{p.autoAimTimer=0;p.autoAimTarget=null;}
+              }
               if(touch){
-                if(ts.a.active&&Math.hypot(ts.a.x-ts.a.ox,ts.a.y-ts.a.oy)>18){
-                  p.a=Math.atan2(ts.a.y-ts.a.oy,ts.a.x-ts.a.ox);
-                }
-              }else if(p.rec<=0&&p.autoAimTimer<=0){
-                p.a=Math.atan2(my/z+cam.y-p.y,mx/z+cam.x-p.x);
+                if(p.ramuShieldTimer<=0&&p.smokeTimer<=0&&touchAiming){p.autoAimTarget=null;p.autoAimTimer=0;p.a=Math.atan2(ts.a.y-ts.a.oy,ts.a.x-ts.a.ox);}
+              }else if(p.rec<=0&&p.autoAimTimer<=0&&p.smokeTimer<=0&&p.ramuShieldTimer<=0){
+                p.autoAimTarget=null;p.a=Math.atan2(my/z+cam.y-p.y,mx/z+cam.x-p.x);
               }
               step(p,ix,iy,dt);
             }else step(p,0,0,dt);
@@ -1535,7 +1610,8 @@ function gadget(p){
     }
     function updateMenuUI(){
       try {
-        $('bn').textContent = BR[selB].nm;
+        $('bn').textContent=BR[selB].nm;
+        $('gad').setAttribute('aria-label',BR[selB].gadgetNm||'Gadget ability');$('gad').title=BR[selB].gadgetNm||'Gadget ability';
         const canvas=$('pv');
         if(canvas){
           // Recreate the menu canvas backing store independently of viewport/DPR.
@@ -1573,7 +1649,7 @@ function gadget(p){
         ctx.setTransform(sc,0,0,sc,c.width/2,c.height/2+dy);
         const oldG = g; g = ctx;
         try {
-          drawP({x:0,y:0,t:0,b:id,a:angle??0.15,walk:0,rec:0,fl:0,alive:true,dt:0,hp:1000,mh:1000,k:BR[id],form:form||0,tf:tf||0,tfn:tfn||1,showcasePose:showcasePose,preview:true,sc:0,afterimages:[]});
+          drawP({x:0,y:0,t:0,b:id,a:angle??0.15,walk:0,rec:0,fl:0,alive:true,dt:0,hp:1000,mh:1000,k:BR[id],form:form||0,ramuMode:id==='ramu'?'base':'ice',tf:tf||0,tfn:tfn||1,showcasePose:showcasePose,preview:true,sc:0,afterimages:[]});
         } finally { g = oldG; }
         return true;
       } catch(e){ console.error('Brawler renderer error:',id,e); return false; }
@@ -1689,7 +1765,7 @@ function gadget(p){
         if(i<=0||j<=0||i>=MW-1||j>=MH-1||M[j]?.[i]!=='#') continue;
         const wx=(i+.5)*T, wy=(j+.5)*T;
         if(Math.hypot(wx-m.x,wy-m.y)>80) continue;
-        M[j][i]='.'; puff(wx,wy,6,'#8a5a2b',1.2);
+        if(!breakLocalWall(i,j))continue; puff(wx,wy,6,'#8a5a2b',1.2);
         if(networkMode && m.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i,j});
       }
       if(networkMode && m.o?.netRemote) return;
@@ -1971,8 +2047,152 @@ function gadget(p){
         const r = 6 + p.chg*26; if(isUIorMUI){ g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=.85; circ(ca*28,-7+sa*28,7+p.chg*13+Math.sin(t*24)*2,mui?'#fff':'#93c5fd'); circ(ca*28,-7+sa*28,4+p.chg*7,'#fff'); g.restore(); } else { circ(ca*32, sa*32, r+Math.sin(t*40)*2, fm.aura||'#5cf'); circ(ca*32, sa*32, r*.55, '#fff'); }
       }
     }
-    function drawP(p){
+    function paintRamuHands(skin,fire,base,ca,sa,px,py){
+      // Keep this tiny aim-dependent layer live instead of baking it into the 30 Hz body sprite.
+      for(const side of[-1,1]){
+        const hx=ca*23+px*side*10,hy=sa*23+py*side*10-3;
+        g.fillStyle=skin;g.strokeStyle='#151923';g.lineWidth=2;g.beginPath();g.arc(hx,hy,6.1,0,Math.PI*2);g.fill();g.stroke();
+        g.strokeStyle=fire?'#ffb76b':base?'#80604b':'#b6f9ff';g.lineWidth=1;g.beginPath();g.moveTo(hx-2,hy-1);g.lineTo(hx+2,hy-1);g.moveTo(hx-1,hy+1);g.lineTo(hx+2,hy+1);g.stroke();
+      }
+    }
+    function drawRamuHandsOverlay(p){
+      const mode=p.ramuMode||'ice',fire=mode==='fire',base=mode==='base',a=p.a||0,ca=Math.cos(a),sa=Math.sin(a),px=-sa,py=ca;
+      const skin=base?'#c99772':fire?'#d9875f':'#c99a78';
+      g.save();g.scale(1,1+Math.sin((p.walk||0))*.035);paintRamuHands(skin,fire,base,ca,sa,px,py);g.restore();
+    }
+    function drawRamu(p,time=performance.now()/1000,includeHands=true){
+      const mode=p.ramuMode||'ice',fire=mode==='fire',base=mode==='base',a=p.a||0,ca=Math.cos(a),sa=Math.sin(a),px=-sa,py=ca;
+      const skin=base?'#c99772':fire?'#d9875f':'#c99a78',ink=base?'#332925':fire?'#ff8a31':'#55e8ff';
+      const dark='#151923',pants=fire?'#382323':'#302a2b';
+      // Mode energy hugs the body: flames lick upward in Fire, while Ice grows sharp
+      // frozen facets and frost lines directly over the skin. No orbiting ring.
+      if(fire){
+        g.save();g.globalCompositeOperation='lighter';
+        const glow=g.createRadialGradient(0,-5,3,0,-5,35);glow.addColorStop(0,'rgba(255,118,32,.38)');glow.addColorStop(.62,'rgba(255,60,18,.18)');glow.addColorStop(1,'rgba(255,50,16,0)');
+        g.fillStyle=glow;g.fillRect(-38,-46,76,88);
+        const colors=['#fff4a6','#ffd04b','#ff7a1c','#f43b16'];
+        for(let i=0;i<22;i++){
+          const phase=time*(5.5+i%4)+i*2.17,side=i%2?-1:1,x=side*(14+(i%4)*2)+Math.sin(phase)*2.2,y=-30+((i*13+Math.floor(time*18))%59),h=9+(i%4)*3.5,w=2.5+i%3;
+          g.globalAlpha=.42+.38*(.5+.5*Math.sin(phase));g.fillStyle=colors[i%colors.length];g.beginPath();g.moveTo(x-w,y+h*.65);g.quadraticCurveTo(x-w*1.7,y+1,x+Math.sin(phase)*2,y-h);g.quadraticCurveTo(x+w*1.7,y-2,x+w,y+h*.65);g.closePath();g.fill();
+        }
+        g.restore();
+      }else if(!base){
+        g.save();g.globalCompositeOperation='lighter';g.globalAlpha=.17;g.fillStyle='#59e8ff';g.beginPath();g.roundRect(-18,-31,36,62,14);g.fill();
+        // Frost wisps rise vertically from the shoulders rather than circling the sprite.
+        for(let i=0;i<8;i++){const side=i%2?-1:1,phase=time*2.6+i*1.9,x=side*(16+(i%3)*3),y=11-((time*20+i*13)%45);g.globalAlpha=.3+.32*(.5+.5*Math.sin(phase));g.strokeStyle=i%3===0?'#ffffff':'#8ff3ff';g.lineWidth=1.4;g.beginPath();g.moveTo(x,y+5);g.lineTo(x+side*2,y);g.lineTo(x-side,y-5);g.stroke();}
+        g.restore();
+      }
+      g.save();g.scale(1,1+Math.sin((p.walk||0))*.035);
+      // Saiyan-like compact fighter proportions: rounded torso, short sturdy legs,
+      // clean bald head and two clearly visible aiming hands.
+      g.fillStyle=pants;g.strokeStyle=dark;g.lineWidth=2.8;
+      g.beginPath();g.roundRect(-13,7,11,16,4);g.roundRect(2,7,11,16,4);g.fill();g.stroke();
+      g.fillStyle='#191c22';g.beginPath();g.roundRect(-15,20,13,7,3);g.roundRect(2,20,13,7,3);g.fill();g.stroke();
+      g.fillStyle=fire?'#ff7a21':base?'#68503e':'#60eaff';g.beginPath();g.roundRect(-14,5,28,5,2);g.fill();
+      g.fillStyle=base?'#8f6245':fire?'#442923':'#314351';g.fillRect(-15,10,30,3);
+      // Keep the two circular hands detached from the torso; Ramu has no visible arms.
+      g.lineCap='round';g.lineJoin='round';
+      // Bare chest with broad, stylized pectorals and visible core definition.
+      const chest=g.createLinearGradient(-15,-11,14,14);chest.addColorStop(0,fire?'#ffb277':skin);chest.addColorStop(.55,skin);chest.addColorStop(1,fire?'#b95d42':base?'#8b6348':'#6aa5b1');
+      g.fillStyle=chest;g.strokeStyle=dark;g.lineWidth=2.8;g.beginPath();g.moveTo(-13,-12);g.quadraticCurveTo(-8,-18,0,-16);g.quadraticCurveTo(8,-18,13,-12);g.lineTo(16,4);g.quadraticCurveTo(12,14,0,15);g.quadraticCurveTo(-12,14,-16,4);g.closePath();g.fill();g.stroke();
+      g.strokeStyle=fire?'rgba(119,38,22,.65)':'rgba(67,45,39,.72)';g.lineWidth=1.2;g.beginPath();g.moveTo(0,-11);g.lineTo(0,10);g.moveTo(-11,-5);g.quadraticCurveTo(-6,-9,0,-5);g.quadraticCurveTo(6,-9,11,-5);g.moveTo(-8,3);g.quadraticCurveTo(0,6,8,3);g.stroke();
+      // Baldur-inspired knotwork tattoos, lit cyan in Ice and neon orange in Fire.
+      {g.save();g.globalCompositeOperation=base?'source-over':'lighter';g.strokeStyle=ink;g.shadowColor=fire?'#ff5a12':'#28dfff';g.shadowBlur=base?0:fire?7:6;g.lineWidth=1.65;g.lineCap='round';
+        g.beginPath();g.moveTo(-11,-5);g.bezierCurveTo(-8,-12,-3,-11,0,-6);g.bezierCurveTo(3,-1,8,-2,10,-8);g.moveTo(11,-5);g.bezierCurveTo(8,2,3,2,0,-3);g.bezierCurveTo(-3,2,-7,4,-10,1);g.arc(-5,-5,2.2,0,Math.PI*2);g.arc(5,-5,2.2,0,Math.PI*2);g.moveTo(-8,7);g.quadraticCurveTo(-4,4,0,8);g.quadraticCurveTo(4,4,8,7);g.moveTo(-2,-13);g.lineTo(0,-8);g.lineTo(2,-13);g.stroke();
+        for(const side of[-1,1]){g.beginPath();g.arc(side*12,-7,2.5,0,Math.PI*2);g.moveTo(side*12-2,-7);g.quadraticCurveTo(side*12,-10,side*12+2,-7);g.quadraticCurveTo(side*12,-4,side*12-2,-7);g.stroke();}g.restore();}
+      // Simple warrior belt and short leather wrap—no oversized beard or forehead.
+      g.fillStyle=base?'#583d32':fire?'#4f2b24':'#344752';g.beginPath();g.moveTo(-13,7);g.lineTo(0,10);g.lineTo(13,7);g.lineTo(10,14);g.lineTo(-10,14);g.closePath();g.fill();
+      g.fillStyle=fire?'#ff9b33':base?'#a67a45':'#a5f6ff';g.strokeStyle=dark;g.lineWidth=1;g.beginPath();g.roundRect(-2,8,4,5,1);g.fill();g.stroke();
+      // Bald head at Saiyan scale. Eyes use the same bright white shape,
+      // with mode-colored irises; Fire adds tiny flames at the eyes themselves.
+      g.fillStyle=skin;g.strokeStyle=dark;g.lineWidth=2.8;g.beginPath();g.arc(0,-18,12.5,0,Math.PI*2);g.fill();g.stroke();
+      g.strokeStyle=base?'#76533b':fire?'#6b3326':'#714b3a';g.lineWidth=1.1;g.beginPath();g.arc(0,-18,10.4,Math.PI*1.15,Math.PI*1.88);g.stroke();
+      g.strokeStyle=dark;g.lineWidth=2.2;g.lineCap='round';g.beginPath();g.moveTo(-9,-21);g.lineTo(-3,-22);g.moveTo(3,-22);g.lineTo(9,-21);g.stroke();
+      for(const side of[-1,1]){const ex=side*5.2,ey=-17.5;g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=1.6;g.beginPath();g.ellipse(ex,ey,4.2,3.4,0,0,Math.PI*2);g.fill();g.stroke();g.fillStyle=fire?'#ff8a24':base?'#49342a':'#49eaff';g.beginPath();g.arc(ex+ca*1.2,ey+sa*1.2,2,0,Math.PI*2);g.fill();g.fillStyle='#111';g.beginPath();g.arc(ex+ca*1.2,ey+sa*1.2,1,0,Math.PI*2);g.fill();
+        if(!base){g.save();g.globalCompositeOperation='lighter';g.globalAlpha=.9;g.shadowColor=fire?'#ff6a16':'#39eaff';g.shadowBlur=8;g.strokeStyle=fire?'#ff9a2d':'#b8fbff';g.lineWidth=1.2;g.beginPath();g.arc(ex,ey,4.6,Math.PI*1.12,Math.PI*1.9);g.stroke();g.restore();}
+        if(fire){g.save();g.globalCompositeOperation='lighter';g.fillStyle='#ff9a24';g.beginPath();g.moveTo(ex-2,ey-3);g.quadraticCurveTo(ex-4,ey-8,ex,ey-10-Math.sin(time*18+side)*2);g.quadraticCurveTo(ex+4,ey-7,ex+2,ey-3);g.closePath();g.fill();g.restore();}}
+      // Small centered black chin goatee, matching the reference; no mouth or mustache.
+      g.fillStyle='#171311';g.strokeStyle=dark;g.lineWidth=.8;g.beginPath();
+      g.moveTo(-3.6,-8.2);g.quadraticCurveTo(-2.8,-6.2,-1.1,-5.7);g.lineTo(0,-2.7);g.lineTo(1.1,-5.7);g.quadraticCurveTo(2.8,-6.2,3.6,-8.2);
+      g.quadraticCurveTo(1.8,-7.1,0,-7.45);g.quadraticCurveTo(-1.8,-7.1,-3.6,-8.2);g.closePath();g.fill();g.stroke();
+      // Aim-dependent hands are omitted from the cached body and drawn at the live aim angle.
+      if(includeHands)paintRamuHands(skin,fire,base,ca,sa,px,py);
+      if(!base&&!fire){
+        // Faceted ice grows from the shoulders and forearms; angular shards are fixed to the body.
+        const crystal=(x,y,size,flip=1)=>{g.save();g.translate(x,y);g.scale(flip,1);const grad=g.createLinearGradient(-size*.35,-size,size*.35,size);grad.addColorStop(0,'rgba(255,255,255,.9)');grad.addColorStop(.35,'rgba(111,239,255,.82)');grad.addColorStop(1,'rgba(16,135,207,.65)');g.fillStyle=grad;g.strokeStyle='#d7fbff';g.lineWidth=1.1;g.beginPath();g.moveTo(0,-size);g.lineTo(size*.48,-size*.12);g.lineTo(size*.22,size);g.lineTo(-size*.18,size*.55);g.lineTo(-size*.38,-size*.16);g.closePath();g.fill();g.stroke();g.globalAlpha=.8;g.strokeStyle='#fff';g.beginPath();g.moveTo(0,-size*.78);g.lineTo(-size*.04,size*.62);g.stroke();g.restore();};
+        crystal(-13,-11,8,-1);crystal(13,-11,8,1);crystal(ca*19+px*9,sa*19+py*9-4,7,-1);crystal(ca*19-px*9,sa*19-py*9-4,7,1);
+        g.save();g.globalCompositeOperation='lighter';g.globalAlpha=.8;g.strokeStyle='#c9fbff';g.lineWidth=1.2;g.beginPath();g.moveTo(-9,-7);g.lineTo(-5,-2);g.lineTo(-7,3);g.moveTo(8,-8);g.lineTo(4,-3);g.lineTo(7,2);g.moveTo(-4,5);g.lineTo(0,2);g.lineTo(4,5);g.stroke();g.restore();
+      }
+      if(fire){
+        // Fire coats the chest, arms and tattoos in neon orange, with flame tongues
+        // attached to the body instead of a rotating aura.
+        g.save();g.globalCompositeOperation='lighter';g.globalAlpha=.25;g.fillStyle='#ff681e';g.beginPath();g.roundRect(-15,-12,30,27,10);g.fill();g.globalAlpha=.82;
+        for(let i=0;i<12;i++){const side=i%2?-1:1,x=side*(10+(i%3)*3),y=8-((time*33+i*9)%29),h=8+(i%4)*2.5,w=2.2;g.fillStyle=i%3?'#ff8a24':'#fff0a1';g.beginPath();g.moveTo(x-w,y+4);g.quadraticCurveTo(x-w*1.6,y,x,y-h);g.quadraticCurveTo(x+w*1.7,y,x+w,y+4);g.closePath();g.fill();}
+        g.restore();
+      }
+      // Transformation is an engulfing vertical surge, not an orbit: fire rises
+      // through the body when changing modes; icy facets grow upward on the spawn.
+      if((p.ramuTransform||0)>0&&!base){
+        const toFire=p.ramuTransformTarget==='fire',duration=toFire?1.55:1.05,progress=Math.max(0,Math.min(1,1-p.ramuTransform/duration));g.save();g.globalCompositeOperation='lighter';
+        if(toFire){
+          for(let i=0;i<12;i++){const x=-17+i*3.1,y=17-progress*54+Math.sin(time*22+i*1.9)*3,h=10+progress*13,w=2.4+(i%3);g.globalAlpha=(.35+.55*progress)*(1-(i%4)*.08);g.fillStyle=i%3?'#ff7421':'#fff3a1';g.beginPath();g.moveTo(x-w,y+h*.45);g.quadraticCurveTo(x-w*1.4,y,x+Math.sin(time*13+i)*2,y-h);g.quadraticCurveTo(x+w*1.8,y-2,x+w,y+h*.45);g.closePath();g.fill();}
+          if(progress<.18){g.globalAlpha=(.18-progress)*2.4;g.fillStyle='#fff';g.beginPath();g.roundRect(-17,-30,34,55,12);g.fill();}
+        }else{
+          for(let i=0;i<9;i++){const x=-16+i*4,y=18-progress*46+Math.sin(time*17+i*2)*2,h=8+progress*12,w=2.5+(i%2);g.globalAlpha=.25+.58*progress;g.fillStyle=i%3?'#55eaff':'#efffff';g.beginPath();g.moveTo(x-w,y+h);g.lineTo(x+Math.sin(time*11+i)*2,y-h);g.lineTo(x+w*1.5,y+h*.35);g.closePath();g.fill();}
+          if(progress<.2){g.globalAlpha=(.2-progress)*3;g.fillStyle='#efffff';g.beginPath();g.roundRect(-17,-30,34,55,12);g.fill();}
+        }
+        g.restore();
+      }
+      g.restore();
+      if(!base&&!fire){
+        // Loose flakes drift vertically past the shoulders; no orbit or spinning ring.
+        g.save();g.globalCompositeOperation='lighter';
+        for(let i=0;i<9;i++){
+          const side=i%2?-1:1,phase=time*(.75+(i%4)*.12)+i*1.73,x=side*(22+(i%4)*3.4)+Math.sin(phase)*3.2,y=24-((time*(11+(i%3)*2)+i*11)%56),size=2.1+(i%3)*.65;
+          g.save();g.translate(x,y);g.rotate(time*.22+i*.77);g.globalAlpha=.72+.18*(.5+.5*Math.sin(phase*2));g.strokeStyle='#edfdff';g.lineWidth=1.2;g.lineCap='round';g.shadowColor='#83edff';g.shadowBlur=4;
+          for(let axis=0;axis<3;axis++){const a=axis*Math.PI/3,c=Math.cos(a),s=Math.sin(a);g.beginPath();g.moveTo(-c*size,-s*size);g.lineTo(c*size,s*size);g.moveTo(c*size*.58,s*size*.58);g.lineTo(c*size*.25-s*size*.32,s*size*.25+c*size*.32);g.moveTo(c*size*.58,s*size*.58);g.lineTo(c*size*.25+s*size*.32,s*size*.25-c*size*.32);g.stroke();}
+          g.shadowBlur=0;g.restore();
+        }
+        g.restore();
+      }
+    }
+    const RAMU_SPRITE_WORLD_SIZE=112, RAMU_SPRITE_HALF=56, RAMU_SPRITE_FRAME=1/30;
+    function drawRamuCached(p,time){
+      const scale=Math.max(1,Math.min(2,DPR*z)),pixels=Math.ceil(RAMU_SPRITE_WORLD_SIZE*scale);
+      let cache=p.ramuSpriteCache;
+      if(!cache)cache=p.ramuSpriteCache={canvas:document.createElement('canvas'),lastTime:-Infinity,scale:0,mode:null,transforming:false};
+      const mode=p.ramuMode||'ice',transforming=(p.ramuTransform||0)>0;
+      if(cache.canvas.width!==pixels||cache.canvas.height!==pixels){cache.canvas.width=pixels;cache.canvas.height=pixels;cache.scale=0;}
+      if(cache.scale!==scale||cache.mode!==mode||cache.transforming!==transforming||time-cache.lastTime>=RAMU_SPRITE_FRAME){
+        const ctx=cache.canvas.getContext('2d');
+        ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,pixels,pixels);
+        ctx.setTransform(pixels/RAMU_SPRITE_WORLD_SIZE,0,0,pixels/RAMU_SPRITE_WORLD_SIZE,0,0);
+        ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.shadowBlur=0;ctx.setLineDash([]);
+        const main=g;g=ctx;
+        try{g.translate(RAMU_SPRITE_HALF,RAMU_SPRITE_HALF);drawRamu(p,time,false);}finally{g=main;}
+        cache.lastTime=time;cache.scale=scale;cache.mode=mode;cache.transforming=transforming;
+      }
+      g.drawImage(cache.canvas,-RAMU_SPRITE_HALF,-RAMU_SPRITE_HALF,RAMU_SPRITE_WORLD_SIZE,RAMU_SPRITE_WORLD_SIZE);
+    }
+    function drawRamuShield(){
+      // A stationary translucent ice cube around the fighter—not an orbiting ring.
+      const pulse=.88+.12*Math.sin(performance.now()*.006);
+      const face=(points,color)=>{g.beginPath();g.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)g.lineTo(points[i][0],points[i][1]);g.closePath();g.fillStyle=color;g.fill();};
+      g.save();g.globalCompositeOperation='source-over';g.globalAlpha=.82*pulse;
+      face([[-24,-23],[0,-37],[24,-23],[0,-9]],'rgba(210,252,255,.34)');
+      face([[-24,-23],[0,-9],[0,27],[-24,12]],'rgba(37,147,193,.30)');
+      face([[24,-23],[0,-9],[0,27],[24,12]],'rgba(91,210,244,.24)');
+      face([[-19,-20],[0,-31],[19,-20],[0,-9]],'rgba(242,255,255,.23)');
+      g.globalAlpha=.96;g.strokeStyle='#dbfbff';g.lineWidth=2.4;g.shadowColor='#54ddff';g.shadowBlur=10;
+      g.beginPath();g.moveTo(-24,-23);g.lineTo(0,-37);g.lineTo(24,-23);g.lineTo(24,12);g.lineTo(0,27);g.lineTo(-24,12);g.closePath();g.moveTo(-24,-23);g.lineTo(0,-9);g.lineTo(24,-23);g.moveTo(0,-9);g.lineTo(0,27);g.stroke();g.shadowBlur=0;
+      g.globalAlpha=.9;g.strokeStyle='#fff';g.lineWidth=1.25;g.beginPath();g.moveTo(-15,-4);g.lineTo(-8,2);g.lineTo(-11,9);g.moveTo(14,-1);g.lineTo(8,4);g.lineTo(11,10);g.moveTo(-4,-29);g.lineTo(0,-22);g.lineTo(4,-28);g.stroke();
+      g.globalCompositeOperation='lighter';g.globalAlpha=.72;g.fillStyle='#f0ffff';
+      for(const [x,y] of [[-24,-23],[0,-37],[24,-23],[-24,12],[24,12],[0,27]]){g.beginPath();g.moveTo(x,y-4);g.lineTo(x+2,y);g.lineTo(x,y+4);g.lineTo(x-2,y);g.closePath();g.fill();}
+      g.restore();
+    }
+    function drawP(p,frameTime=performance.now()/1000){
       const v = p.preview || p.human || gameMode=='showdown' || gameMode==='duo' || sees(0,p); if(!v) return;
+      const ramuLifting=p.b==='ramu'&&p.ramuDiveTimer>0&&p.ramuDiveLift>0;if(p.b==='ramu'&&p.ramuDiveTimer>0&&!ramuLifting)return;
       if(p.afterimages){
         for(const ai of p.afterimages){
           g.save(); g.translate(ai.x, ai.y); g.globalAlpha = (ai.t / ai.maxT) * 0.45;
@@ -1980,7 +2200,8 @@ function gadget(p){
           g.restore();
         }
       }
-      g.save(); g.translate(p.x, p.y-(p.h||0));
+      const waterHopLift=p.ramuWaterHop>0?Math.sin(Math.max(0,Math.min(1,1-p.ramuWaterHop/.42))*Math.PI)*28:0;
+      g.save(); g.translate(p.x, p.y-(p.h||0)-waterHopLift);
       if(!p.alive){ const u=p.dt/.9; if(u>1){ g.restore(); return; } g.translate(0,-Math.sin(u*Math.PI)*34); g.rotate(u*14); g.scale(1-u*.6, 1-u*.6); g.globalAlpha=1-u; }
       else { g.fillStyle='#0004'; g.beginPath(); g.ellipse(0,14,18,8,0,0,6.283); g.fill(); }
       g.save();
@@ -2003,8 +2224,10 @@ function gadget(p){
         g.strokeStyle=aura; g.lineWidth=4+Math.min(7,p.tf*3); g.shadowColor=aura; g.shadowBlur=22;
         g.beginPath(); g.ellipse(0,2,27+Math.sin(Date.now()*.012)*3,35+Math.sin(Date.now()*.015)*5,0,0,Math.PI*2); g.stroke(); g.restore();
       }
+      if(ramuLifting){const lift=Math.max(0,Math.min(1,1-p.ramuDiveLift/.22));g.globalAlpha=Math.max(0,1-lift);g.translate(0,-lift*150);g.scale(1-lift*.98,1-lift*.98);}
       if(p.b == 'shachi') drawSh(p);
       else if(p.b == 'saiyan') drawSa(p);
+      else if(p.b === 'ramu'){if(p.preview)drawRamu(p,frameTime);else{drawRamuCached(p,frameTime);drawRamuHandsOverlay(p);}if(p.ramuShieldTimer>0)drawRamuShield();}
       else if(p.b === 'deges') {
         const bob=1+Math.sin(p.walk)*.045; g.scale(1,bob);
         // Broad Saiyan fighter build in the reference outfit: plain black hooded puffer, grey joggers, black mask.
@@ -2075,6 +2298,8 @@ function gadget(p){
         g.save(); g.translate(ca*14, sa*14+4); g.rotate(p.a); g.fillStyle='#ff8a1c'; g.strokeStyle='#000'; g.lineWidth=2; g.beginPath(); g.moveTo(0,-4); g.lineTo(9,0); g.lineTo(0,4); g.closePath(); g.fill(); g.stroke(); g.restore();
         g.save(); g.rotate(p.a); const rc=Math.max(0,p.rec)*50; g.fillStyle='#6b3f1d'; g.strokeStyle='#000'; g.lineWidth=2.5; g.fillRect(2-rc,4,16,9); g.strokeRect(2-rc,4,16,9); g.fillStyle='#555'; g.fillRect(16-rc,5,24,7); g.strokeRect(16-rc,5,24,7); g.fillStyle='#999'; g.fillRect(36-rc,3,6,11); g.restore();
       }
+      if(p.frozenTimer>0&&p.alive){g.save();g.globalAlpha=.55+.2*Math.sin(performance.now()*.018);g.strokeStyle='#9bf3ff';g.lineWidth=2;g.beginPath();g.ellipse(0,1,24,31,0,0,Math.PI*2);g.stroke();for(let i=0;i<4;i++){const a=performance.now()*.001+i*Math.PI/2;g.fillStyle='#e7fdff';g.beginPath();g.moveTo(Math.cos(a)*23,Math.sin(a)*30);g.lineTo(Math.cos(a)*18-2,Math.sin(a)*25);g.lineTo(Math.cos(a)*18+2,Math.sin(a)*25);g.closePath();g.fill();}g.restore();}
+      if(p.burnTimer>0&&p.alive){g.save();g.globalCompositeOperation='lighter';for(let i=0;i<9;i++){const a=performance.now()*.006+i*2.4,r=13+(i%3)*4,x=Math.cos(a)*r,y=7+Math.sin(a*1.2)*13;g.globalAlpha=.45+.4*(.5+.5*Math.sin(a));g.fillStyle=i%2?'#ff5a1f':'#ffd166';g.beginPath();g.moveTo(x-2,y+4);g.quadraticCurveTo(x-4,y-1,x+Math.sin(a)*2,y-8);g.quadraticCurveTo(x+5,y-1,x+2,y+4);g.closePath();g.fill();}g.restore();}
       // Make a charged Kamehameha visible on every brawler, including remotely controlled bots.
       // Saiyan forms already draw their own charge aura in drawSa().
       if(p.k?.sy && p.chg>0 && p.b!=='saiyan' && p.alive){
@@ -2173,6 +2398,12 @@ function gadget(p){
             const size=f.s*(.55+.45*u);g.save();g.translate(f.x,f.y);g.rotate(Math.atan2(f.vy,f.vx)+Math.PI/2);g.globalAlpha=u;
             g.fillStyle=f.c;g.beginPath();g.moveTo(0,-size*1.6);g.quadraticCurveTo(size*.95,-size*.2,size*.68,size*.65);g.quadraticCurveTo(0,size*1.25,-size*.68,size*.65);g.quadraticCurveTo(-size*.95,-size*.2,0,-size*1.6);g.fill();g.restore();
           }
+          else if(f.k=='ramu-fire-tail'){
+            const life=Math.max(0,u),length=(7+f.s*1.25)*(.55+.45*life),width=Math.max(1,f.s*.34*life);
+            g.save();g.globalCompositeOperation='lighter';g.translate(f.x,f.y);g.rotate(f.a||0);g.globalAlpha=life*.86;g.fillStyle=f.c||'#ff7a22';
+            g.beginPath();g.moveTo(-length,-width*.32);g.quadraticCurveTo(-length*.2,-width*1.45,length*.58,-width*.34);g.quadraticCurveTo(length*1.05,0,length*.58,width*.34);g.quadraticCurveTo(-length*.2,width*1.45,-length,width*.32);g.closePath();g.fill();
+            g.globalAlpha=life*.58;g.fillStyle='#fff0a8';g.beginPath();g.moveTo(-length*.42,-width*.16);g.quadraticCurveTo(length*.08,-width*.46,length*.7,0);g.quadraticCurveTo(length*.08,width*.46,-length*.42,width*.16);g.closePath();g.fill();g.restore();
+          }
           else if(f.k=='bubble'){
             const r=f.r*(.78+(1-u)*.6), wobble=Math.sin(performance.now()*.008+(f.phase||0))*1.2, green=!!f.c;
             g.save();g.globalAlpha=u*.82;g.strokeStyle=f.c||'#f6d98b';g.lineWidth=1.5;g.fillStyle=green?'rgba(210,255,180,.24)':'rgba(255,239,184,.22)';
@@ -2193,7 +2424,7 @@ function gadget(p){
           }
           else { g.globalAlpha=Math.min(1,u*2); tx(f.tx,f.x,f.y,20,f.c||'#ffe14d'); g.globalAlpha=1; }
         }
-        for(const p of [...P].sort((a,b)=>a.y-b.y)) drawP(p);
+        for(const p of [...P].sort((a,b)=>a.y-b.y)) drawP(p,now);
         for(const k of KM){
           const u=k.t/k.m, L=k.len*Math.min(1,(1-u)*7), w=k.w*(u>.15?1:u/.15);
           g.save(); g.translate(k.x,k.y); g.rotate(k.a); g.globalAlpha=.3; g.fillStyle=k.col; g.fillRect(0,-w,L,w*2);
@@ -2240,11 +2471,9 @@ function gadget(p){
             g.shadowBlur = 0; g.restore();
           }
         }
-        for(let j=0;j<MH;j++)for(let i=0;i<MW;i++)if(M[j][i]=='b'){
-          const x=i*T+T/2, y=j*T+T/2, sh = P.some(p=>p.alive&&Math.floor(p.x/T)==i&&Math.floor(p.y/T)==j)?Math.sin(now*14)*2:0;
-          g.globalAlpha=.93; for(const[ox,oy,r] of[[-12,6,15],[12,6,15],[0,-8,17],[-2,10,14]]) circ(x+ox+sh, y+oy, r, '#15803d', 0);
-          g.lineWidth=3; g.strokeStyle='#166534'; g.beginPath(); g.arc(x+sh, y-8, 17, 3.4, 6); g.stroke(); g.globalAlpha=1;
-        }
+        drawBushOverlay(now);
+        // The continuous flame must sit above cover foliage so its travel to the target stays visible.
+        for(const p of P)if(p.b==='ramu'&&(p.ramuFireActive||(p.ramuFireLength||0)>0))drawRamuFlame(p,now);
         for(const p of P) drawUI(p);
         g.setTransform(DPR, 0, 0, DPR, 0, 0);
         if(touch && scr == 'game'){
@@ -2309,10 +2538,11 @@ function gadget(p){
         s.style.background = me.sc>=1 ? 'linear-gradient(#ffe45c,#ff9a00)' : 'linear-gradient(to top,#d9a900 '+r+'%,#444 '+r+'%)';
         s.textContent = me.sc>=1 ? 'SUPER' : r+'%';
         s.setAttribute('aria-label', me.sc>=1 ? 'Super ready' : 'Super charge '+r+' percent');
-        const gadgetButton = $('gad');
-        gadgetButton.textContent = me.gcd>0 ? String(Math.ceil(me.gcd)) : '⚡';
-        gadgetButton.setAttribute('aria-label', me.gcd>0 ? 'Gadget cooldown '+Math.ceil(me.gcd)+' seconds' : 'Gadget ready');
-        gadgetButton.style.opacity = me.gcd>0 ? .4 : 1;
+        const gadgetButton = $('gad'), diveInProgress=me.b==='ramu'&&me.ramuMode==='fire'&&me.ramuDiveTimer>0;
+        gadgetButton.textContent = diveInProgress ? 'DIVE' : me.gcd>0 ? String(Math.ceil(me.gcd)) : '⚡';
+        gadgetButton.setAttribute('aria-label', diveInProgress ? 'Flame Dive in progress; cooldown starts on landing' : me.gcd>0 ? 'Gadget cooldown '+Math.ceil(me.gcd)+' seconds' : 'Gadget ready');
+        gadgetButton.disabled = diveInProgress || me.gcd>0;
+        gadgetButton.style.opacity = diveInProgress || me.gcd>0 ? .4 : 1;
         if(G.ph=='count'){
           const n = Math.ceil(G.t-.2);
           if(G.t>2.9) tx(gameMode==='showdown'?'SOLO SHOWDOWN':gameMode==='duo'?'DUO SHOWDOWN':'ROUND '+G.r, W/2, H/2, Math.min(90,W/8), '#ffd21f');
@@ -2426,13 +2656,15 @@ function gadget(p){
           $('roomMenuStart').style.display='none';
         }
       },
+      getNetworkWorldState(){return localWorldState();},
+      applyRemoteWorldState(world){applyLocalWorldState(world);},
       getLocalState(){
         if(!me) return null;
         const p=me;
-        return {id:p.netId,t:p.t,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my,shieldTimer:p.shieldTimer||0,lp:p.lp?{...p.lp}:null,h:p.h||0};
+        return {id:p.netId,brawler:p.b,t:p.t,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,ramuMode:p.ramuMode,ramuTransform:p.ramuTransform,ramuTransformTarget:p.ramuTransformTarget,fireEnergy:p.fireEnergy,fireLock:p.fireLock,ramuDiveTimer:p.ramuDiveTimer,ramuDiveLift:p.ramuDiveLift,ramuWaterHop:p.ramuWaterHop||0,ramuFireActive:p.ramuFireActive,ramuIceBurstRemaining:p.ramuIceBurstRemaining,ramuIceBurstTimer:p.ramuIceBurstTimer,ramuShieldTimer:p.ramuShieldTimer,smokeTimer:p.smokeTimer,freezeMeter:p.freezeMeter,frozenTimer:p.frozenTimer,burnTimer:p.burnTimer,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my,shieldTimer:p.shieldTimer||0,lp:p.lp?{...p.lp}:null,h:p.h||0};
       },
       getNetworkStates(){
-        const pack=p=>({id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my,shieldTimer:p.shieldTimer||0,lp:p.lp?{...p.lp}:null,h:p.h||0});
+        const pack=p=>({id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,ramuMode:p.ramuMode,ramuTransform:p.ramuTransform,ramuTransformTarget:p.ramuTransformTarget,fireEnergy:p.fireEnergy,fireLock:p.fireLock,ramuDiveTimer:p.ramuDiveTimer,ramuDiveLift:p.ramuDiveLift,ramuWaterHop:p.ramuWaterHop||0,ramuFireActive:p.ramuFireActive,ramuIceBurstRemaining:p.ramuIceBurstRemaining,ramuIceBurstTimer:p.ramuIceBurstTimer,ramuShieldTimer:p.ramuShieldTimer,smokeTimer:p.smokeTimer,freezeMeter:p.freezeMeter,frozenTimer:p.frozenTimer,burnTimer:p.burnTimer,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my,shieldTimer:p.shieldTimer||0,lp:p.lp?{...p.lp}:null,h:p.h||0});
         if(!me) return [];
         const states=[pack(me)];
         if(isNetworkHost) for(const p of P) if(p!==me && p.isBot) states.push(pack(p));
@@ -2449,12 +2681,23 @@ function gadget(p){
         const maxSpeed=900, speed=Math.hypot(p.netVx,p.netVy);
         if(speed>maxSpeed){p.netVx=p.netVx/speed*maxSpeed;p.netVy=p.netVy/speed*maxSpeed;}
         p.netTarget = {x:nx,y:ny,a:state.a ?? p.a}; p.netTargetAt=now;
-        for(const k of ['hp','mh','alive','sc','am','cd','gcd','kcd','tf','tfn','form','chg','holdT','hw','muiCharging','burst','bt','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my','shieldTimer','lp','h']) if(state[k]!==undefined) p[k]=state[k];
+        for(const k of ['hp','mh','alive','sc','am','cd','gcd','kcd','tf','tfn','form','ramuMode','ramuTransform','ramuTransformTarget','fireEnergy','fireLock','ramuDiveTimer','ramuDiveLift','ramuWaterHop','ramuFireActive','ramuShieldTimer','smokeTimer','freezeMeter','frozenTimer','burnTimer','chg','holdT','hw','muiCharging','burst','bt','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my','shieldTimer','lp','h']) if(state[k]!==undefined) p[k]=state[k];
         if(p.b==='saiyan' && Number.isFinite(state.form)) p.k=Object.assign({},BR.saiyan,FM[state.form]||{});
         p.netLast=now;
       },
       applyRemoteAction(msg){
-        if(!msg || !msg.playerId) return;
+        if(!msg)return;
+        if(msg.action==='wall-state'){
+          const i=Number(msg.i??msg.col),j=Number(msg.j??msg.row);
+          if(Number.isInteger(i)&&Number.isInteger(j)&&i>0&&j>0&&i<MW-1&&j<MH-1)setLocalWallState(i,j,msg);
+          return;
+        }
+        if(msg.action==='wall-break'){
+          const i=Number(msg.i??msg.col),j=Number(msg.j??msg.row);
+          if(Number.isInteger(i)&&Number.isInteger(j)&&breakLocalWall(i,j))puff(i*T+T/2,j*T+T/2,8,'#8a5a2b',1.2);
+          return;
+        }
+        if(!msg.playerId)return;
         const p=P.find(q=>q.netId===msg.playerId);
         if(!p || p===me) return;
         if(msg.action==='damage'){
@@ -2464,19 +2707,22 @@ function gadget(p){
           // A client can request damage to another human, but only that human's
           // own client applies it. The host alone applies damage to authoritative bots.
           if(target && target===me && me.alive){
-            dmg(me,{d:amount,o:p,s:0,vx:Number(msg.vx)||0,vy:Number(msg.vy)||0});
+            dmg(me,{d:amount,o:p,s:0,vx:Number(msg.vx)||0,vy:Number(msg.vy)||0,knockback:Number(msg.knockback)||0,iceBall:!!msg.iceBall,fireBall:!!msg.fireBall,fireStream:!!msg.fireStream});
           } else if(isNetworkHost && target && target.isBot && target!==me && target.alive){
-            dmg(target,{d:amount,o:p,s:0,vx:Number(msg.vx)||0,vy:Number(msg.vy)||0});
+            dmg(target,{d:amount,o:p,s:0,vx:Number(msg.vx)||0,vy:Number(msg.vy)||0,knockback:Number(msg.knockback)||0,iceBall:!!msg.iceBall,fireBall:!!msg.fireBall,fireStream:!!msg.fireStream});
           }
           return;
         }
-        if(msg.action==='wall-break'){
-          const i=Number(msg.i),j=Number(msg.j);
-          if(Number.isInteger(i)&&Number.isInteger(j)&&i>0&&j>0&&i<MW-1&&j<MH-1&&M[j]?.[i]==='#'){
-            M[j][i]='.'; puff(i*T+T/2,j*T+T/2,8,'#8a5a2b',1.2);
+        if(msg.action==='ramu-impact'){
+          if(Number.isFinite(msg.gadgetCooldownMs))p.gcd=Math.max(0,Number(msg.gadgetCooldownMs)/1000);
+          if(Number.isFinite(msg.x)&&Number.isFinite(msg.y)){
+            if(msg.landingHop===true||msg.waterHop===true){p.x=msg.x;p.y=msg.y;p.ramuWaterHop=.42;}
+            if(msg.waterHop===true&&Number.isFinite(msg.fromX)&&Number.isFinite(msg.fromY)){puff(msg.fromX,msg.fromY,16,'#38d9ff',1.15);F.push({k:'splash',x:msg.fromX,y:msg.fromY,rad:26,l:.42,m:.42,c:'#4bdfff',seed:Math.random()*6.28});}
+            ramuImpactVisual(msg.x,msg.y);
           }
           return;
         }
+        if(msg.action==='ramu-flame-stop'){p.ramuFireActive=false;return;}
         if(msg.action==='transform'){
           const requestedForm=Math.max(1,Math.min(5,Number(msg.form)||((p.form||0)+1)));
           p.tfn=requestedForm; p.tf=Math.max(p.tf||0,1.8); p.sc=0; p.chg=0; p.burst=0; p.holdT=0; p.hw=false;
@@ -2494,6 +2740,7 @@ function gadget(p){
         }
         if(!p.alive) return;
         if(Number.isFinite(msg.angle)) p.a=msg.angle;
+        if(msg.action==='ramu-flame-start'&&p.b==='ramu'&&p.ramuMode==='fire'){p.ramuFireActive=true;return;}
         if(msg.action==='charged-ki'){
           const x=Number(msg.x),y=Number(msg.y),vx=Number(msg.vx),vy=Number(msg.vy),r=Math.max(0,Number(msg.r)||0);
           if([x,y,vx,vy].every(Number.isFinite)&&r>0){
@@ -2523,7 +2770,8 @@ function gadget(p){
           // Remote bot supers must not depend on this browser's local round phase.
           // The host can be a fraction of a tick ahead, otherwise the non-host silently
           // drops the bot's super when its local G.ph is still counting/ending.
-          p.sc=1; p.tf=0; p.chg=0; p.holdT=0;
+          p.sc=1;p.tf=0;p.chg=0;p.holdT=0;
+          if(p.b==='ramu'){const nextMode=msg.ramuMode==='fire'||msg.ramuMode==='ice'?msg.ramuMode:(p.ramuMode==='fire'?'ice':'fire');p.sc=0;if(p.ramuMode!==nextMode)setRamuMode(p,nextMode);return;}
           if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY};
           if(p.k?.sy){
             if(p.form<5 && !p.lp) xform(p);
@@ -3025,7 +3273,7 @@ function gadget(p){
       $('ldFill').style.width='100%'; $('ldPct').textContent='100%'; show('loading');
       activeMatchRoster=roster.map(p=>({...p})); activeMatchHostId=hostId; activeMatchLocalId=localId;
       matchChannel=db.channel('dabrawl-match-'+matchId,{config:{broadcast:{self:false}}});
-      matchChannel.on('broadcast',{event:'match-state'},({payload})=>{if(Array.isArray(payload?.players)) for(const player of payload.players){window.DaBrawlGame?.applyRemoteState(player);seenAt.set(player.id,Date.now());}});
+      matchChannel.on('broadcast',{event:'match-state'},({payload})=>{if(Array.isArray(payload?.players))for(const player of payload.players){window.DaBrawlGame?.applyRemoteState(player);seenAt.set(player.id,Date.now());}if(payload?.hostId===activeMatchHostId&&payload?.world)window.DaBrawlGame?.applyRemoteWorldState?.(payload.world);});
       matchChannel.on('broadcast',{event:'player-state'},({payload})=>{if(payload?.player) {window.DaBrawlGame?.applyRemoteState(payload.player);seenAt.set(payload.player.id,Date.now());}});
       matchChannel.on('broadcast',{event:'player-action'},({payload})=>window.DaBrawlGame?.applyRemoteAction(payload));
       matchChannel.on('broadcast',{event:'match-ended'},({payload})=>{ if(!payload || activeMatchId!==matchId) return; window.DaBrawlGame?.applyMatchResult?.(payload); });
@@ -3061,7 +3309,7 @@ function gadget(p){
           stateTimer=setInterval(()=>{
             if(!matchChannel || activeMatchId!==matchId) return;
             const players=window.DaBrawlGame?.getNetworkStates?.() || [window.DaBrawlGame?.getLocalState()].filter(Boolean);
-            if(players.length) void matchChannel.send({type:'broadcast',event:'match-state',payload:{sentAt:Date.now(),players}});
+            if(players.length){const payload={sentAt:Date.now(),players,hostId:activeMatchLocalId};if(isNetworkHost)payload.world=window.DaBrawlGame?.getNetworkWorldState?.();void matchChannel.send({type:'broadcast',event:'match-state',payload});}
             // Do not replace a temporarily silent player with a bot: browsers throttle background tabs.
             // The player's next state packet will resynchronize them when their tab becomes active again.
           },50);
@@ -3127,7 +3375,7 @@ function gadget(p){
       if(matchChannel){const old=matchChannel;matchChannel=null;await db.removeChannel(old);}
       if(window.DaBrawlGame) window.DaBrawlGame.endNetworkGame();
     }
-    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,showcaseBrawler:brawler=>{if(roomChannel&&['kuku','shachi','saiyan'].includes(brawler))void db.auth.getUser().then(({data:{user}})=>user?roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler,userId:user.id}}):null);},toggleReady:null,openRoom:async(side=0)=>{desiredRoomInviteSlot=side===1?3:2;const {data:{user}}=await db.auth.getUser();if(!user){show('onlineLobby');return;}if(!currentRoom)await createRoom();if(currentRoom){await loadLobbyFriends(user);show('friendsScreen');}}};
+    window.DaBrawlNet={clientId,beginMatchmaking,cancelMatchmaking,leaveMatch,sendAction:sendMatchAction,announceMatchEnd,requestRematch,hostLeaveMatch,isInParty:()=>!!currentRoom,showcaseBrawler:brawler=>{if(roomChannel&&['kuku','shachi','saiyan','deges','ramu'].includes(brawler))void db.auth.getUser().then(({data:{user}})=>user?roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler,userId:user.id}}):null);},toggleReady:null,openRoom:async(side=0)=>{desiredRoomInviteSlot=side===1?3:2;const {data:{user}}=await db.auth.getUser();if(!user){show('onlineLobby');return;}if(!currentRoom)await createRoom();if(currentRoom){await loadLobbyFriends(user);show('friendsScreen');}}};
 
     let friendsPresenceChannel=null, friendsPresenceTimer=null;
     const friendsEscape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -3395,7 +3643,7 @@ function gadget(p){
       finally{readyBusy=false;}
     }
     async function updateRoomBrawler(brawler){
-      if(!currentRoom||!['kuku','shachi','saiyan'].includes(brawler))return;
+      if(!currentRoom||!['kuku','shachi','saiyan','deges','ramu'].includes(brawler))return;
       const {data:{user}}=await db.auth.getUser();if(!user)return;
       const {error}=await db.from('game_room_players').update({character_id:brawler,is_ready:false}).eq('room_id',currentRoom.id).eq('user_id',user.id);
       if(error){status('Brawler selection sync failed: '+error.message,true);return;}
