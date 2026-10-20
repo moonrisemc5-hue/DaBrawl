@@ -691,7 +691,9 @@
     ];
     let K = BR.kuku;
     const NM = ["Pip","Rex","Mochi","Zed","Bolt","Nova","Juno","Taco","Blaze","Jax","Vex","Zane"];
-    let P=[], B=[], F=[], MT=[], KM=[], me, G, cam={x:0,y:0}, shake=0, wf=0, touch=false, matchEliminations=0, teamEliminations=0, teamEliminationOrder={};
+    let P=[], B=[], F=[], MT=[], KM=[], me, G, cam={x:0,y:0}, shake=0, wf=0, touch=false, disableShake=false, matchEliminations=0, teamEliminations=0, teamEliminationOrder={};
+    try{disableShake=localStorage.getItem('dabrawl_disable_shake')==='1';}catch(e){}
+    function setShake(v){if(!disableShake)shake=Math.max(shake,v);}
     let selB='kuku'; try { selB = localStorage.getItem('dabrawl_b') || 'kuku'; if(!BR[selB]) selB='kuku'; } catch(e){}
     const brawlerKeys = Object.keys(BR);
     function cycleBrawler(dir){
@@ -1046,17 +1048,17 @@
           if(!ally)dmg(target,{...b,o:b.o,t:b.o?.t??b.t});
         }
       }
-      shake=Math.max(shake,b.superBeer?10:4);
+      setShake(b.superBeer?10:4);
     }
     function puff(x,y,n,c,s=1){ for(let i=0;i<n;i++){ const a=Math.random()*6.28, v=40+Math.random()*90*s; F.push({k:'p',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.5,m:.5,c,s:8+Math.random()*8}); } }
     function star(x,y,n){ for(let i=0;i<n;i++){ const a=Math.random()*6.28, v=80+Math.random()*140; F.push({k:'s',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-60,l:.9,m:.9}); } }
     function degesAimTarget(p,maxRange){
-      const sx=p.x+Math.cos(p.a)*24,sy=p.y+Math.sin(p.a)*24;
+      const sx=p.x+Math.cos(p.a)*8,sy=p.y+Math.sin(p.a)*8;
       let tx=sx+Math.cos(p.a)*maxRange,ty=sy+Math.sin(p.a)*maxRange;
       if(p===me&&!touch&&p.autoAimTimer<=0&&scr==='game'&&Number.isFinite(mx)&&Number.isFinite(my)){tx=mx/Math.max(.01,z)+cam.x;ty=my/Math.max(.01,z)+cam.y;}
       else if(p.remoteBeerTarget&&Number.isFinite(p.remoteBeerTarget.x)&&Number.isFinite(p.remoteBeerTarget.y)){tx=p.remoteBeerTarget.x;ty=p.remoteBeerTarget.y;}
-      const dx=tx-sx,dy=ty-sy,dist=Math.hypot(dx,dy),ux=dx/(dist||1),uy=dy/(dist||1);let range=Math.max(70,Math.min(maxRange,dist));
-      for(let d=8;d<=range;d+=8){if(tile(sx+ux*d,sy+uy*d)==='#'){range=Math.max(8,d-8);break;}}
+      const dx=tx-sx,dy=ty-sy,dist=Math.hypot(dx,dy),ux=dx/(dist||1),uy=dy/(dist||1);let range=Math.max(1,Math.min(maxRange,dist));
+      for(let d=8;d<=range;d+=8){if(tile(sx+ux*d,sy+uy*d)==='#'){range=Math.max(1,d-3);break;}}
       return {x:sx+ux*range,y:sy+uy*range,range,angle:Math.atan2(dy,dx)};
     }
     function tryFire(p){
@@ -1086,7 +1088,7 @@
       K=p.k; if(s&&K.lg){ leap(p,0); return; }
       if(p.b==='ramu'){
         if(s){p.ramuMode=p.ramuMode?0:1;p.am=p.ramuMode?1:3;p.sc=0;p.tf=.65;for(let i=0;i<38;i++){const a=Math.random()*Math.PI*2,v=70+Math.random()*220;F.push({k:'p',x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.8,m:.8,c:p.ramuMode?(i%2?'#ff672e':'#ffe36b'):(i%2?'#8ceeff':'#e4fbff'),s:4+Math.random()*7});}F.push({k:'t',x:p.x,y:p.y-42,vx:0,vy:-36,l:1,m:1,tx:p.ramuMode?'FIRE MODE':'ICE MODE',c:p.ramuMode?'#ff8b3d':'#a5edff'});return;}
-        if(p.ramuMode===0){if(p.am<=0||p.rec>0)return;for(let i=0;i<3;i++)B.push({x:p.x+Math.cos(p.a)*24,y:p.y+Math.sin(p.a)*24,vx:Math.cos(p.a)*520,vy:Math.sin(p.a)*520,r:260,d:700,t:p.t,o:p,s:false,z:6,col:'#9cecff',iceBall:true,delay:i*.17,wait:i*.17});p.am--;p.rec=.5;}
+        if(p.ramuMode===0){if(p.am<=0||p.rec>0)return;for(let i=0;i<3;i++)B.push({x:p.x+Math.cos(p.a)*24,y:p.y+Math.sin(p.a)*24,vx:Math.cos(p.a)*520,vy:Math.sin(p.a)*520,r:260,d:700,t:p.t,o:p,s:false,z:6,col:'#9cecff',iceBall:true,delay:i*.25,wait:i*.25,iceSize:15});p.am--;p.rec=.5;}
         else{if(p.fireAmmo<=0)return;}
         return;
       }
@@ -1208,9 +1210,8 @@ function gadget(p){
       t.lastHitAt=performance.now();
       if(b.iceBall&&b.o?.b==='ramu'){
         t.iceHits=t.iceHits instanceof Map?t.iceHits:new Map();
-        const hits=(t.iceHits.get(b.o)||0)+1;t.iceHits.set(b.o,hits);
-        F.push({k:'t',x:t.x+22,y:t.y-42,vx:0,vy:-20,l:.6,m:.6,tx:'❄ '+Math.min(6,hits)+'/6',c:'#9cecff'});
-        if(hits>=6){t.freeze=2;t.iceHits.set(b.o,0);}
+        const meter=Math.min(1,(t.iceHits.get(b.o)||0)+1/6);t.iceHits.set(b.o,meter);
+        if(meter>=.999){t.freeze=2;t.iceHits.set(b.o,0);}
       }
       if(b.fireStream&&b.o?.b==='ramu'){t.fireBurn=2;t.burnOwner=b.o;t.burnTick=.5;}
       if(!t.isDummy) t.hp-=b.d;
