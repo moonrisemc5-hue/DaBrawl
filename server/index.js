@@ -41,7 +41,7 @@ function makePlayer(user, msg, slot) {
   const brawler = BRAWLERS[msg.brawler] ? msg.brawler : "default";
   return { id: user.id, name: cleanText(msg.name), brawler, team: slot % 2, slot,
     x: slot % 2 ? 620 : 180, y: 150 + Math.floor(slot / 2) * 70, aim: slot % 2 ? Math.PI : 0,
-    hackerDroneX:(slot % 2 ? 620 : 180)+44,hackerDroneY:126,hackerDroneControl:false,hackerUpgrades:0,
+    hackerDroneX:(slot % 2 ? 620 : 180)+44,hackerDroneY:126,hackerDroneControl:false,hackerUpgrades:0,hackerAmmo:2,hackerAmmoReloadAt:0,
     hp: BRAWLERS[brawler].hp, maxHp: BRAWLERS[brawler].hp, alive: true, meter: 0,
     form: 0, ramuMode: "ice", fireEnergy: 1, fireLockUntil: 0, ramuFlameHeld: false, ramuFlameStartedAt: 0, ramuFlameLength: 0, ramuFlameNextHitAt: 0, ramuDiveUntil: 0, ramuDiveMoveAt: 0, ramuShieldUntil: 0, freezeMeter: 0, frozenUntil: 0,
     burnUntil: 0, burnNextAt: 0, burnOwnerId: null, smokeUntil: 0,
@@ -55,7 +55,7 @@ function emit(room, type, data = {}) {
 function snapshot(room) {
   return { mode: room.mode, phase: room.phase, startedAt: room.startedAt, endsAt: room.endsAt,
     winner: room.winner, ownerId: room.ownerId, tick: room.tick, destroyedWalls: room.world.destroyedWalls, wallStates: snapshotArenaWallStates(room.world), beams: room.beams.map(b => ({ id:b.id, ownerId:b.ownerId, x:b.x, y:b.y, aim:b.aim, length:b.length, width:b.width, expiresAt:b.expiresAt })), players: [...room.players.values()].map(p => ({
-      id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,hackerDroneX:p.hackerDroneX,hackerDroneY:p.hackerDroneY,hackerDroneControl:!!p.hackerDroneControl,hackerUpgrades:p.hackerUpgrades||0,
+      id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,hackerDroneX:p.hackerDroneX,hackerDroneY:p.hackerDroneY,hackerDroneControl:!!p.hackerDroneControl,hackerUpgrades:p.hackerUpgrades||0,hackerAmmo:p.hackerAmmo??2,
       hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,ramuMode:p.ramuMode,fireEnergy:p.fireEnergy,hackTargetId:p.hackTargetId||null,hackedById:p.hackedById||null,hackUntil:p.hackUntil||0,fireLockMs:Math.max(0,(p.fireLockUntil||0)-now()),
       ramuDiveUntil:p.ramuDiveUntil||0,ramuDiveMoveMs:Math.max(0,(p.ramuDiveMoveAt||0)-now()),ramuFlameHeld:!!p.ramuFlameHeld,ramuShieldMs:Math.max(0,(p.ramuShieldUntil||0)-now()),freezeMeter:p.freezeMeter||0,frozenMs:Math.max(0,(p.frozenUntil||0)-now()),burnMs:Math.max(0,(p.burnUntil||0)-now()),smokeMs:Math.max(0,(p.smokeUntil||0)-now()),
       gadgetCharges:gadgetCharges(p),gadgetCooldownMs:Math.max(0,p.gadgetReadyAt-now()),
@@ -114,11 +114,12 @@ function doFire(room, p, isSuper = false, options = {}) {
   if(!isSuper&&p.brawler==="hacker"&&p.hackTargetId&&p.hackUntil>t){const controlled=room.players.get(p.hackTargetId);if(controlled?.alive){controlled.aim=p.aim;return doFire(room,controlled,false);}p.hackTargetId=null;p.hackUntil=0;}
   if(!isSuper&&p.brawler==="hacker"){
     if(t-p.lastFire<stats.cooldown)return;
+    if((p.hackerAmmo??2)<1)return;
     const target=room.players.get(options.targetId||"");if(!target||!isTargetDamageable(target,p,t)||target===p)return;
     const ox=Number.isFinite(options.droneX)?options.droneX:p.hackerDroneX,oy=Number.isFinite(options.droneY)?options.droneY:p.hackerDroneY;
     if(Math.hypot(target.x-ox,target.y-oy)>stats.range)return;
-    p.lastFire=t;const level=Math.min(10,p.hackerUpgrades||0),damage=Math.max(1,Math.round((stats.damage+level*85)*(.88+Math.random()*.24))),types=["MALWARE DETECTED","RANSOMWARE","SPYWARE","CORRUPTED DATA"],malwareType=types[Math.floor(Math.random()*types.length)];p.hackerUpgrades=Math.min(10,level+1);
-    target.lastHitAt=t;target.hp=Math.max(0,target.hp-damage);target.meter=clamp(target.meter+12,0,100);p.meter=clamp(p.meter+8,0,100);
+    p.lastFire=t;p.hackerAmmo=Math.max(0,(p.hackerAmmo??2)-1);if(p.hackerAmmoReloadAt<=0)p.hackerAmmoReloadAt=t+stats.cooldown;const level=Math.min(10,p.hackerUpgrades||0),damage=Math.max(1,Math.round((stats.damage+level*85)*(.88+Math.random()*.24))),types=["MALWARE DETECTED","RANSOMWARE","SPYWARE","CORRUPTED DATA"],malwareType=types[Math.floor(Math.random()*types.length)];p.hackerUpgrades=Math.min(10,level+1);
+    target.lastHitAt=t;target.hp=Math.max(0,target.hp-damage);target.meter=clamp(target.meter+12,0,100);p.meter=clamp(p.meter+12,0,100);
     event(room,"hit",{attackerId:p.id,targetId:target.id,damage,hp:target.hp,malware:true,malwareType,upgrade:p.hackerUpgrades});
     if(target.hp<=0){target.alive=false;cancelKameCharge(target);target.input={x:0,y:0};event(room,"knockout",{playerId:target.id,by:p.id});}
     event(room,"attack-fired",{playerId:p.id,aim:p.aim,kind:"malware-install",upgrade:p.hackerUpgrades});sendState(room);return;
@@ -363,6 +364,7 @@ function stepRoom(room, dt) {
         const energyState=advanceRamuFireEnergy(p,dt,t,getBrawlerStats(p));
         if(energyState.depleted)event(room,"ramu-flame-empty",{playerId:p.id,lockMs:getBrawlerStats(p).fireLockMs,fireEnergy:p.fireEnergy});
       }
+      if(p.brawler==="hacker"&&(p.hackerAmmo??2)<2&&p.hackerAmmoReloadAt>0&&t>=p.hackerAmmoReloadAt){p.hackerAmmo=Math.min(2,(p.hackerAmmo??0)+1);p.hackerAmmoReloadAt=p.hackerAmmo<2?t+getBrawlerStats(p).cooldown:0;}
       if(p.freezeMeter>0&&p.frozenUntil<=t)p.freezeMeter=Math.max(0,p.freezeMeter-dt*.035);
       if(p.alive&&p.burnUntil>t&&t>=(p.burnNextAt||0)){
         p.burnNextAt=t+500;p.hp=Math.max(0,p.hp-100);p.lastHitAt=t;event(room,"burn-tick",{playerId:p.id,by:p.burnOwnerId,damage:100,hp:p.hp});
