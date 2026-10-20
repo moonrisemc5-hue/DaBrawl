@@ -127,6 +127,10 @@ test("accepts server-timed Saiyan Kame charge actions and validates aim", () => 
 test("Kame charge actions do not accept client-authored charge values", () => {
   assert.deepEqual(parseClientMessage('{"type":"action","action":"kame-start"}'), { type:"action", action:"kame-start" });
   assert.deepEqual(parseClientMessage('{"type":"action","action":"kame-release","angle":1.2}'), { type:"action", action:"kame-release", angle:1.2 });
+  assert.deepEqual(parseClientMessage('{"type":"action","action":"ramu-flame-start","angle":0.4}'), { type:"action", action:"ramu-flame-start", angle:0.4 });
+  assert.deepEqual(parseClientMessage('{"type":"action","action":"ramu-flame-stop","angle":0.4}'), { type:"action", action:"ramu-flame-stop", angle:0.4 });
+  assert.deepEqual(parseClientMessage('{"type":"action","action":"super","angle":0.4,"ramuMode":"ice"}'), { type:"action", action:"super", angle:0.4, ramuMode:"ice" });
+  assert.throws(() => parseClientMessage('{"type":"action","action":"super","ramuMode":"base"}'), /Invalid Ramu mode/);
   assert.throws(() => parseClientMessage('{"type":"action","action":"kame"}'), /Unsupported action/);
 });
 

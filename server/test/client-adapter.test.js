@@ -5,12 +5,14 @@ import { adaptServerPlayer, adaptServerPacket } from "../client-adapter.js";
 test("maps a valid authoritative player to the browser-facing field names", () => {
   assert.deepEqual(adaptServerPlayer({
     id: "user-1", name: "Ivor", brawler: "kuku", team: 1, slot: 3,
+    ramuMode: "ice", fireEnergy: 1, fireLockMs: 0, ramuFlameHeld: false, ramuDiveUntil: 0, ramuDiveMoveMs: 0, ramuShieldMs: 0, freezeMeter: 0, frozenMs: 0, burnMs: 0, smokeMs: 0,
     gadgetCharges: 1, gadgetCooldownMs: 450, kameCooldownMs: 2500, muiCharging: true,
     x: 123, y: 234, aim: 1.25, hp: 4500, maxHp: 7000, alive: true,
     meter: 48, form: 2, transforming: true, connected: true, ready: false
   }), {
     id: "user-1", name: "Ivor", x: 123, y: 234, a: 1.25, hp: 4500, mh: 7000, alive: true,
-    sc: 48, form: 2, tfn: 2, tf: 1, brawler: "kuku", team: 1, slot: 3,
+    sc: 48, form: 2, tfn: 2, tf: 1, brawler: "kuku", ramuMode: "ice", fireEnergy: 1, fireLockMs: 0, ramuFlameHeld: false, ramuDiveUntil: 0, ramuDiveMoveMs: 0, ramuShieldMs: 0,
+    freezeMeter: 0, frozenMs: 0, burnMs: 0, smokeMs: 0, team: 1, slot: 3,
     gadgetCharges: 1, gadgetCooldownMs: 450, kameCooldownMs: 2500, muiCharging: true, connected: true, ready: false
   });
 });
@@ -102,9 +104,21 @@ test("maps terrain and charged-beam events for a future browser adapter", () => 
   assert.equal(event.data.playerId, "p1");
   const state = adaptServerPacket({ type: "state", room: "ROOM1", state: {
     players: [{ id:"p1", x:1, y:2, hp:3, maxHp:4 }],
-    destroyedWalls: [{ row: 2, col: 4 }, { row: "bad", col: 1 }]
+    destroyedWalls: [{ row: 2, col: 4 }, { row: "bad", col: 1 }],
+    wallStates: [{row:2,col:4,heat:2.5,iceHits:3,iced:false,melt:0},{row:2,col:5,heat:9,iceHits:14,iced:true,melt:8},{row:"bad",col:1,heat:0,iceHits:0,melt:0}]
   }});
   assert.deepEqual(state.state.destroyedWalls, [{ row: 2, col: 4 }]);
+  assert.deepEqual(state.state.wallStates, [
+    {row:2,col:4,heat:2.5,iceHits:3,iced:false,melt:0},
+    {row:2,col:5,heat:5,iceHits:12,iced:true,melt:5}
+  ]);
+  const wallEvent=adaptServerPacket({type:"event",event:"wall-state",row:2,col:4,heat:1.5,iceHits:12,iced:true,melt:0});
+  assert.equal(wallEvent.name,"wall-state");
+  assert.equal(wallEvent.data.iced,true);
+  const impact=adaptServerPacket({type:"event",event:"ramu-impact",playerId:"ramu",gadgetCooldownMs:20000,gadgetCharges:0});
+  assert.equal(impact.name,"area-impact");
+  assert.equal(impact.data.gadgetCooldownMs,20000);
+  assert.equal(impact.data.gadgetCharges,0);
 });
 
 test("preserves validated active beam snapshots for rendering without applying damage", () => {
@@ -117,4 +131,14 @@ test("preserves validated active beam snapshots for rendering without applying d
   }});
   assert.equal(adapted.state.beams.length, 1);
   assert.equal(adapted.state.beams[0].id, 4);
+});
+
+
+test("preserves Ramu mode, status timers, ice volleys, and fire-stream metadata",()=>{
+  const player=adaptServerPlayer({id:"ramu",name:"Ramu",brawler:"ramu",x:1,y:2,hp:4000,maxHp:8000,ramuMode:"fire",fireEnergy:.6,fireLockMs:200,ramuFlameHeld:true,ramuDiveUntil:123456,ramuDiveMoveMs:220,ramuShieldMs:0,freezeMeter:.75,frozenMs:900,burnMs:1200,smokeMs:0});
+  assert.equal(player.ramuMode,"fire");assert.equal(player.fireEnergy,.6);assert.equal(player.ramuFlameHeld,true);assert.equal(player.ramuDiveUntil,123456);assert.equal(player.ramuDiveMoveMs,220);assert.equal(player.freezeMeter,.75);assert.equal(player.frozenMs,900);assert.equal(player.burnMs,1200);
+  const packet=adaptServerPacket({type:"state",state:{players:[{id:"ramu",x:1,y:2,hp:4000,maxHp:8000}],projectiles:[{id:1,ownerId:"ramu",x:10,y:20,angle:0,super:false,iceBall:true,activateAt:1700,damage:1000}]}});
+  assert.equal(packet.state.projectiles[0].iceBall,true);assert.equal(packet.state.projectiles[0].activateAt,1700);assert.equal(packet.state.projectiles[0].damage,1000);
+  const flame=adaptServerPacket({type:"event",event:"hit",attackerId:"ramu",targetId:"enemy",damage:125,fireStream:true,fireBall:false});
+  assert.equal(flame.data.fireStream,true);assert.equal(flame.data.fireBall,false);
 });

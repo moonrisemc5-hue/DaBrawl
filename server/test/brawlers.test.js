@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "../brawlers.js";
 
 test("all browser brawlers have explicit server rules", () => {
-  for (const id of ["kuku", "shachi", "saiyan", "deges"]) assert.ok(BRAWLERS[id], `Missing ${id}`);
+  for (const id of ["kuku", "shachi", "saiyan", "deges", "ramu"]) assert.ok(BRAWLERS[id], `Missing ${id}`);
 });
 
 test("Kuku's server baseline matches the browser balance", () => {

@@ -23,6 +23,17 @@ export function adaptServerPlayer(player) {
     tfn: finite(player.form) ? player.form : 0,
     tf: player.transforming === true ? 1 : 0,
     brawler: text(player.brawler),
+    ramuMode: player.ramuMode === "ice" || player.ramuMode === "fire" ? player.ramuMode : null,
+    fireEnergy: finite(player.fireEnergy) ? Math.max(0, Math.min(1, player.fireEnergy)) : null,
+    fireLockMs: finite(player.fireLockMs) ? Math.max(0, player.fireLockMs) : null,
+    ramuFlameHeld: player.ramuFlameHeld === true,
+    ramuDiveUntil: finite(player.ramuDiveUntil) ? player.ramuDiveUntil : null,
+    ramuDiveMoveMs: finite(player.ramuDiveMoveMs) ? Math.max(0, player.ramuDiveMoveMs) : null,
+    ramuShieldMs: finite(player.ramuShieldMs) ? Math.max(0, player.ramuShieldMs) : null,
+    freezeMeter: finite(player.freezeMeter) ? Math.max(0, Math.min(1, player.freezeMeter)) : null,
+    frozenMs: finite(player.frozenMs) ? Math.max(0, player.frozenMs) : null,
+    burnMs: finite(player.burnMs) ? Math.max(0, player.burnMs) : null,
+    smokeMs: finite(player.smokeMs) ? Math.max(0, player.smokeMs) : null,
     team: finite(player.team) ? player.team : null,
     slot: finite(player.slot) ? player.slot : null,
     // Preserve authoritative gadget timing without guessing the browser's units.
@@ -43,10 +54,17 @@ const EVENT_KINDS = Object.freeze({
   "super-fired": "super-fired",
   "super-slam": "super-fired",
   "hit": "hit-confirmed",
+  "freeze": "freeze",
+  "burn-tick": "burn",
+  "ramu-impact": "area-impact",
+  "ramu-flame-start": "fire-start",
+  "ramu-flame-stop": "fire-stop",
+  "ramu-flame-empty": "fire-empty",
   "knockout": "knockout",
   "transform": "transform",
   "gadget": "gadget",
   "wall-break": "wall-break",
+  "wall-state": "wall-state",
   "kame-fired": "kame-fired",
   "mui-charging": "mui-charging",
   "mui-beam-fired": "mui-beam-fired",
@@ -75,12 +93,13 @@ export function adaptServerPacket(packet) {
         winner: state.winner ?? null,
         ownerId: text(state.ownerId),
         destroyedWalls: Array.isArray(state.destroyedWalls) ? state.destroyedWalls.filter(w => w && Number.isInteger(w.row) && Number.isInteger(w.col)).map(w => ({ row: w.row, col: w.col })) : [],
+        wallStates: Array.isArray(state.wallStates) ? state.wallStates.filter(w => w && Number.isInteger(w.row) && Number.isInteger(w.col) && finite(w.heat) && Number.isInteger(w.iceHits) && finite(w.melt)).map(w => ({ row:w.row, col:w.col, heat:Math.max(0,Math.min(5,w.heat)), iceHits:Math.max(0,Math.min(12,w.iceHits)), iced:w.iced===true, melt:Math.max(0,Math.min(5,w.melt)) })) : [],
         beams: Array.isArray(state.beams) ? state.beams.filter(b => b && Number.isSafeInteger(b.id) && typeof b.ownerId === "string" && [b.x,b.y,b.aim,b.length,b.width,b.expiresAt].every(finite)).map(b => ({ id:b.id, ownerId:b.ownerId, x:b.x, y:b.y, aim:b.aim, length:b.length, width:b.width, expiresAt:b.expiresAt })) : [],
         players,
         projectiles: Array.isArray(state.projectiles) ? state.projectiles.filter(p =>
           p && typeof p.id === "number" && typeof p.ownerId === "string" &&
           finite(p.x) && finite(p.y) && finite(p.angle) && typeof p.super === "boolean"
-        ).map(p => ({ id:p.id, ownerId:p.ownerId, x:p.x, y:p.y, angle:p.angle, super:p.super })) : []
+        ).map(p => ({ id:p.id, ownerId:p.ownerId, x:p.x, y:p.y, angle:p.angle, super:p.super, iceBall:p.iceBall===true, fireBall:p.fireBall===true, activateAt:finite(p.activateAt)?p.activateAt:0, damage:finite(p.damage)?Math.max(0,p.damage):0 })) : []
       }
     };
   }

@@ -93,17 +93,13 @@ function dodgeVector(bot,projectiles,world){
   return {x:dx,y:dy,threat};
 }
 function enemiesFor(bot,players){return players.filter(p=>p&&p.id!==bot.id&&p.alive&&p.connected!==false&&p.team!==bot.team&&Number.isFinite(p.x)&&Number.isFinite(p.y));}
-function injuredTeammate(bot,players,world,range){
-  return players.filter(p=>p&&p.alive&&p.team===bot.team&&p.hp<p.maxHp-250&&Math.hypot(p.x-bot.x,p.y-bot.y)<=range+126&&!lineBlocked(bot.x,bot.y,p.x,p.y,world))
-    .sort((a,b)=>(a.hp/a.maxHp)-(b.hp/b.maxHp)||Math.hypot(a.x-bot.x,a.y-bot.y)-Math.hypot(b.x-bot.x,b.y-bot.y))[0]||null;
-}
-
 // Pure, deterministic combat policy. The server owns movement, cooldowns, damage and outcomes.
 export function decideBotAction(bot,players,world,at=Date.now(),projectiles=[]){
   if(!bot||!Array.isArray(players)||!world||!Number.isFinite(bot.x)||!Number.isFinite(bot.y))throw new TypeError("Invalid bot decision inputs");
-  const enemies=enemiesFor(bot,players),stats=getBrawlerStats(bot),injured=bot.brawler==='deges'?injuredTeammate(bot,players,world,stats.gadgetRange||230):null;
+  const enemies=enemiesFor(bot,players),stats=getBrawlerStats(bot);
+  const smokeHealReady=bot.brawler==='deges'&&bot.hp/Math.max(1,bot.maxHp)<=.38&&(bot.gadgetReadyAt||0)<=at;
   if(!bot.alive||!enemies.length){
-    return {input:{x:0,y:0},aim:Number.isFinite(bot.aim)?bot.aim:0,action:injured&&(bot.gadgetReadyAt||0)<=at?"gadget":null,targetId:null,gadgetTargetId:injured?.id||null};
+    return {input:{x:0,y:0},aim:Number.isFinite(bot.aim)?bot.aim:0,action:smokeHealReady?"gadget":null,targetId:null,gadgetTargetId:null};
   }
   enemies.sort((a,b)=>Math.hypot(a.x-bot.x,a.y-bot.y)-Math.hypot(b.x-bot.x,b.y-bot.y));
   const health=bot.hp/Math.max(1,bot.maxHp),visibleDegeš=enemies.filter(p=>p.brawler==='deges'&&Math.hypot(p.x-bot.x,p.y-bot.y)<650&&!lineBlocked(bot.x,bot.y,p.x,p.y,world));
@@ -140,7 +136,7 @@ export function decideBotAction(bot,players,world,at=Date.now(),projectiles=[]){
   const readyToFire=at-(bot.lastFire||0)>=stats.cooldown;
   const action=bot.brawler==='saiyan'&&bot.form<5&&bot.meter>=50&&bot.transformUntil<=at?"transform"
     :bot.meter>=100&&at-(bot.lastSuper||0)>=1200?"super"
-    :injured&&(bot.gadgetReadyAt||0)<=at?"gadget"
+    :smokeHealReady?"gadget"
     :readyToFire&&hasShotLine?"fire":null;
-  return {input,aim,action,targetId:target.id,gadgetTargetId:injured?.id||null};
+  return {input,aim,action,targetId:target.id,gadgetTargetId:null};
 }

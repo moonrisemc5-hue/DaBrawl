@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { gadgetCharges, getGadgetCooldownMs, tryConsumeGadget } from "../abilities.js";
+import { gadgetCharges, getGadgetCooldownMs, tryConsumeGadget, startRamuDiveCooldown } from "../abilities.js";
 
 test("gadget starts with one charge and consumes it exactly once", () => {
   const player = { brawler: "kuku", form: 0, gadgetReadyAt: 0 };
@@ -33,4 +33,17 @@ test("gadget cooldown matches browser form-specific cooldowns", () => {
 test("invalid player or time cannot consume a gadget charge", () => {
   assert.equal(tryConsumeGadget(null, 1000), false);
   assert.equal(tryConsumeGadget({ gadgetReadyAt: 0 }, NaN), false);
+});
+
+
+test("Ramu Fire Dive has no launch cooldown and starts twenty seconds at landing", () => {
+  const player = { brawler: "ramu", ramuMode: "fire", gadgetReadyAt: 0 };
+  assert.equal(tryConsumeGadget(player, 5000), true);
+  assert.equal(player.gadgetReadyAt, 5000);
+  assert.equal(gadgetCharges(player, 5000), 1);
+  assert.equal(startRamuDiveCooldown(player, 10220, 20000), true);
+  assert.equal(player.gadgetReadyAt, 30220);
+  assert.equal(gadgetCharges(player, 30219), 0);
+  assert.equal(gadgetCharges(player, 30220), 1);
+  assert.equal(startRamuDiveCooldown({ brawler: "kuku" }, 10220, 20000), false);
 });

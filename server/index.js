@@ -16,13 +16,13 @@ const MAX_PLAYERS = 6;
 const MAX_ROOMS = 100;
 
 import { BRAWLERS, getBrawlerStats, getNextSaiyanForm } from "./brawlers.js";
-import { advanceProjectile, findProjectileContact, findProjectileObstacleHit, projectileStillInRange, isTargetDamageable } from "./combat.js";
-import { gadgetCharges, tryConsumeGadget } from "./abilities.js";
+import { advanceProjectile, findProjectileContact, findProjectileObstacleHit, projectileStillInRange, isTargetDamageable, advanceRamuFireEnergy, consumeRamuModeSuper } from "./combat.js";
+import { gadgetCharges, tryConsumeGadget, startRamuDiveCooldown } from "./abilities.js";
 import { beginKameCharge, finishKameCharge, cancelKameCharge, kameChargePower } from "./charge.js";
-import { movementDelta, movePlayerWithObstacles, resolvePlayerCollisions, PLAYER_RADIUS } from "./world.js";
+import { movementDelta, movePlayerWithObstacles, resolvePlayerCollisions, clampPlayerPosition, PLAYER_RADIUS } from "./world.js";
 import { selectWinnerByHealth } from "./match-results.js";
 import { decideBotAction } from "./bot-ai.js";
-import { createArena, applyRoomMode, removeArenaWall, traceKameBeam, traceMasteredBeam } from "./maps.js";
+import { createArena, applyRoomMode, removeArenaWall, registerArenaIceWallHit, advanceArenaWallFire, coolArenaWallStates, snapshotArenaWallStates, findArenaWallAlongRay, traceKameBeam, traceMasteredBeam } from "./maps.js";
 const auth = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
@@ -42,7 +42,9 @@ function makePlayer(user, msg, slot) {
   return { id: user.id, name: cleanText(msg.name), brawler, team: slot % 2, slot,
     x: slot % 2 ? 620 : 180, y: 150 + Math.floor(slot / 2) * 70, aim: slot % 2 ? Math.PI : 0,
     hp: BRAWLERS[brawler].hp, maxHp: BRAWLERS[brawler].hp, alive: true, meter: 0,
-    form: 0, transformUntil: 0, gadgetReadyAt: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0, kameReadyAt: 0, kameChargeStartedAt: 0,
+    form: 0, ramuMode: "ice", fireEnergy: 1, fireLockUntil: 0, ramuFlameHeld: false, ramuFlameStartedAt: 0, ramuFlameLength: 0, ramuFlameNextHitAt: 0, ramuDiveUntil: 0, ramuDiveMoveAt: 0, ramuShieldUntil: 0, freezeMeter: 0, frozenUntil: 0,
+    burnUntil: 0, burnNextAt: 0, burnOwnerId: null, smokeUntil: 0,
+    transformUntil: 0, gadgetReadyAt: 0, input: { x: 0, y: 0 }, seq: -1, lastFire: 0, lastSuper: 0, kameReadyAt: 0, kameChargeStartedAt: 0,
     connected: true, socket: null, lastSeen: now(), disconnectedAt: 0, invulnerableUntil: 0, ready: false, isBot: Boolean(user.isBot), botThinkAt: 0 };
 }
 function emit(room, type, data = {}) {
@@ -51,13 +53,14 @@ function emit(room, type, data = {}) {
 }
 function snapshot(room) {
   return { mode: room.mode, phase: room.phase, startedAt: room.startedAt, endsAt: room.endsAt,
-    winner: room.winner, ownerId: room.ownerId, tick: room.tick, destroyedWalls: room.world.destroyedWalls, beams: room.beams.map(b => ({ id:b.id, ownerId:b.ownerId, x:b.x, y:b.y, aim:b.aim, length:b.length, width:b.width, expiresAt:b.expiresAt })), players: [...room.players.values()].map(p => ({
+    winner: room.winner, ownerId: room.ownerId, tick: room.tick, destroyedWalls: room.world.destroyedWalls, wallStates: snapshotArenaWallStates(room.world), beams: room.beams.map(b => ({ id:b.id, ownerId:b.ownerId, x:b.x, y:b.y, aim:b.aim, length:b.length, width:b.width, expiresAt:b.expiresAt })), players: [...room.players.values()].map(p => ({
       id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,
-      hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,
+      hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,ramuMode:p.ramuMode,fireEnergy:p.fireEnergy,fireLockMs:Math.max(0,(p.fireLockUntil||0)-now()),
+      ramuDiveUntil:p.ramuDiveUntil||0,ramuDiveMoveMs:Math.max(0,(p.ramuDiveMoveAt||0)-now()),ramuFlameHeld:!!p.ramuFlameHeld,ramuShieldMs:Math.max(0,(p.ramuShieldUntil||0)-now()),freezeMeter:p.freezeMeter||0,frozenMs:Math.max(0,(p.frozenUntil||0)-now()),burnMs:Math.max(0,(p.burnUntil||0)-now()),smokeMs:Math.max(0,(p.smokeUntil||0)-now()),
       gadgetCharges:gadgetCharges(p),gadgetCooldownMs:Math.max(0,p.gadgetReadyAt-now()),
       kameCooldownMs:Math.max(0,(p.kameReadyAt||0)-now()),kameCharging:Boolean(p.kameChargeStartedAt),kameCharge:kameChargePower(p.kameChargeStartedAt,now()),muiCharging:Boolean(p.pendingMuiBeam),
       transforming:p.transformUntil>now(),connected:p.connected,ready:p.ready
-    })), projectiles: room.projectiles.map(b => ({ id:b.id,ownerId:b.ownerId,x:b.x,y:b.y,angle:b.angle,super:b.super,beer:!!b.friendlySupport,cigar:!!b.cigar,greenBeer:!!b.greenBeer,flightTime:b.flightTime||0,flightDuration:b.flightDuration||0,arcHeight:b.arcHeight||58,range:b.range||300,damage:b.damage||0,splashRadius:b.splashRadius||0,heal:b.heal||0 })) };
+    })), projectiles: room.projectiles.map(b => ({ id:b.id,ownerId:b.ownerId,x:b.x,y:b.y,angle:b.angle,super:b.super,iceBall:!!b.iceBall,fireBall:!!b.fireBall,activateAt:b.activateAt||0,beer:!!b.friendlySupport,flightTime:b.flightTime||0,flightDuration:b.flightDuration||0,arcHeight:b.arcHeight||58,range:b.range||300,damage:b.damage||0,splashRadius:b.splashRadius||0,heal:b.heal||0 })) };
 }
 function sendState(room) { emit(room, "state", { state: snapshot(room) }); }
 function event(room, name, data = {}) { room.events.push({ name, at: now(), ...data }); if (room.events.length > 80) room.events.shift(); emit(room, "event", { event: name, ...data }); }
@@ -106,14 +109,25 @@ function doFire(room, p, isSuper = false) {
   if (!isCombatPhase(room.phase)) return;
   const stats = getBrawlerStats(p);
   const t = now();
-  if (!p.alive || p.transformUntil > t || p.kameChargeStartedAt > 0) return;
-  // A max-form Saiyan has no next transformation; reject before consuming super meter.
-  if (isSuper && stats.superKind === "transform" && getNextSaiyanForm(p) === null && !(p.form >= 5)) return;
+  if (!p.alive || p.transformUntil > t || p.kameChargeStartedAt > 0 || p.smokeUntil > t || p.frozenUntil > t || p.ramuDiveUntil > t || p.ramuShieldUntil > t) return;
+  if (p.brawler === "ramu" && isSuper) {
+    const wasFlaming=p.ramuFlameHeld===true,transition=consumeRamuModeSuper(p,t,1200);
+    if(!transition)return;
+    if(wasFlaming)event(room,"ramu-flame-stop",{playerId:p.id,aim:p.aim,fireEnergy:p.fireEnergy});
+    event(room,"transform",{playerId:p.id,brawler:"ramu",mode:transition.mode,durationMs:transition.durationMs});sendState(room);return;
+  }
+  if (p.brawler === "ramu" && !isSuper && p.ramuMode === "fire") {
+    if (p.fireEnergy <= 0 || (p.fireLockUntil||0) > t) return;
+    setRamuFlameHeld(room,p,true,t);return;
+  }
+  if (isSuper && p.brawler === "saiyan" && stats.superKind === "transform" && getNextSaiyanForm(p) === null && !(p.form >= 5)) return;
   if (isSuper) {
     if (p.meter < 100 || t - p.lastSuper < 1200) return;
     p.meter = 0; p.lastSuper = t;
-  } else if (t - p.lastFire < stats.cooldown) return;
-  else p.lastFire = t;
+  } else {
+    if (t - p.lastFire < stats.cooldown) return;
+    p.lastFire = t;
+  }
   if (isSuper && stats.superKind === "transform" && getNextSaiyanForm(p) !== null) {
     const nextForm = getNextSaiyanForm(p);
     const nextStats = BRAWLERS.saiyan.forms[nextForm];
@@ -137,7 +151,7 @@ function doFire(room, p, isSuper = false) {
     for (const target of room.players.values()) {
       if (!isTargetDamageable(target, p, t)) continue;
       if (Math.hypot(target.x-p.x,target.y-p.y) > stats.superRange) continue;
-      target.lastHitAt=t;target.hp = Math.max(0, target.hp-stats.superDamage);
+      target.lastHitAt=t;target.hp = Math.max(0,target.hp-stats.superDamage);
       target.meter = clamp(target.meter+12,0,100);
       hits++;
       event(room,"hit",{attackerId:p.id,targetId:target.id,damage:stats.superDamage,hp:target.hp,super:true});
@@ -145,6 +159,15 @@ function doFire(room, p, isSuper = false) {
     }
     event(room,"super-slam",{playerId:p.id,hits});
     return;
+  }
+  if (p.brawler === "ramu") {
+    const shotCount=stats.iceBurstShots||3,spacing=stats.iceBurstIntervalMs||170,angle=p.aim,dx=Math.cos(angle),dy=Math.sin(angle),px=-dy,py=dx;
+    for(let i=0;i<shotCount;i++){
+      const side=(i-(shotCount-1)/2)*7;
+      room.projectiles.push({id:nextProjectileId++,ownerId:p.id,team:p.team,x:p.x+dx*23+px*side,y:p.y+dy*23+py*side,angle,
+        speed:stats.bulletSpeed,damage:stats.damage,range:stats.range,traveled:0,super:false,iceBall:true,activateAt:t+i*spacing});
+    }
+    p.meter=clamp(p.meter+8,0,100);event(room,"attack-fired",{playerId:p.id,aim:p.aim,kind:"ice-burst",shots:shotCount,intervalMs:spacing});return;
   }
   if (p.brawler === "deges") {
     const angle = p.aim;
@@ -169,7 +192,104 @@ function doFire(room, p, isSuper = false) {
   p.meter = clamp(p.meter + (isSuper ? 0 : 8), 0, 100);
   event(room, isSuper ? "super-fired" : "attack-fired", { playerId:p.id, aim:p.aim });
 }
+function setRamuFlameHeld(room,player,held,at=now()){
+  if(!player||player.brawler!=="ramu"||player.ramuMode!=="fire")return false;
+  const next=held===true&&player.alive&&player.fireEnergy>0&&(player.fireLockUntil||0)<=at;
+  if(player.ramuFlameHeld===next)return false;
+  player.ramuFlameHeld=next;
+  if(next){const stats=getBrawlerStats(player);player.ramuFlameStartedAt=at;player.ramuFlameLength=0;player.ramuFlameNextHitAt=at+(stats.fireInitialReachMs||400);}
+  else{player.ramuFlameStartedAt=0;player.ramuFlameNextHitAt=0;}
+  event(room,next?"ramu-flame-start":"ramu-flame-stop",{playerId:player.id,aim:player.aim,fireEnergy:player.fireEnergy});
+  return true;
+}
+function tickRamuFlame(room,player,at){
+  if(!player.alive||!player.ramuFlameHeld||player.ramuMode!=="fire"||player.fireEnergy<=0||player.fireLockUntil>at||at<(player.ramuFlameNextHitAt||0))return;
+  const stats=getBrawlerStats(player),dx=Math.cos(player.aim),dy=Math.sin(player.aim),sx=player.x+dx*25,sy=player.y+dy*25;
+  const elapsed=Math.max(0,at-(player.ramuFlameStartedAt||at)),travel=Math.min(stats.fireRange,elapsed*(stats.fireReachSpeed||720)/1000);
+  const wall=findArenaWallAlongRay(room.world,sx,sy,dx,dy,stats.fireRange),wallRange=wall?wall.distance:stats.fireRange,range=Math.min(travel,wallRange);
+  player.ramuFlameLength=range;player.ramuFlameNextHitAt=at+stats.fireTickMs;
+  if(range<8)return;
+  for(const target of room.players.values()){
+    if(!isTargetDamageable(target,player,at))continue;
+    const rx=target.x-sx,ry=target.y-sy,along=rx*dx+ry*dy,side=Math.abs(-rx*dy+ry*dx),halfWidth=9+Math.min(7,Math.max(0,along)*.02);
+    if(along<0||along>range||side>halfWidth+19)continue;
+    target.lastHitAt=at;target.hp=Math.max(0,target.hp-stats.fireDamage);target.meter=clamp(target.meter+12,0,100);
+    player.meter=clamp(player.meter+(stats.fireSuperCharge||6.6),0,100);
+    event(room,"hit",{attackerId:player.id,targetId:target.id,damage:stats.fireDamage,hp:target.hp,fireStream:true,fireBall:false,burnMs:0});
+    if(target.hp<=0){target.alive=false;cancelKameCharge(target);target.input={x:0,y:0};event(room,"knockout",{playerId:target.id,by:player.id});}
+  }
+}
+function advanceRamuFlameWall(room,player,dt,at,activeWallKeys){
+  if(!player.alive||!player.ramuFlameHeld||player.ramuMode!=="fire"||player.fireEnergy<=0||player.fireLockUntil>at)return;
+  const stats=getBrawlerStats(player),dx=Math.cos(player.aim),dy=Math.sin(player.aim),sx=player.x+dx*25,sy=player.y+dy*25;
+  const wall=findArenaWallAlongRay(room.world,sx,sy,dx,dy,stats.fireRange);
+  if(!wall)return;
+  const wallDistance=wall.distance;
+  const elapsed=Math.max(0,at-(player.ramuFlameStartedAt||at)),travel=Math.min(stats.fireRange,elapsed*(stats.fireReachSpeed||720)/1000);
+  if(travel+1<wallDistance)return;
+  // A player in front of the wall absorbs the flame instead of heating terrain behind them.
+  for(const other of room.players.values()){
+    if(!isTargetDamageable(other,player,at))continue;
+    const rx=other.x-sx,ry=other.y-sy,along=rx*dx+ry*dy,side=Math.abs(-rx*dy+ry*dx),halfWidth=10+Math.min(8,Math.max(0,along)*.02);
+    if(along>0&&along<wallDistance&&side<=halfWidth+PLAYER_RADIUS)return;
+  }
+  const row=wall.row,col=wall.col,key=`${row}:${col}`;activeWallKeys.add(key);
+  const result=advanceArenaWallFire(room.world,row,col,dt);
+  if(result.type==="broken"){
+    event(room,"wall-break",{playerId:player.id,row,col,heated:true});
+    event(room,"wall-state",{row,col,heat:result.state.heat,iceHits:0,iced:false,melt:0,broken:true});
+    return;
+  }
+  if(!result.changed)return;
+  const state=room.world.wallStates.find(w=>w.row===row&&w.col===col),previous=state?.lastNetworkSyncAt||0;
+  if(result.type==="melted"||at-previous>=200){
+    if(state)state.lastNetworkSyncAt=at;
+    event(room,"wall-state",{row,col,heat:result.state.heat,iceHits:result.state.iceHits,iced:result.state.iced,melt:result.state.melt,melted:result.type==="melted"});
+  }
+}
 
+function startSmokeChannel(room,player,at){
+  const stats=getBrawlerStats(player);player.smokeUntil=at+stats.gadgetChannelMs;player.input={x:0,y:0};
+  event(room,"gadget",{playerId:player.id,kind:"smoke-heal",channelMs:stats.gadgetChannelMs,cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
+}
+function useGadget(room,player,at){
+  if(!isCombatPhase(room.phase)||!player.alive||player.transformUntil>at||player.smokeUntil>at||player.frozenUntil>at||player.ramuDiveUntil>at||player.ramuShieldUntil>at||player.kameChargeStartedAt>0||!tryConsumeGadget(player,at))return false;
+  const a=player.aim;
+  if(player.brawler==="deges"){startSmokeChannel(room,player,at);return true;}
+  if(player.brawler==="ramu"){
+    setRamuFlameHeld(room,player,false,at);
+    if(player.ramuMode==="fire"){
+      const stats=getBrawlerStats(player);player.ramuDiveUntil=at+stats.gadgetDiveMs;player.ramuDiveMoveAt=at+stats.gadgetDiveLiftMs;player.input={x:0,y:0};
+      event(room,"gadget",{playerId:player.id,kind:"flame-dive",durationMs:stats.gadgetDiveMs,launchMs:stats.gadgetDiveLiftMs,moveMs:stats.gadgetDiveMs-stats.gadgetDiveLiftMs,warningMs:1000,cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
+    }else{
+      player.input={x:0,y:0};player.ramuShieldUntil=at+getBrawlerStats(player).gadgetShieldMs;
+      event(room,"gadget",{playerId:player.id,kind:"crystal-shield",durationMs:getBrawlerStats(player).gadgetShieldMs,cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
+    }
+    return true;
+  }
+  const dashPosition=movePlayerWithObstacles(player.x,player.y,Math.cos(a)*70,Math.sin(a)*70,room.world,PLAYER_RADIUS);player.x=dashPosition.x;player.y=dashPosition.y;
+  event(room,"gadget",{playerId:player.id,kind:"dash",cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});return true;
+}
+function applyRamuBurn(target,ownerId,at){target.burnUntil=Math.max(target.burnUntil||0,at+2200);target.burnNextAt=Math.min(target.burnNextAt||at+500,at+500);target.burnOwnerId=ownerId||target.burnOwnerId||null;}
+function landRamuDive(room,player,at){
+  const fromX=player.x,fromY=player.y,fromWater=room.world.obstacles.some(o=>o.tile==="~"&&fromX>=o.x-PLAYER_RADIUS&&fromX<=o.x+o.width+PLAYER_RADIUS&&fromY>=o.y-PLAYER_RADIUS&&fromY<=o.y+o.height+PLAYER_RADIUS),[landing]=resolvePlayerCollisions([{x:fromX,y:fromY}],room.world,PLAYER_RADIUS);
+  player.x=landing.x;player.y=landing.y;
+  startRamuDiveCooldown(player,at,getBrawlerStats(player).gadgetDiveCooldownMs);
+  const landingHop=Math.hypot(player.x-fromX,player.y-fromY)>2,waterHop=landingHop&&fromWater;
+  const x=player.x,y=player.y,radius=82,destroyedWalls=[];
+  for(const target of room.players.values()){
+    if(!isTargetDamageable(target,player,at)||Math.hypot(target.x-x,target.y-y)>radius)continue;
+    const dx=target.x-x,dy=target.y-y,d=Math.hypot(dx,dy)||1;target.lastHitAt=at;target.hp=Math.max(0,target.hp-2000);target.meter=clamp(target.meter+12,0,100);applyRamuBurn(target,player.id,at);
+    const push=movePlayerWithObstacles(target.x,target.y,dx/d*42,dy/d*42,room.world,PLAYER_RADIUS);target.x=push.x;target.y=push.y;
+    event(room,"hit",{attackerId:player.id,targetId:target.id,damage:2000,hp:target.hp,fireBall:true,knockback:42,super:true});
+    if(target.hp<=0){target.alive=false;cancelKameCharge(target);target.input={x:0,y:0};event(room,"knockout",{playerId:target.id,by:player.id});}
+  }
+  for(const obstacle of [...room.world.obstacles]){
+    if(obstacle.tile!=="#"||Math.hypot(obstacle.x+obstacle.width/2-x,obstacle.y+obstacle.height/2-y)>radius)continue;
+    if(removeArenaWall(room.world,obstacle.row,obstacle.col))destroyedWalls.push({row:obstacle.row,col:obstacle.col});
+  }
+  event(room,"ramu-impact",{playerId:player.id,x,y,fromX,fromY,waterHop,landingHop,radius,damage:2000,destroyedWalls,gadgetCooldownMs:Math.max(0,player.gadgetReadyAt-at),gadgetCharges:gadgetCharges(player,at)});
+}
 function doKame(room, player, angle) {
   const at = now();
   const power = finishKameCharge(player, at);
@@ -202,24 +322,11 @@ function stepRoom(room, dt) {
       if (p.isBot && p.alive && p.connected && t >= p.botThinkAt) {
         const decision = decideBotAction(p, [...room.players.values()], room.world, t, room.projectiles);
         p.input = decision.input; p.aim = decision.aim; p.lastSeen = t; p.botThinkAt = t + 180;
+        if(p.brawler==="ramu"&&p.ramuMode==="fire")setRamuFlameHeld(room,p,decision.action==="fire",t);
         if (decision.action === "fire") doFire(room, p, false);
         else if (decision.action === "super") doFire(room, p, true);
-        else if (decision.action === "gadget") {
-          if (p.transformUntil <= t && !(p.kameChargeStartedAt > 0) && tryConsumeGadget(p,t)) {
-            if (p.brawler === "deges") {
-              const stats=getBrawlerStats(p),ally=room.players.get(decision.gadgetTargetId)||p;
-              const dx=ally.x-p.x,dy=ally.y-p.y,distance=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx);
-              const range=Math.max(70,Math.min(stats.gadgetRange,distance));p.aim=angle;
-              room.projectiles.push({id:nextProjectileId++,ownerId:p.id,team:p.team,x:p.x+Math.cos(angle)*24,y:p.y+Math.sin(angle)*24,angle,
-                speed:stats.gadgetSpeed,damage:stats.gadgetDamage,range,splashRadius:stats.gadgetRadius,heal:stats.gadgetHeal,durationMs:stats.gadgetDuration,
-                flightDuration:range/stats.gadgetSpeed,arcHeight:142,traveled:0,super:false,cigar:true,greenBeer:true});
-              event(room,"gadget",{playerId:p.id,kind:"green-beer-cigar",cooldownMs:Math.max(0,p.gadgetReadyAt-t),charges:gadgetCharges(p,t)});
-            } else {
-              const pos = movePlayerWithObstacles(p.x,p.y,Math.cos(p.aim)*70,Math.sin(p.aim)*70,room.world,PLAYER_RADIUS); p.x=pos.x; p.y=pos.y;
-              event(room,"gadget",{playerId:p.id,cooldownMs:Math.max(0,p.gadgetReadyAt-t),charges:gadgetCharges(p,t)});
-            }
-          }
-        } else if (decision.action === "transform") {
+        else if (decision.action === "gadget") useGadget(room,p,t);
+        else if (decision.action === "transform") {
           const nextForm=getNextSaiyanForm(p);
           if (p.meter>=50 && p.transformUntil<=t && nextForm!==null) {
             p.meter-=50; const stats=BRAWLERS.saiyan.forms[nextForm]; const delta=stats.hp-p.maxHp;
@@ -229,6 +336,18 @@ function stepRoom(room, dt) {
         }
       }
 
+      if(p.alive&&p.smokeUntil>0&&t>=p.smokeUntil){p.smokeUntil=0;const healed=p.maxHp-p.hp;p.hp=p.maxHp;event(room,"heal",{playerId:p.id,targetId:p.id,amount:healed,hp:p.hp,smokeChannel:true});}
+      if(p.brawler==="ramu"&&p.ramuMode==="fire"){
+        if(!p.alive)p.ramuFlameHeld=false;
+        const energyState=advanceRamuFireEnergy(p,dt,t,getBrawlerStats(p));
+        if(energyState.depleted)event(room,"ramu-flame-empty",{playerId:p.id,lockMs:getBrawlerStats(p).fireLockMs,fireEnergy:p.fireEnergy});
+      }
+      if(p.freezeMeter>0&&p.frozenUntil<=t)p.freezeMeter=Math.max(0,p.freezeMeter-dt*.035);
+      if(p.alive&&p.burnUntil>t&&t>=(p.burnNextAt||0)){
+        p.burnNextAt=t+500;p.hp=Math.max(0,p.hp-100);p.lastHitAt=t;event(room,"burn-tick",{playerId:p.id,by:p.burnOwnerId,damage:100,hp:p.hp});
+        if(p.hp<=0){p.alive=false;cancelKameCharge(p);p.input={x:0,y:0};event(room,"knockout",{playerId:p.id,by:p.burnOwnerId});}
+      }else if(p.burnUntil<=t){p.burnUntil=0;p.burnNextAt=0;p.burnOwnerId=null;}
+      if(p.alive&&p.ramuDiveUntil>0&&t>=p.ramuDiveUntil){p.ramuDiveUntil=0;landRamuDive(room,p,t);}
       if (p.alive && shouldForfeitDisconnectedPlayer(p.connected, p.disconnectedAt, t, DISCONNECT_GRACE_MS)) {
         p.alive = false;
         cancelKameCharge(p);
@@ -238,11 +357,11 @@ function stepRoom(room, dt) {
       }
       if (!p.connected || !p.alive) continue;
       if (t - p.lastSeen > INPUT_TIMEOUT_MS) p.input = { x: 0, y: 0 };
-      const stats = getBrawlerStats(p),oldX=p.x,oldY=p.y;
-      const { x: dx, y: dy } = movementDelta(p.input.x, p.input.y, stats.speed, dt);
-      const nextPosition = movePlayerWithObstacles(p.x, p.y, dx, dy, room.world, PLAYER_RADIUS);
-      p.x = nextPosition.x;
-      p.y = nextPosition.y;
+      const stats=getBrawlerStats(p),oldX=p.x,oldY=p.y;
+      if(p.smokeUntil>t||p.frozenUntil>t||p.ramuShieldUntil>t||(p.ramuDiveUntil>t&&t<(p.ramuDiveMoveAt||0)))p.input={x:0,y:0};
+      const {x:dx,y:dy}=movementDelta(p.input.x,p.input.y,stats.speed,dt);
+      if(p.ramuDiveUntil>t&&t>=(p.ramuDiveMoveAt||0)){const divePosition=clampPlayerPosition(p.x+dx,p.y+dy,room.world,PLAYER_RADIUS);p.x=divePosition.x;p.y=divePosition.y;}
+      else{const nextPosition=movePlayerWithObstacles(p.x,p.y,dx,dy,room.world,PLAYER_RADIUS);p.x=nextPosition.x;p.y=nextPosition.y;}
       if(dt>0){let vx=(p.x-oldX)/dt,vy=(p.y-oldY)/dt,cap=stats.speed*1.8,v=Math.hypot(vx,vy);if(v>cap){vx*=cap/v;vy*=cap/v;}p.aiVx=(p.aiVx||0)*.35+vx*.65;p.aiVy=(p.aiVy||0)*.35+vy*.65;}
       if (p.transformUntil && t >= p.transformUntil) p.transformUntil = 0;
     }
@@ -339,7 +458,6 @@ function stepRoom(room, dt) {
         if (!target.alive || Math.hypot(target.x-zone.x,target.y-zone.y) > zone.radius) continue;
         const isOwner = target.id === zone.ownerId;
         const sameTeam = isOwner || ((room.mode !== "showdown") && target.team === zone.team);
-        if (zone.greenBeer && !sameTeam) continue;
         if (sameTeam) {
           const healed = Math.min(target.maxHp-target.hp, zone.heal);
           if (healed > 0) { target.hp += healed; event(room,"heal",{projectileId:zone.id,playerId:zone.ownerId,targetId:target.id,amount:healed,hp:target.hp,splash:true,beerZone:true}); }
@@ -477,10 +595,17 @@ wss.on("connection", (ws,_req,meta) => {
       } else if (m.type==="ready") { updateReady(room, player, m.ready); sendState(room); }
       else if (m.type==="input") {
         const seq=Math.floor(finite(m.seq,-1)); if (seq<=player.seq) return;
-        player.seq=seq; player.input=validAxes(m.x,m.y); player.aim=clamp(finite(m.aim,player.aim),-Math.PI*2,Math.PI*2);
+        player.seq=seq;player.input=validAxes(m.x,m.y);if(player.smokeUntil<=now()&&player.frozenUntil<=now()&&player.ramuShieldUntil<=now())player.aim=clamp(finite(m.aim,player.aim),-Math.PI*2,Math.PI*2);
         player.lastSeen=now(); ws.send(JSON.stringify({type:"ack",seq,serverTime:now()}));
       } else if (m.type==="action") {
         if (m.action==="fire") doFire(room,player,false);
+        else if(m.action==="ramu-flame-start"){
+          const at=now();player.aim=clamp(finite(m.angle,player.aim),-Math.PI*2,Math.PI*2);
+          if(isCombatPhase(room.phase)&&player.alive&&player.brawler==="ramu"&&player.ramuMode==="fire"&&player.transformUntil<=at&&player.smokeUntil<=at&&player.frozenUntil<=at&&player.ramuDiveUntil<=at&&player.ramuShieldUntil<=at)setRamuFlameHeld(room,player,true,at);
+          sendState(room);
+        } else if(m.action==="ramu-flame-stop"){
+          const at=now();if(player.brawler==="ramu")setRamuFlameHeld(room,player,false,at);sendState(room);
+        }
         else if (m.action==="super") doFire(room,player,true);
         else if (m.action==="transform") {
           const nextForm = getNextSaiyanForm(player);
@@ -500,30 +625,14 @@ wss.on("connection", (ws,_req,meta) => {
           sendState(room);
         } else if (m.action==="kame-release") { player.aim=clamp(finite(m.angle,player.aim),-Math.PI*2,Math.PI*2); doKame(room, player, player.aim); sendState(room);
         } else if (m.action==="gadget") {
-          const at=now();
-          if (isCombatPhase(room.phase) && player.alive && player.transformUntil<=at && !(player.kameChargeStartedAt>0) && tryConsumeGadget(player,at)) {
-            const a=player.aim;
-            if (player.brawler === "deges") {
-              const stats = getBrawlerStats(player);
-              room.projectiles.push({ id:nextProjectileId++, ownerId:player.id, team:player.team,
-                x:player.x+Math.cos(a)*24, y:player.y+Math.sin(a)*24, angle:a,
-                speed:stats.gadgetSpeed, damage:stats.gadgetDamage, range:stats.gadgetRange, splashRadius:stats.gadgetRadius,
-                heal:stats.gadgetHeal, durationMs:stats.gadgetDuration, flightDuration:stats.gadgetRange/stats.gadgetSpeed, arcHeight:142,
-                traveled:0, super:false, cigar:true, greenBeer:true });
-            } else {
-              const dashPosition=movePlayerWithObstacles(player.x,player.y,Math.cos(a)*70,Math.sin(a)*70,room.world,PLAYER_RADIUS);
-              player.x=dashPosition.x; player.y=dashPosition.y;
-            }
-            event(room,"gadget",{playerId:player.id,kind:player.brawler==="deges"?"green-beer-cigar":"dash",cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
-            sendState(room);
-          }
+          useGadget(room,player,now());sendState(room);
         } else if (m.action==="add-bot") {
           if (!canConfigureRoom(player.id,room.ownerId,room.phase)) throw new Error("Only the room owner can add bots before the match starts");
           if (room.players.size>=MAX_PLAYERS) throw new Error("Room is full");
           const slot=nextAvailableSlot(room.players.values(), MAX_PLAYERS);
           if (slot < 0) throw new Error("Room is full");
           const id=`bot:${room.code}:${slot}`;
-          const choices=["kuku","shachi","saiyan","deges"]; const brawler=choices[slot%choices.length];
+          const choices=["kuku","shachi","saiyan","deges","ramu"];const brawler=choices[slot%choices.length];
           const bot=makePlayer({id},{name:`Bot ${slot+1}`,brawler},slot); bot.isBot=true; bot.connected=true; bot.socket=null; bot.ready=true; room.players.set(id,bot);
           startMatch(room); event(room,"bot-joined",{playerId:id,brawler}); sendState(room);
         } else if (m.action==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
