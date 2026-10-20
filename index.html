@@ -3267,7 +3267,17 @@ function gadget(p){
       if(activeMatchId || !roster.some(p=>p.id===localId)) return;
       activeMatchId=matchId; activePlayerId=localId;
       clearInterval(queueTimer); queueTimer=null;
-      if(queueChannel){const old=queueChannel;await new Promise(resolve=>setTimeout(resolve,1200)); if(queueChannel===old) queueChannel=null; await db.removeChannel(old);}
+      if(queueChannel){
+        const old=queueChannel;
+        if(queueChannel===old) queueChannel=null;
+        // Channel removal can occasionally stall during a quickplay handoff.
+        // Never leave the player stranded on GET READY while cleanup is pending.
+        await new Promise(resolve=>setTimeout(resolve,250));
+        await Promise.race([
+          db.removeChannel(old).catch(()=>null),
+          new Promise(resolve=>setTimeout(resolve,1500))
+        ]);
+      }
       seenAt.clear();
       $('mmTxt').textContent='GET READY!'; $('mmHint').textContent='Match found. Syncing players…';
       $('ldFill').style.width='100%'; $('ldPct').textContent='100%'; show('loading');
@@ -3299,9 +3309,33 @@ function gadget(p){
           await startOnlineMatch(next.roster,next.matchId,next.mode,activeMatchLocalId,next.hostId,next.startAt);
         }
       });
+      let matchConnectWatchdog=setTimeout(()=>{
+        if(activeMatchId!==matchId || networkMode) return;
+        $('mmTxt').textContent='ONLINE CONNECTION TIMED OUT';
+        $('mmHint').textContent='Online sync did not connect. Starting a playable offline match instead…';
+        const old=matchChannel; matchChannel=null;
+        activeMatchId=null; activePlayerId=clientId;
+        clearInterval(stateTimer); stateTimer=null;
+        if(old) void db.removeChannel(old).catch(()=>{});
+        window.DaBrawlGame?.endNetworkGame();
+        status('Online match sync timed out; started offline quickplay so you can keep playing.',true);
+        startLoadingScreen(false);
+      },12000);
       matchChannel.subscribe(statusValue=>{
-        if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){ $('mmTxt').textContent='CONNECTION LOST'; $('mmHint').textContent='Could not connect to the match. Check Supabase Realtime settings and try again.'; return; }
+        if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){
+          clearTimeout(matchConnectWatchdog);
+          $('mmTxt').textContent='CONNECTION LOST';
+          $('mmHint').textContent='Could not connect to the match. Returning to playable offline quickplay…';
+          const old=matchChannel; matchChannel=null;
+          activeMatchId=null; activePlayerId=clientId;
+          if(old) void db.removeChannel(old).catch(()=>{});
+          window.DaBrawlGame?.endNetworkGame();
+          status('Online match connection failed; started offline quickplay instead.',true);
+          startLoadingScreen(false);
+          return;
+        }
         if(statusValue!=='SUBSCRIBED') return;
+        clearTimeout(matchConnectWatchdog);
         setTimeout(()=>{
           if(!matchChannel || activeMatchId!==matchId) return;
           window.DaBrawlGame?.startNetworkGame(roster,matchId,mode,localId,hostId,startAt);
