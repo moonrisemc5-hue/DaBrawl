@@ -110,7 +110,7 @@ function doFire(room, p, isSuper = false, options = {}) {
   const stats = getBrawlerStats(p);
   const t = now();
   if (!p.alive || p.transformUntil > t || p.kameChargeStartedAt > 0 || p.smokeUntil > t || p.frozenUntil > t || p.ramuDiveUntil > t || p.ramuShieldUntil > t) return;
-  if(!isSuper&&p.brawler==="hacker"&&p.hackTargetId&&p.hackUntil>t){const controlled=room.players.get(p.hackTargetId);if(controlled?.alive){controlled.aim=p.aim;return doFire(room,controlled,false);}}
+  if(!isSuper&&p.brawler==="hacker"&&p.hackTargetId&&p.hackUntil>t){const controlled=room.players.get(p.hackTargetId);if(controlled?.alive){controlled.aim=p.aim;return doFire(room,controlled,false);}p.hackTargetId=null;p.hackUntil=0;}
   if(isSuper&&p.brawler==="hacker"){
     const target=room.players.get(options.targetId||"");
     if(p.meter<100||t-p.lastSuper<1200||!target||!isTargetDamageable(target,p,t)||Math.hypot(target.x-p.x,target.y-p.y)>stats.superRange)return;
