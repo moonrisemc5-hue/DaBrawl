@@ -1,0 +1,67 @@
+name: DaBrawl frontend syntax check
+
+on:
+  push:
+    paths:
+      - "index.html"
+      - ".github/workflows/frontend-check.yml"
+  pull_request:
+    paths:
+      - "index.html"
+      - ".github/workflows/frontend-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inline-script-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check inline JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import subprocess
+
+          class InlineScripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.attrs = None
+                  self.parts = []
+                  self.scripts = []
+
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() == "script":
+                      self.attrs = dict(attrs)
+                      self.parts = []
+
+              def handle_data(self, data):
+                  if self.attrs is not None:
+                      self.parts.append(data)
+
+              def handle_endtag(self, tag):
+                  if tag.lower() != "script" or self.attrs is None:
+                      return
+                  kind = (self.attrs.get("type") or "").lower()
+                  if not self.attrs.get("src") and kind not in ("application/json", "application/ld+json", "importmap"):
+                      self.scripts.append("".join(self.parts))
+                  self.attrs = None
+                  self.parts = []
+
+          parser = InlineScripts()
+          parser.feed(Path("index.html").read_text(encoding="utf-8"))
+          if not parser.scripts:
+              raise SystemExit("No inline JavaScript scripts found")
+          for index, script in enumerate(parser.scripts, 1):
+              path = Path(f"/tmp/dabrawl-inline-{index}.js")
+              path.write_text(script, encoding="utf-8")
+              subprocess.run(["node", "--check", str(path)], check=True)
+          print(f"Syntax OK: checked {len(parser.scripts)} inline script(s)")
+          PY
