@@ -1,8 +1,10 @@
 // Server-authoritative gadget charge and cooldown rules.
 // Timings are based on the browser gadget cooldowns; special visual effects still require client parity.
 export function getGadgetCooldownMs(player) {
-  // Degeš has a 900ms toss, a 3s green-beer pool, then a 15s cooldown.
-  if (player?.brawler === "deges") return 18_900;
+  // Degeš channels smoke for two seconds; cooldown includes the channel, then 15s.
+  if (player?.brawler === "deges") return 17_000;
+  // Ice Cube keeps the existing 12s cooldown. Fire Dive starts its 20s cooldown only on landing.
+  if (player?.brawler === "ramu") return player.ramuMode === "fire" ? 0 : 12_000;
   if (player?.brawler === "saiyan") {
     if (player.form === 2) return 7_000;
     if (player.form === 3) return 14_000;
@@ -19,5 +21,12 @@ export function gadgetCharges(player, at = Date.now()) {
 export function tryConsumeGadget(player, at = Date.now()) {
   if (!player || !Number.isFinite(at) || gadgetCharges(player, at) < 1) return false;
   player.gadgetReadyAt = at + getGadgetCooldownMs(player);
+  return true;
+}
+
+/** Start Ramu's Fire Dive cooldown at landing, not at launch. */
+export function startRamuDiveCooldown(player, at, durationMs) {
+  if (!player || player.brawler !== "ramu" || !Number.isFinite(at) || !Number.isFinite(durationMs) || durationMs < 0) return false;
+  player.gadgetReadyAt = at + durationMs;
   return true;
 }
