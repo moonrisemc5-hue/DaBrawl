@@ -1288,7 +1288,7 @@
     }
     function tryFire(p){
       const ramuFlame=p?.b==='ramu'&&p.ramuMode==='fire';
-      if(G.ph!='play'||!p.alive||(!ramuFlame&&p.am<1)||(!ramuFlame&&p.cd>0)||p.lp||p.k.sy||p.tf>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
+      if(G.ph!='play'||!p.alive||(!ramuFlame&&p.am<1&&p.b!=='hacker')||(!ramuFlame&&p.cd>0)||p.lp||p.k.sy||p.tf>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
       if(ramuFlame){if((p.fireEnergy||0)>0&&(p.fireLock||0)<=0){p.nh=0;p.hc=0;}if(p!==me&&p.aiFireHeld&&(p.fireLock||0)<=0&&(p.fireEnergy||0)>0)p.ramuFireActive=true;return;}
       p.nh=0;p.hc=0;
       if(p.b==='deges'){const target=degesAimTarget(p,300);p.a=target.angle;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',target.angle,{targetX:target.x,targetY:target.y,beerRange:target.range});}
