@@ -3341,7 +3341,15 @@ function gadget(p){
         setTimeout(()=>{
           if(!matchChannel || activeMatchId!==matchId) return;
           try {
-            window.DaBrawlGame?.startNetworkGame(roster,matchId,mode,localId,hostId,startAt);
+            if(typeof window.DaBrawlGame?.startNetworkGame!=='function'){
+              throw new Error('Game engine multiplayer bridge did not load');
+            }
+            window.DaBrawlGame.startNetworkGame(roster,matchId,mode,localId,hostId,startAt);
+            // Optional chaining alone can silently do nothing if the game bridge is
+            // missing or startup returns without changing screens. Verify the result.
+            if(scr!=='game' || !networkMode || !me){
+              throw new Error('Match startup returned without entering gameplay');
+            }
           } catch(err) {
             clearTimeout(matchConnectWatchdog);
             console.error('Could not start online match:',err);
