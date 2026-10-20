@@ -35,7 +35,7 @@ function makeRoom(code, mode = "knockout") {
   const normalizedMode = validMode(mode);
   return { code, mode: normalizedMode, world: createArena(normalizedMode),
     phase: "waiting", createdAt: now(), updatedAt: now(), emptySince: 0, startedAt: 0, endsAt: 0, tick: 0,
-    players: new Map(), projectiles: [], beams: [], events: [], winner: null };
+    players: new Map(), projectiles: [], splashZones: [], beams: [], events: [], winner: null };
 }
 function makePlayer(user, msg, slot) {
   const brawler = BRAWLERS[msg.brawler] ? msg.brawler : "default";
@@ -57,7 +57,7 @@ function snapshot(room) {
       gadgetCharges:gadgetCharges(p),gadgetCooldownMs:Math.max(0,p.gadgetReadyAt-now()),
       kameCooldownMs:Math.max(0,(p.kameReadyAt||0)-now()),kameCharging:Boolean(p.kameChargeStartedAt),kameCharge:kameChargePower(p.kameChargeStartedAt,now()),muiCharging:Boolean(p.pendingMuiBeam),
       transforming:p.transformUntil>now(),connected:p.connected,ready:p.ready
-    })), projectiles: room.projectiles.map(b => ({ id:b.id,ownerId:b.ownerId,x:b.x,y:b.y,angle:b.angle,super:b.super,beer:!!b.friendlySupport,cigar:!!b.cigar,flightTime:b.flightTime||0,flightDuration:b.flightDuration||0,arcHeight:b.arcHeight||58,range:b.range||300,damage:b.damage||0,splashRadius:b.splashRadius||0 })) };
+    })), projectiles: room.projectiles.map(b => ({ id:b.id,ownerId:b.ownerId,x:b.x,y:b.y,angle:b.angle,super:b.super,beer:!!b.friendlySupport,cigar:!!b.cigar,greenBeer:!!b.greenBeer,flightTime:b.flightTime||0,flightDuration:b.flightDuration||0,arcHeight:b.arcHeight||58,range:b.range||300,damage:b.damage||0,splashRadius:b.splashRadius||0,heal:b.heal||0 })) };
 }
 function sendState(room) { emit(room, "state", { state: snapshot(room) }); }
 function event(room, name, data = {}) { room.events.push({ name, at: now(), ...data }); if (room.events.length > 80) room.events.shift(); emit(room, "event", { event: name, ...data }); }
@@ -137,7 +137,7 @@ function doFire(room, p, isSuper = false) {
     for (const target of room.players.values()) {
       if (!isTargetDamageable(target, p, t)) continue;
       if (Math.hypot(target.x-p.x,target.y-p.y) > stats.superRange) continue;
-      target.hp = Math.max(0, target.hp-stats.superDamage);
+      target.lastHitAt=t;target.hp = Math.max(0, target.hp-stats.superDamage);
       target.meter = clamp(target.meter+12,0,100);
       hits++;
       event(room,"hit",{attackerId:p.id,targetId:target.id,damage:stats.superDamage,hp:target.hp,super:true});
@@ -187,7 +187,7 @@ function doKame(room, player, angle) {
     const rx = target.x - player.x, ry = target.y - player.y;
     const along = rx * dx + ry * dy, perpendicular = Math.abs(-rx * dy + ry * dx);
     if (along <= 0 || along >= traced.length || perpendicular >= width + PLAYER_RADIUS) continue;
-    target.hp = Math.max(0, target.hp - damage); target.meter = clamp(target.meter + 12, 0, 100); hits++;
+    target.lastHitAt=at;target.hp = Math.max(0, target.hp - damage); target.meter = clamp(target.meter + 12, 0, 100); hits++;
     event(room, "hit", { attackerId: player.id, targetId: target.id, damage, hp: target.hp, kame: true });
     if (target.hp <= 0) { target.alive = false; cancelKameCharge(target); target.input = { x: 0, y: 0 }; event(room, "knockout", { playerId: target.id, by: player.id }); }
   }
@@ -200,14 +200,24 @@ function stepRoom(room, dt) {
   if (room.phase === "playing") {
     for (const p of room.players.values()) {
       if (p.isBot && p.alive && p.connected && t >= p.botThinkAt) {
-        const decision = decideBotAction(p, [...room.players.values()], room.world, t);
+        const decision = decideBotAction(p, [...room.players.values()], room.world, t, room.projectiles);
         p.input = decision.input; p.aim = decision.aim; p.lastSeen = t; p.botThinkAt = t + 180;
         if (decision.action === "fire") doFire(room, p, false);
         else if (decision.action === "super") doFire(room, p, true);
         else if (decision.action === "gadget") {
           if (p.transformUntil <= t && !(p.kameChargeStartedAt > 0) && tryConsumeGadget(p,t)) {
-            const pos = movePlayerWithObstacles(p.x,p.y,Math.cos(p.aim)*70,Math.sin(p.aim)*70,room.world,PLAYER_RADIUS); p.x=pos.x; p.y=pos.y;
-            event(room,"gadget",{playerId:p.id,cooldownMs:Math.max(0,p.gadgetReadyAt-t),charges:gadgetCharges(p,t)});
+            if (p.brawler === "deges") {
+              const stats=getBrawlerStats(p),ally=room.players.get(decision.gadgetTargetId)||p;
+              const dx=ally.x-p.x,dy=ally.y-p.y,distance=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx);
+              const range=Math.max(70,Math.min(stats.gadgetRange,distance));p.aim=angle;
+              room.projectiles.push({id:nextProjectileId++,ownerId:p.id,team:p.team,x:p.x+Math.cos(angle)*24,y:p.y+Math.sin(angle)*24,angle,
+                speed:stats.gadgetSpeed,damage:stats.gadgetDamage,range,splashRadius:stats.gadgetRadius,heal:stats.gadgetHeal,durationMs:stats.gadgetDuration,
+                flightDuration:range/stats.gadgetSpeed,arcHeight:142,traveled:0,super:false,cigar:true,greenBeer:true});
+              event(room,"gadget",{playerId:p.id,kind:"green-beer-cigar",cooldownMs:Math.max(0,p.gadgetReadyAt-t),charges:gadgetCharges(p,t)});
+            } else {
+              const pos = movePlayerWithObstacles(p.x,p.y,Math.cos(p.aim)*70,Math.sin(p.aim)*70,room.world,PLAYER_RADIUS); p.x=pos.x; p.y=pos.y;
+              event(room,"gadget",{playerId:p.id,cooldownMs:Math.max(0,p.gadgetReadyAt-t),charges:gadgetCharges(p,t)});
+            }
           }
         } else if (decision.action === "transform") {
           const nextForm=getNextSaiyanForm(p);
@@ -228,11 +238,12 @@ function stepRoom(room, dt) {
       }
       if (!p.connected || !p.alive) continue;
       if (t - p.lastSeen > INPUT_TIMEOUT_MS) p.input = { x: 0, y: 0 };
-      const stats = getBrawlerStats(p);
+      const stats = getBrawlerStats(p),oldX=p.x,oldY=p.y;
       const { x: dx, y: dy } = movementDelta(p.input.x, p.input.y, stats.speed, dt);
       const nextPosition = movePlayerWithObstacles(p.x, p.y, dx, dy, room.world, PLAYER_RADIUS);
       p.x = nextPosition.x;
       p.y = nextPosition.y;
+      if(dt>0){let vx=(p.x-oldX)/dt,vy=(p.y-oldY)/dt,cap=stats.speed*1.8,v=Math.hypot(vx,vy);if(v>cap){vx*=cap/v;vy*=cap/v;}p.aiVx=(p.aiVx||0)*.35+vx*.65;p.aiVy=(p.aiVy||0)*.35+vy*.65;}
       if (p.transformUntil && t >= p.transformUntil) p.transformUntil = 0;
     }
     for (const p of room.players.values()) {
@@ -254,10 +265,16 @@ function stepRoom(room, dt) {
   const keep = [];
   for (const b of room.projectiles) {
     advanceProjectile(b, dt);
+    if (b.flightDuration > 0 && b.speed > 0) b.flightTime = Math.min(b.flightDuration, (b.traveled || 0) / b.speed);
     const splashProjectile = () => {
       if (!b.friendlySupport && !b.cigar) return;
       const radius = b.splashRadius || 0, owner = room.players.get(b.ownerId);
-      if (b.friendlySupport && !b.cigar) {
+      if (b.greenBeer) {
+        if (owner) owner.gadgetReadyAt = t + (b.durationMs || 3000) + 15_000;
+        room.splashZones.push({ id:b.id, ownerId:b.ownerId, team:b.team, x:b.x, y:b.y, radius,
+          damage:0, heal:b.heal || 1000, greenBeer:true, tickMs:1000, expiresAt:t+(b.durationMs || 3000), nextTickAt:t,
+          nextTargetAt:new Map() });
+      } else if (b.friendlySupport && !b.cigar) {
         room.splashZones.push({ id:b.id, ownerId:b.ownerId, team:b.team, x:b.x, y:b.y, radius,
           damage:b.damage, heal:b.heal || 2250, superBeer:!!b.superBeer, expiresAt:t+1800, nextTickAt:t,
           nextTargetAt:new Map() });
@@ -265,19 +282,20 @@ function stepRoom(room, dt) {
         for (const target of room.players.values()) {
           if (!target.alive || target.id === b.ownerId || Math.hypot(target.x-b.x,target.y-b.y) > radius) continue;
           if (target.team === b.team) continue;
-          target.hp = Math.max(0,target.hp-b.damage);
+          target.lastHitAt=t;target.hp = Math.max(0,target.hp-b.damage);
           target.meter = clamp(target.meter+12,0,100);
           event(room,"hit",{projectileId:b.id,attackerId:b.ownerId,targetId:target.id,damage:b.damage,hp:target.hp,splash:true});
           if(target.hp<=0){target.alive=false;cancelKameCharge(target);target.input={x:0,y:0};event(room,"knockout",{playerId:target.id,by:b.ownerId});}
         }
       }
-      event(room,"projectile-splash",{projectileId:b.id,ownerId:b.ownerId,x:b.x,y:b.y,radius,kind:b.cigar?"cigar":"beer",super:!!b.superBeer,durationMs:b.cigar?0:1800});
+      event(room,"projectile-splash",{projectileId:b.id,ownerId:b.ownerId,x:b.x,y:b.y,radius,kind:b.greenBeer?"green-beer":b.cigar?"cigar":"beer",super:!!b.superBeer,durationMs:b.greenBeer?(b.durationMs||3000):b.cigar?0:1800,healPerSecond:b.greenBeer?(b.heal||1000):undefined});
       if(owner && b.superBeer) owner.meter=0;
     };
     const wallHit = b.friendlySupport && !b.cigar ? null : findProjectileObstacleHit(b, room.world.obstacles, 2);
     let contact = findProjectileContact(b, room.players.values(), t, 19);
     if (b.friendlySupport && !b.cigar) contact = null; // Beer passes over players and splashes only when it lands.
-    if (b.friendlySupport && b.cigar) {
+    if (b.greenBeer) contact = null; // Lobbed support cigar lands at its range instead of colliding with players.
+    if (b.friendlySupport && b.cigar && !b.greenBeer) {
       const x1 = Number.isFinite(b.previousX) ? b.previousX : b.x, y1 = Number.isFinite(b.previousY) ? b.previousY : b.y;
       const dx = b.x - x1, dy = b.y - y1, length2 = dx*dx + dy*dy;
       let allyContact = null, firstT = Infinity;
@@ -303,7 +321,7 @@ function stepRoom(room, dt) {
         hit.hp += healed;
         event(room, "heal", { projectileId:b.id, playerId:b.ownerId, targetId:hit.id, amount:healed, hp:hit.hp });
       } else {
-        hit.hp = Math.max(0, hit.hp-b.damage); hit.meter = clamp(hit.meter+12,0,100);
+        hit.lastHitAt=t;hit.hp = Math.max(0, hit.hp-b.damage); hit.meter = clamp(hit.meter+12,0,100);
         const owner = room.players.get(b.ownerId); if (owner) owner.meter = clamp(owner.meter+18,0,100);
         event(room, "hit", { projectileId:b.id, attackerId:b.ownerId, targetId:hit.id, damage:b.damage, hp:hit.hp });
         if (hit.hp <= 0) { hit.alive=false; cancelKameCharge(hit); hit.input={x:0,y:0}; event(room,"knockout",{playerId:hit.id,by:b.ownerId}); }
@@ -316,11 +334,12 @@ function stepRoom(room, dt) {
   for (const zone of room.splashZones) {
     if (t >= zone.expiresAt) continue;
     if (t >= zone.nextTickAt) {
-      zone.nextTickAt = t + 600;
+      zone.nextTickAt = t + (zone.tickMs || 600);
       for (const target of room.players.values()) {
         if (!target.alive || Math.hypot(target.x-zone.x,target.y-zone.y) > zone.radius) continue;
         const isOwner = target.id === zone.ownerId;
-        const sameTeam = isOwner || ((room.mode === "knockout" || room.mode === "duo") && target.team === zone.team);
+        const sameTeam = isOwner || ((room.mode !== "showdown") && target.team === zone.team);
+        if (zone.greenBeer && !sameTeam) continue;
         if (sameTeam) {
           const healed = Math.min(target.maxHp-target.hp, zone.heal);
           if (healed > 0) { target.hp += healed; event(room,"heal",{projectileId:zone.id,playerId:zone.ownerId,targetId:target.id,amount:healed,hp:target.hp,splash:true,beerZone:true}); }
@@ -328,7 +347,7 @@ function stepRoom(room, dt) {
           const previous = zone.nextTargetAt.get(target.id) || 0;
           if (t < previous) continue;
           zone.nextTargetAt.set(target.id,t+600);
-          target.hp = Math.max(0,target.hp-zone.damage);
+          target.lastHitAt=t;target.hp = Math.max(0,target.hp-zone.damage);
           target.meter = clamp(target.meter+12,0,100);
           event(room,"hit",{projectileId:zone.id,attackerId:zone.ownerId,targetId:target.id,damage:zone.damage,hp:target.hp,splash:true,super:zone.superBeer,beerZone:true});
           if(target.hp<=0){target.alive=false;cancelKameCharge(target);target.input={x:0,y:0};event(room,"knockout",{playerId:target.id,by:zone.ownerId});}
@@ -351,7 +370,7 @@ function stepRoom(room, dt) {
           const rx = target.x - beam.x, ry = target.y - beam.y;
           const along = rx * dx + ry * dy, perpendicular = Math.abs(-rx * dy + ry * dx);
           if (along <= 0 || along >= beam.length || perpendicular >= beam.width + 14) continue;
-          target.hp = Math.max(0, target.hp - beam.damage);
+          target.lastHitAt=t;target.hp = Math.max(0, target.hp - beam.damage);
           target.meter = clamp(target.meter + 12, 0, 100);
           event(room, "hit", { attackerId: beam.ownerId, targetId: target.id, damage: beam.damage, hp: target.hp, mui: true });
           if (target.hp <= 0) { target.alive = false; cancelKameCharge(target); target.input = { x: 0, y: 0 }; event(room, "knockout", { playerId: target.id, by: beam.ownerId }); }
@@ -488,13 +507,14 @@ wss.on("connection", (ws,_req,meta) => {
               const stats = getBrawlerStats(player);
               room.projectiles.push({ id:nextProjectileId++, ownerId:player.id, team:player.team,
                 x:player.x+Math.cos(a)*24, y:player.y+Math.sin(a)*24, angle:a,
-                speed:stats.gadgetSpeed, damage:stats.gadgetDamage, range:stats.gadgetRange, splashRadius:34,
-                traveled:0, super:false, cigar:true });
+                speed:stats.gadgetSpeed, damage:stats.gadgetDamage, range:stats.gadgetRange, splashRadius:stats.gadgetRadius,
+                heal:stats.gadgetHeal, durationMs:stats.gadgetDuration, flightDuration:stats.gadgetRange/stats.gadgetSpeed, arcHeight:142,
+                traveled:0, super:false, cigar:true, greenBeer:true });
             } else {
               const dashPosition=movePlayerWithObstacles(player.x,player.y,Math.cos(a)*70,Math.sin(a)*70,room.world,PLAYER_RADIUS);
               player.x=dashPosition.x; player.y=dashPosition.y;
             }
-            event(room,"gadget",{playerId:player.id,kind:player.brawler==="deges"?"cigar-projectile":"dash",cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
+            event(room,"gadget",{playerId:player.id,kind:player.brawler==="deges"?"green-beer-cigar":"dash",cooldownMs:Math.max(0,player.gadgetReadyAt-at),charges:gadgetCharges(player,at)});
             sendState(room);
           }
         } else if (m.action==="add-bot") {
@@ -503,7 +523,7 @@ wss.on("connection", (ws,_req,meta) => {
           const slot=nextAvailableSlot(room.players.values(), MAX_PLAYERS);
           if (slot < 0) throw new Error("Room is full");
           const id=`bot:${room.code}:${slot}`;
-          const choices=["kuku","shachi","saiyan"]; const brawler=choices[slot%choices.length];
+          const choices=["kuku","shachi","saiyan","deges"]; const brawler=choices[slot%choices.length];
           const bot=makePlayer({id},{name:`Bot ${slot+1}`,brawler},slot); bot.isBot=true; bot.connected=true; bot.socket=null; bot.ready=true; room.players.set(id,bot);
           startMatch(room); event(room,"bot-joined",{playerId:id,brawler}); sendState(room);
         } else if (m.action==="ping") ws.send(JSON.stringify({type:"pong",clientSentAt:finite(m.clientSentAt),serverTime:now()}));
