@@ -211,10 +211,6 @@
         </div><h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">SOLO SHOWDOWN</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">Every brawler for themselves. Be the last one standing.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#fca5a5">SOLO MODE · FREE FOR ALL</div>
       </button>
       <button class="mode-card" data-mode="duo" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer"><div style="height:100px;border:2px solid #000;border-radius:9px;background:linear-gradient(135deg,#647b45,#c0ad72 48%,#476b43);position:relative"><div style="position:absolute;left:18%;top:25%;width:19px;height:19px;background:#3b82f6;border:2px solid #111;border-radius:5px;box-shadow:18px 13px 0 #60a5fa,125px 35px 0 #ef4444,143px 48px 0 #f87171,205px 8px 0 #c084fc,223px 21px 0 #d8b4fe"></div></div><h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">DUO SHOWDOWN</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">Team up with a partner. Five duos fight until one team remains.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#86efac">TEAM MODE · 5 TEAMS OF 2</div></button>
-      <button class="mode-card" data-mode="trio" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer">
-        <div style="height:100px;border:2px solid #000;border-radius:9px;overflow:hidden;background:linear-gradient(135deg,#315b49,#a8c76b 48%,#314f3d);position:relative"><div style="position:absolute;left:18%;top:25%;width:18px;height:18px;background:#3b82f6;border:2px solid #111;border-radius:5px;box-shadow:22px 12px 0 #60a5fa,44px 24px 0 #93c5fd,125px 35px 0 #ef4444,147px 47px 0 #f87171,169px 59px 0 #fca5a5"></div></div>
-        <h3 style="font-size:25px;margin:9px 0 3px;color:var(--y)">TRIO SHOWDOWN</h3><p style="font:14px Arial,sans-serif;margin:0;color:#cbd5e1">Four teams of three fight to be the last trio standing.</p><div style="font:12px Arial,sans-serif;margin-top:9px;color:#86efac">TEAM MODE · 4 TEAMS OF 3</div>
-      </button>
       <button class="mode-card" data-mode="duel" style="font:inherit;color:#fff;text-align:left;padding:12px;border:3px solid #64748b;border-radius:14px;background:#111c35;cursor:pointer">
         <div style="height:100px;border:2px solid #000;border-radius:9px;overflow:hidden;background:linear-gradient(90deg,#314f3d 0 32%,#b6a66c 32% 68%,#314f3d 68%);position:relative">
           <div style="position:absolute;left:23%;top:32%;width:23px;height:23px;background:#3b82f6;border:2px solid #111;border-radius:5px;box-shadow:100px 0 0 #ef4444"></div><div style="position:absolute;left:48%;top:0;height:100%;width:8px;background:#456044"></div>
@@ -234,10 +230,6 @@
         <div id="keybindRows" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
         <p id="keybindHint" style="font:13px Arial,sans-serif;color:#cbd5e1;margin:10px 0 0">Choose a control, then press the key you want to use.</p>
         <button class="btn" id="resetKeybinds" style="font-size:18px;margin-top:10px">RESET DEFAULTS</button>
-      </section>
-      <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
-        <h3 style="margin:0 0 6px;color:var(--y);font-size:24px">ACCESSIBILITY</h3>
-        <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff;font-size:18px"><span>Disable Shaking<small style="display:block;color:#cbd5e1;font-size:13px;margin-top:4px">Turn off camera shake on your screen only.</small></span><input id="disableShakeToggle" type="checkbox" style="width:24px;height:24px;accent-color:#38bdf8"></label>
       </section>
       <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
         <h3 style="margin:0 0 6px;color:var(--y);font-size:24px">ACCOUNT</h3>
@@ -556,9 +548,14 @@
     const T=48; let MW=28, MH=16;
     const Q=["..............","..#...bb......","..#...bb..~~..","......bb..~~..","..bb......#...","..bb..##..#...","......##......","...~~.....#..."];
     let M, gasDist=0, mapVariant=0;
+    const localWallStates=new Map(), localDestroyedWalls=new Set();let originalWallCells=new Set();
+    let terrainCanvas=null,terrainCacheDirty=true,terrainCacheWidth=0,terrainCacheHeight=0;
+    let bushSpriteCanvas=null,bushSpriteScale=0,bushTiles=[],waterTiles=[];
+    const RAMU_WALL_RULES={iceHits:12,heatSeconds:5,meltSeconds:5,coolPerSecond:.5};
     function build(){
+      localWallStates.clear();localDestroyedWalls.clear();terrainCacheDirty=true;bushTiles=[];waterTiles=[];
       gasDist = 0;
-      if(gameMode == 'showdown' || gameMode === 'duo' || gameMode === 'trio'){
+      if(gameMode == 'showdown' || gameMode === 'duo'){
         MW=50; MH=32;
         M = Array.from({length:MH}, (_,j) => Array.from({length:MW}, (_,i) => {
           if(i==0||j==0||i==MW-1||j==MH-1) return '#';
@@ -747,10 +744,10 @@
     }
     const BR = {
       kuku: {nm:'KUKU', rarity:'COMMON', rarityCol:'#00c0ff', hp:7000, spd:135, pel:8, dmg:312.5, spr:.68, rng:230, bs:550, rel:1.6, sd:333.3, sp:12, ss:.72, sr:340, w:140, z:2.5, cm:0.6, cls:'DAMAGE DEALER', atkNm:'2500 DMG', supNm:'WALL BREAKER', info:'Kuku fires 8 rapid buckshot pellets!'},
-      shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:10000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2000, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
+      shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:8000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2000, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
       saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'TRANSFORMER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'},
-      deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b86b3d', hp:7500, spd:138, pel:1, dmg:1062, spr:0, rng:300, bs:430, rel:2.4, sd:1375.5, sr:110, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'1062 DMG', supNm:'BEER BARRAGE', info:'Hooded masked gangster in a black puffer and grey joggers; his cigar splashes healing green beer!'},
-      ramu: {nm:'RAMU', rarity:'MYTHIC', rarityCol:'#ff4fd8', hp:8200, spd:140, pel:3, dmg:700, spr:.12, rng:260, bs:520, rel:1.1, sd:0, sr:0, w:100, z:6, cm:.55, cls:'TRANSFORMER', atkNm:'ICE VOLLEY / FIRE STREAM', supNm:'FIRE / ICE SHIFT', info:'A mighty bearded warrior commands ice and fire. Freeze enemies with six ice hits, or burn them with a continuous flame stream.'}
+      deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b16cff', hp:7600, spd:138, pel:1, dmg:1062, spr:0, rng:300, bs:430, rel:2.4, sd:1375.5, sr:110, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'1062 DMG', supNm:'BEER BARRAGE', gadgetNm:'2s SMOKE · FULL HEAL', info:'Hooded masked gangster in a black puffer and grey joggers. His gadget is a stationary two-second smoke channel that fully heals him; he remains vulnerable.'},
+      ramu: {nm:'RAMU', rarity:'MYTHIC', rarityCol:'#ef4444', hp:8000, spd:142, pel:1, dmg:1000, spr:0, rng:250, bs:480, rel:1.25, mode:1, sd:2000, sr:110, w:120, z:12, cm:0.55, freezeHits:8, fireDamage:1000, fireTickMs:350, fireInitialReach:.4, fireRange:285, fireEnergyDrain:.18, fireSuperCharge:6.6, freezeDuration:2, gadgetDiveCooldown:20, cls:'TRANSFORMER', atkNm:'ICE BURST / FIRE LANCE', supNm:'TRANSFORM MODE', gadgetNm:'ICE CUBE / FLAME DIVE', info:'Transform into fire or ice.'}
     };
     const FM = [
       {},
@@ -762,9 +759,7 @@
     ];
     let K = BR.kuku;
     const NM = ["Pip","Rex","Mochi","Zed","Bolt","Nova","Juno","Taco","Blaze","Jax","Vex","Zane"];
-    let P=[], B=[], F=[], MT=[], KM=[], me, G, cam={x:0,y:0}, shake=0, wf=0, touch=false, disableShake=false, matchEliminations=0, teamEliminations=0, teamEliminationOrder={};
-    try{disableShake=localStorage.getItem('dabrawl_disable_shake')==='1';}catch(e){}
-    function setShake(v){if(!disableShake)shake=Math.max(shake,v);}
+    let P=[], B=[], F=[], MT=[], KM=[], me, G, cam={x:0,y:0}, shake=0, wf=0, touch=false, matchEliminations=0, teamEliminations=0, teamEliminationOrder={};
     let selB='kuku'; try { selB = localStorage.getItem('dabrawl_b') || 'kuku'; if(!BR[selB]) selB='kuku'; } catch(e){}
     const brawlerKeys = Object.keys(BR);
     function cycleBrawler(dir){
@@ -780,11 +775,11 @@
     function mk(t,i,human,name,b='kuku',isDummy=false){
       let xPos, yPos;
       if(isDummy){ xPos = (MW*T)/2 + (i===0?-60:60); yPos = (MH*T)/2 + (i===0?-40:40); }
-      else if(gameMode == 'showdown' || gameMode === 'duo' || gameMode === 'trio'){
+      else if(gameMode == 'showdown' || gameMode === 'duo'){
         let valid = false, attempts = 0;
         while(!valid && attempts < 500){
           attempts++;
-          const angle = gameMode==='duo' ? (t/5)*Math.PI*2 + (i===0?-0.045:0.045) : (i / (gameMode==='trio'?12:10)) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+          const angle = gameMode==='duo' ? (t/5)*Math.PI*2 + (i===0?-0.045:0.045) : (i / 10) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
           xPos = (MW * T) / 2 + Math.cos(angle) * (MW * 0.42) * T;
           yPos = (MH * T) / 2 + Math.sin(angle) * (MH * 0.42) * T;
           if(tile(xPos, yPos) == '.') valid = true;
@@ -792,7 +787,7 @@
         if(!valid){ xPos = 2.5 * T; yPos = 2.5 * T; }
       } else { xPos = (t?26.5:1.5)*T; yPos = ([5,7,10][i%3]+.5)*T; }
       const maxH = BR[b].hp;
-      return {b, k:BR[b], lp:null, h:0, form:0, ramuMode:0, iceHits:new Map(), freeze:0, fireAmmo:1, fireRegen:0, ramuShield:0, ramuLeap:0, ramuLand:null, burst:0, holdT:0, chg:0, dodge:0, dodgeFx:0, tf:0, kcd:0, bt:0, kmt:0, hw:0, alt:0, t, human, name, x:xPos, y:yPos, hp:isDummy?99999:maxH, mh:isDummy?99999:maxH, am:b==='ramu'?1:3, sc:0, a:t?Math.PI:0, alive:true, dt:0, fl:0, dash:0, dd:0, gcd:0, cd:0, nh:9, mx:0, my:0, walk:0, rec:0, sw:0, sd:1, isDummy, autoAimTimer:0, wasOnCd:false, gasTimer:0, muiCharging:0, kaioken:0, ss2:0, ss2Cooldown:0, afterimages:[]};
+      return {b, k:BR[b], lp:null, h:0, ramuWaterHop:0, form:0, ramuMode:'ice', ramuTransform:b==='ramu'?1.05:0, ramuTransformTarget:b==='ramu'?'ice':'none', fireEnergy:1, fireLock:0, ramuDiveTimer:0, ramuDiveLift:0, ramuFireActive:false, ramuFireTick:0, ramuFireLength:0, ramuFireLengthMax:0, ramuWallSyncTimer:0, ramuIceBurstRemaining:0, ramuIceBurstTimer:0, ramuIceBurstIndex:0, ramuIceBurstAim:0, ramuShieldTimer:0, smokeTimer:0, freezeMeter:0, frozenTimer:0, burnTimer:0, burnTick:0, burnOwner:null, burst:0, holdT:0, chg:0, dodge:0, dodgeFx:0, tf:0, kcd:0, bt:0, kmt:0, hw:0, alt:0, t, human, name, x:xPos, y:yPos, hp:isDummy?99999:maxH, mh:isDummy?99999:maxH, am:3, sc:0, a:t?Math.PI:0, alive:true, dt:0, fl:0, dash:0, dd:0, gcd:0, cd:0, nh:9, mx:0, my:0, walk:0, rec:0, sw:0, sd:1, isDummy, autoAimTimer:0, wasOnCd:false, gasTimer:0, muiCharging:0, kaioken:0, ss2:0, ss2Cooldown:0, afterimages:[]};
     }
     let activeLoadingTimer=null, loadingGeneration=0;
     function startLoadingScreen(test=false){
@@ -822,19 +817,16 @@
         G = {ph:'play',t:0,w:[0,0],r:1,res:''};
       } else if(gameMode === 'duel'){
         // Offline fallback for 1v1: exactly one opponent, never a full 3v3 roster.
-        P.push(mk(1,0,0,n.pop()||'Duel Bot',['kuku','shachi','saiyan'][Math.random()*3|0]));
+        P.push(mk(1,0,0,n.pop()||'Duel Bot',['kuku','shachi','saiyan','deges','ramu'][Math.random()*5|0]));
         G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       } else if(gameMode === 'duo'){
-        for(let i=1; i<10; i++) P.push(mk(Math.floor(i/2), i%2, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
-        G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
-      } else if(gameMode === 'trio'){
-        for(let i=1; i<12; i++) P.push(mk(Math.floor(i/3), i%3, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
+        for(let i=1; i<10; i++) P.push(mk(Math.floor(i/2), i%2, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan','deges','ramu'][Math.random()*5|0]));
         G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       } else if(gameMode == 'showdown'){
-        for(let i=1; i<10; i++) P.push(mk(i, i, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
+        for(let i=1; i<10; i++) P.push(mk(i, i, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan','deges','ramu'][Math.random()*5|0]));
         G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       } else {
-        for(let t=0;t<2;t++)for(let i=0;i<3;i++){ if(!t&&!i) continue; P.push(mk(t,i,0,n.pop(),['kuku','shachi','saiyan'][Math.random()*3|0])); }
+        for(let t=0;t<2;t++)for(let i=0;i<3;i++){ if(!t&&!i) continue; P.push(mk(t,i,0,n.pop(),['kuku','shachi','saiyan','deges','ramu'][Math.random()*5|0])); }
         G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       }
       B=[]; F=[]; Z=[]; MT=[]; KM=[]; show('game');
@@ -1017,7 +1009,7 @@
       button.addEventListener('contextmenu',e=>e.preventDefault());
     }
     $('leaveBtn').onclick = () => { if(scr==='game' && gameMode==='showdown' && me && !me.alive && (G?.ph==='play'||G?.ph==='end')){ finish(); return; } show('menu'); isTestMode = false; };
-    $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
+    $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ if(isNetworkHost) void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
     $('home').onclick = () => { try{localStorage.removeItem('dabrawl_active_match');}catch(_){} beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
     $('play').onclick = () => {
       if(window.DaBrawlNet?.isInParty()){window.DaBrawlNet.toggleReady?.();return;}
@@ -1043,16 +1035,14 @@
       show('onlineLobby');
     };
     $('settingsBack').onclick = () => { waitingForBind=null; show('menu'); };
-    const shakeToggle=$('disableShakeToggle');
-    if(shakeToggle){shakeToggle.checked=disableShake;shakeToggle.addEventListener('change',()=>{disableShake=shakeToggle.checked;try{localStorage.setItem('dabrawl_disable_shake',disableShake?'1':'0');}catch(_){}if(disableShake)shake=0;});}
     // The legacy settingsAccount button was replaced by inline sign-in/sign-out controls.
     $('resetKeybinds').onclick = () => { keyBinds={...DEFAULT_BINDS};waitingForBind=null;$('keybindHint').textContent='Default controls restored.';saveKeyBinds(); };
     $('bk1').onclick = () => show('menu');
     function applyGameMode(mode){
-      if(!['knockout','showdown','duo','trio','duel'].includes(mode))return;
+      if(!['knockout','showdown','duo','duel'].includes(mode))return;
       gameMode=mode;
-      $('modeTxt').textContent=mode==='knockout'?'KNOCKOUT 3v3':mode==='showdown'?'SOLO SHOWDOWN':mode==='duo'?'DUO SHOWDOWN':mode==='trio'?'TRIO SHOWDOWN':'1v1 DUEL';
-      $('modeBtn').title=mode==='knockout'?'Knockout: 3v3':mode==='showdown'?'Solo Showdown: every player for themselves':mode==='duo'?'Duo Showdown: five teams of two':mode==='trio'?'Trio Showdown: four teams of three':'1v1 Duel: you versus one bot';
+      $('modeTxt').textContent=mode==='knockout'?'KNOCKOUT 3v3':mode==='showdown'?'SOLO SHOWDOWN':mode==='duo'?'DUO SHOWDOWN':'1v1 DUEL';
+      $('modeBtn').title=mode==='knockout'?'Knockout: 3v3':mode==='showdown'?'Solo Showdown: every player for themselves':mode==='duo'?'Duo Showdown: five teams of two':'1v1 Duel: you versus one bot';
       document.querySelectorAll('.mode-card').forEach(card=>{const active=card.dataset.mode===mode;card.style.borderColor=active?'#ffd21f':'#64748b';card.style.boxShadow=active?'0 0 0 2px #ffd21f':'none';});
     }
     $('modeBtn').onclick = () => {
@@ -1067,81 +1057,220 @@
     $('modePickerBack').onclick=()=>show('menu');
     $('bk2').onclick = () => { clearInterval(mmI); clearTimeout(mmTimeout); mmI=null; mmTimeout=null; if(window.DaBrawlNet) window.DaBrawlNet.cancelMatchmaking(); show('menu'); };
     function aimAtNearestEnemy(p){
-      let bestDistance=600,bestEnemy=null;
+      let bestDistance=p.b==='ramu'?Math.hypot(MW*T,MH*T):600,bestEnemy=null;
       for(const enemy of P){
         if(enemy===p||!enemy.alive||(gameMode!=='showdown'&&enemy.t===p.t)||!sees(p.t,enemy))continue;
+        if(p.b==='ramu'&&aiLineBlocked(p.x,p.y,enemy.x,enemy.y))continue;
         const distance=Math.hypot(enemy.x-p.x,enemy.y-p.y);
         if(distance<bestDistance){bestDistance=distance;bestEnemy=enemy;}
       }
       if(bestEnemy){
         if(p.b==='deges'){const lead=aiPredictPoint(p,bestEnemy,430,.8);p.a=Math.atan2(lead.y-p.y,lead.x-p.x);}
         else p.a=Math.atan2(bestEnemy.y-p.y,bestEnemy.x-p.x);
-        p.autoAimTimer=.4;return true;
+        p.autoAimTarget=bestEnemy;p.autoAimTimer=p.b==='ramu'?2.5:.4;return true;
       }
-      return false;
+      p.autoAimTarget=null;p.autoAimTimer=0;return false;
     }
-    function autoAimAndShoot(p){
-      if(p.muiCharging>0||KM.some(k=>k.o===p))return;
+    function autoAimTarget(p){
+      if(p.muiCharging>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0||KM.some(k=>k.o===p))return;
       aimAtNearestEnemy(p);
-      if(p.k.sy)sTap(p);else tryFire(p);
     }
-    const sees = (tm,p) => gameMode=='showdown' || gameMode=='duo' || gameMode=='trio' || p.t==tm || tile(p.x,p.y)!='b' || P.some(a => a.alive && a.t==tm && Math.hypot(a.x-p.x, a.y-p.y)<2.5*T);
+    const sees = (tm,p) => gameMode=='showdown' || gameMode=='duo' || p.t==tm || tile(p.x,p.y)!='b' || P.some(a => a.alive && a.t==tm && Math.hypot(a.x-p.x, a.y-p.y)<2.5*T);
     function degesImpactVisual(x,y,b){
-      const radius=b.splashRadius||(b.superBeer?110:72), greenBeer=!!b.greenBeer, isBeer=!!b.beer||greenBeer;
-      const color=greenBeer?'#82d856':isBeer?'#d99a42':'#c4a484', puddleColor=greenBeer?'#398b35':isBeer?'#9b5b22':'#806b59';
-      // Layer a splat, irregular puddle and flying droplets so impacts read as liquid, not a target ring.
+      const radius=b.splashRadius||(b.superBeer?110:72),isBeer=!!b.beer;
+      const color=isBeer?'#d99a42':'#c4a484',puddleColor=isBeer?'#9b5b22':'#806b59';
       F.push({k:'splash',x,y,rad:Math.min(62,radius*.68),l:.42,m:.42,c:color,seed:Math.random()*6.28});
-      F.push({k:'puddle',x,y,rad:greenBeer?Math.min(92,radius*.72):Math.min(52,radius*.58),l:greenBeer?3:isBeer?1.8:.55,m:greenBeer?3:isBeer?1.8:.55,c:puddleColor,seed:Math.random()*6.28});
-      for(let i=0;i<13;i++){
-        const a=(i/13)*Math.PI*2+(Math.random()-.5)*.34, speed=55+Math.random()*125;
-        const life=.28+Math.random()*.28;
-        F.push({k:'drop',x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed-24,l:life,m:life,c:greenBeer?'#d8ffb3':i%4===0?'#ffe7a0':color,s:3+Math.random()*4});
-      }
-      if(isBeer){
-        const bubbles=greenBeer?24:(b.superBeer?18:11);
-        for(let i=0;i<bubbles;i++){
-          const a=Math.random()*Math.PI*2, dist=Math.random()*radius*.42, life=.55+Math.random()*.7;
-          F.push({k:'bubble',x:x+Math.cos(a)*dist,y:y+Math.sin(a)*dist*.45,vx:(Math.random()-.5)*24,vy:-35-Math.random()*85,l:life,m:life,r:2+Math.random()*(greenBeer?4.5:(b.superBeer?4:2.8)),phase:Math.random()*6.28,c:greenBeer?'#dbffae':undefined});
-        }
-      }
-      F.push({k:'tx',x,y:y-12,tx:greenBeer?'🫧':isBeer?'🍺':'💨',c:'#fff',l:.65,m:.65});
-      puff(x,y,10,greenBeer?'#a5e978':isBeer?'#eabf68':'#c4a484',1.15);
+      F.push({k:'puddle',x,y,rad:Math.min(52,radius*.58),l:isBeer?1.8:.55,m:isBeer?1.8:.55,c:puddleColor,seed:Math.random()*6.28});
+      for(let i=0;i<13;i++){const a=(i/13)*Math.PI*2+(Math.random()-.5)*.34,speed=55+Math.random()*125,life=.28+Math.random()*.28;F.push({k:'drop',x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed-24,l:life,m:life,c:i%4===0?'#ffe7a0':color,s:3+Math.random()*4});}
+      if(isBeer)for(let i=0;i<(b.superBeer?18:11);i++){const a=Math.random()*Math.PI*2,dist=Math.random()*radius*.42,life=.55+Math.random()*.7;F.push({k:'bubble',x:x+Math.cos(a)*dist,y:y+Math.sin(a)*dist*.45,vx:(Math.random()-.5)*24,vy:-35-Math.random()*85,l:life,m:life,r:2+Math.random()*(b.superBeer?4:2.8),phase:Math.random()*6.28});}
+      F.push({k:'tx',x,y:y-12,tx:isBeer?'🍺':'💨',c:'#fff',l:.65,m:.65});puff(x,y,10,isBeer?'#eabf68':'#c4a484',1.15);
     }
     function degesSplash(x,y,b){
-      const radius=b.splashRadius||(b.superBeer?110:72), isBeer=!!b.beer;
-      degesImpactVisual(x,y,b);
-      if(b.greenBeer){
-        const now=Date.now();Z.push({x,y,radius,owner:b.o,team:b.o?.t??b.t,damage:0,heal:800,greenBeer:true,expires:now+3000,nextTick:now+500,tickMs:1000,lastHit:new Map()});
-      }else if(b.beer){
-        Z.push({x,y,radius,owner:b.o,team:b.o?.t??b.t,damage:b.d||0,heal:800,superBeer:!!b.superBeer,expires:Date.now()+3000,nextTick:Date.now()+500,tickMs:1000,lastHit:new Map()});
-      }else{
-        for(const target of P){
-          if(!target.alive||target===b.o||Math.hypot(target.x-x,target.y-y)>radius)continue;
-          const ally=(gameMode==='knockout'||gameMode==='duo'||gameMode==='trio')&&target.t===(b.o?.t??b.t);
-          if(!ally)dmg(target,{...b,o:b.o,t:b.o?.t??b.t});
-        }
-      }
-      setShake(b.superBeer?10:4);
+      const radius=b.splashRadius||(b.superBeer?110:72);degesImpactVisual(x,y,b);
+      if(b.beer){Z.push({x,y,radius,owner:b.o,team:b.o?.t??b.t,damage:b.d||0,heal:b.heal||2250,superBeer:!!b.superBeer,expires:Date.now()+1800,nextTick:Date.now(),lastHit:new Map()});}
+      else for(const target of P){if(!target.alive||target===b.o||Math.hypot(target.x-x,target.y-y)>radius)continue;const ally=(gameMode==='knockout'||gameMode==='duo')&&target.t===(b.o?.t??b.t);if(!ally)dmg(target,{...b,o:b.o,t:b.o?.t??b.t});}
+      shake=Math.max(shake,b.superBeer?10:4);
     }
     function puff(x,y,n,c,s=1){ for(let i=0;i<n;i++){ const a=Math.random()*6.28, v=40+Math.random()*90*s; F.push({k:'p',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.5,m:.5,c,s:8+Math.random()*8}); } }
     function star(x,y,n){ for(let i=0;i<n;i++){ const a=Math.random()*6.28, v=80+Math.random()*140; F.push({k:'s',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-60,l:.9,m:.9}); } }
     function degesAimTarget(p,maxRange){
-      const sx=p.x,sy=p.y;
+      const sx=p.x+Math.cos(p.a)*24,sy=p.y+Math.sin(p.a)*24;
       let tx=sx+Math.cos(p.a)*maxRange,ty=sy+Math.sin(p.a)*maxRange;
       if(p===me&&!touch&&p.autoAimTimer<=0&&scr==='game'&&Number.isFinite(mx)&&Number.isFinite(my)){tx=mx/Math.max(.01,z)+cam.x;ty=my/Math.max(.01,z)+cam.y;}
       else if(p.remoteBeerTarget&&Number.isFinite(p.remoteBeerTarget.x)&&Number.isFinite(p.remoteBeerTarget.y)){tx=p.remoteBeerTarget.x;ty=p.remoteBeerTarget.y;}
-      const dx=tx-sx,dy=ty-sy,dist=Math.hypot(dx,dy),ux=dx/(dist||1),uy=dy/(dist||1);let range=Math.max(1,Math.min(maxRange,dist));
-      if(p.b!=='deges'){for(let d=8;d<=range;d+=8){if(tile(sx+ux*d,sy+uy*d)==='#'){range=Math.max(1,d-3);break;}}}
+      const dx=tx-sx,dy=ty-sy,dist=Math.hypot(dx,dy),ux=dx/(dist||1),uy=dy/(dist||1),range=Math.max(70,Math.min(maxRange,dist));
+      // Bottles are lofted projectiles and intentionally fly over map walls.
       return {x:sx+ux*range,y:sy+uy*range,range,angle:Math.atan2(dy,dx)};
     }
+    function spawnRamuIceBall(p,angle,index=1){
+      const side=(index-1)*7,c=Math.cos(angle),sn=Math.sin(angle),x=p.x+c*23-sn*side,y=p.y+sn*23+c*side;
+      B.push({x,y,vx:c*480,vy:sn*480,r:250,d:1000,t:p.t,o:p,s:false,z:12,col:'#70eaff',iceBall:true,trailAt:0});
+      beep(500,.055,.028,'triangle',155);
+    }
+    function startRamuIceBurst(p,angle){
+      if(!p||p.ramuMode==='fire'||p.ramuIceBurstRemaining>0||p.ramuShieldTimer>0||p.am<1)return false;
+      p.am=Math.max(0,p.am-1);p.ramuIceBurstAim=angle;p.ramuIceBurstRemaining=2;p.ramuIceBurstIndex=1;p.ramuIceBurstTimer=.17;
+      spawnRamuIceBall(p,angle,0);p.rec=.1;return true;
+    }
+    function ramuFlameRange(p){
+      const c=Math.cos(p.a),sn=Math.sin(p.a),sx=p.x+c*25,sy=p.y+sn*25,max=p.k?.fireRange||285;let range=max,wall=null;
+      for(let d=8;d<=max;d+=8){if(tile(sx+c*d,sy+sn*d)==='#'){range=Math.max(0,d-8);wall={i:Math.floor((sx+c*d)/T),j:Math.floor((sy+sn*d)/T),distance:Math.max(0,d-8)};break;}}
+      return {sx,sy,c,sn,range,wall};
+    }
+    function ramuFlameTargetRange(p,beam=ramuFlameRange(p)){
+      let range=beam.range;
+      for(const target of P){
+        if(target===p||!target.alive||target.lp||target.tf>0||target.ramuDiveTimer>0)continue;
+        if((gameMode==='knockout'||gameMode==='duo')&&target.t===p.t)continue;
+        const dx=target.x-beam.sx,dy=target.y-beam.sy,along=dx*beam.c+dy*beam.sn,side=Math.abs(-dx*beam.sn+dy*beam.c);
+        const halfWidth=10+Math.min(8,Math.max(0,along)*.02);
+        if(along>0&&along<=beam.range&&side<=halfWidth+16&&along<range)range=Math.min(beam.range,along+18);
+      }
+      return {...beam,range};
+    }
+    function updateLocalRamuWallHeat(dt){
+      const activeWalls=new Set(),canSimulateWalls=!networkMode||isNetworkHost;
+      if(canSimulateWalls&&G.ph==='play')for(const p of P){
+        if(!p.alive||p.b!=='ramu'||p.ramuMode!=='fire'||!p.ramuFireActive)continue;
+        const beam=ramuFlameRange(p),wall=beam.wall;
+        if(!wall||wall.i<=0||wall.j<=0||wall.i>=MW-1||wall.j>=MH-1)continue;
+        const targetRange=ramuFlameTargetRange(p,beam).range;
+        if(wall.distance>targetRange+1||(p.ramuFireLength||0)+1<wall.distance)continue;
+        const key=wallKey(wall.i,wall.j),state=localWallState(wall.i,wall.j,true);activeWalls.add(key);
+        if(state.iced){
+          state.melt=Math.min(RAMU_WALL_RULES.meltSeconds,state.melt+dt);
+          if(state.melt>=RAMU_WALL_RULES.meltSeconds){
+            const melted={...state,iced:false,iceHits:0,heat:0,melt:0};
+            if(networkMode&&isNetworkHost)sendLocalWallState(melted);
+            localWallStates.delete(key);puff((wall.i+.5)*T,(wall.j+.5)*T,16,'#c8fbff',1.2);
+          }else if(p.ramuWallSyncTimer<=0){sendLocalWallState(state);p.ramuWallSyncTimer=.25;}
+        }else{
+          state.iceHits=0;state.heat=Math.min(RAMU_WALL_RULES.heatSeconds,state.heat+dt);
+          if(state.heat>=RAMU_WALL_RULES.heatSeconds){
+            if(breakLocalWall(wall.i,wall.j)){
+              const x=(wall.i+.5)*T,y=(wall.j+.5)*T;puff(x,y,18,'#ff6a00',1.5);puff(x,y,8,'#fff0a6',1.1);beep(90,.22,.15,'sawtooth',-50);
+              if(networkMode&&isNetworkHost&&window.DaBrawlNet)window.DaBrawlNet.sendAction('wall-break',0,{i:wall.i,j:wall.j,heated:true});
+            }
+          }else if(p.ramuWallSyncTimer<=0){sendLocalWallState(state);p.ramuWallSyncTimer=.25;}
+        }
+      }
+      for(const [key,state] of localWallStates){
+        if(activeWalls.has(key))continue;
+        state.heat=Math.max(0,state.heat-dt*RAMU_WALL_RULES.coolPerSecond);
+        state.melt=Math.max(0,state.melt-dt*RAMU_WALL_RULES.coolPerSecond);
+        if(!state.iced&&state.iceHits===0&&state.heat===0&&state.melt===0)localWallStates.delete(key);
+      }
+    }
+    function ramuFlameTick(p){
+      if(!p.alive||p.ramuMode!=='fire'||!p.ramuFireActive)return;
+      const beam=ramuFlameRange(p),aimed=ramuFlameTargetRange(p,beam),reach=Math.min(aimed.range,Math.max(0,p.ramuFireLength||0));if(reach<=0)return;
+      for(const target of P){
+        if(target===p||!target.alive||target.lp||target.tf>0||target.ramuDiveTimer>0)continue;
+        if((gameMode==='knockout'||gameMode==='duo')&&target.t===p.t)continue;
+        const dx=target.x-beam.sx,dy=target.y-beam.sy,along=dx*beam.c+dy*beam.sn,side=Math.abs(-dx*beam.sn+dy*beam.c);
+        const halfWidth=9+Math.min(7,Math.max(0,along)*.02);
+        if(along<0||along>reach||side>halfWidth+14)continue;
+        dmg(target,{d:p.k?.fireDamage||1000,o:p,s:0,vx:beam.c,vy:beam.sn,fireStream:true});
+        puff(target.x,target.y,4,'#ff9138',.7);
+      }
+    }
+    function setRamuFireActive(p,active){
+      if(!p||p.ramuFireActive===active)return;
+      p.ramuFireActive=active;
+      if(active)p.ramuFireTick=p.k?.fireInitialReach||.4;else p.ramuFireTick=0;
+      if(networkMode&&window.DaBrawlNet&&(p===me||(isNetworkHost&&p.isBot&&p.netId)))window.DaBrawlNet.sendAction(active?'ramu-flame-start':'ramu-flame-stop',p.a,p!==me?{playerId:p.netId}:{});
+    }
+    function setRamuMode(p,mode){
+      if(!p||p.b!=='ramu'||!['fire','ice'].includes(mode)||p.ramuMode===mode)return false;
+      if(p.ramuFireActive)setRamuFireActive(p,false);
+      p.sc=0;p.ramuMode=mode;p.ramuIceBurstRemaining=0;p.ramuIceBurstTimer=0;p.ramuIceBurstIndex=0;
+      p.ramuTransform=mode==='fire'?1.55:1.05;p.ramuTransformTarget=mode;p.am=3;p.fireEnergy=1;p.fireLock=0;p.ramuFireTick=0;p.ramuFireLength=0;p.ramuFireLengthMax=0;
+      for(let i=0;i<24;i++){const a=Math.random()*Math.PI*2,v=80+Math.random()*220,c=mode==='fire'?(i%2?'#ff7a21':'#fff0a1'):(i%2?'#73eaff':'#eaffff');F.push({k:'p',x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-24,l:.52,m:.52,c,s:4+Math.random()*7});}
+      shake=Math.max(shake,mode==='fire'?16:10);playRamuModeSound(mode);return true;
+    }
+    const RAMU_FLAME_FRAME=1/30, RAMU_FLAME_TEXTURE_HEIGHT=96, RAMU_FLAME_TEXTURE_MID=48, RAMU_FLAME_VARIANTS=3;
+    const ramuFlameTextureCache=new Map();let ramuFlameCacheCleanupAt=0;
+    function drawRamuFlameShape(p,time,beam,range,fade,phaseSeed=0){
+      const phase=time*16.5+phaseSeed,segments=Math.max(8,Math.min(16,Math.ceil(range/20)));
+      const centerAt=u=>(Math.sin(phase+u*12)*4+Math.sin(phase*1.7+u*25)*1.7)*u;
+      const widthAt=u=>Math.max(.6,(2+Math.sin(Math.PI*u)*10+Math.sin(phase+u*19)*1.5)*(1-.45*u));
+      const flame=g.createLinearGradient(0,0,range+12,0);
+      flame.addColorStop(0,"#fff2a6");flame.addColorStop(.22,"#ffd04c");flame.addColorStop(.58,"#ff7a1c");flame.addColorStop(1,"#f34216");
+      g.save();g.globalCompositeOperation="lighter";g.translate(0,RAMU_FLAME_TEXTURE_MID);g.shadowBlur=0;
+      for(const[scale,alpha,phaseOffset]of[[1.08,.58,0],[.48,.82,1.3]]){
+        g.beginPath();
+        for(let n=0;n<=segments;n++){
+          const u=n/segments,x=u*range,y=centerAt(u)+Math.sin(phase+phaseOffset+u*21)*1.8*u-widthAt(u)*scale;
+          if(n===0)g.moveTo(x,y);else g.lineTo(x,y);
+        }
+        for(let n=segments;n>=0;n--){
+          const u=n/segments,x=u*range,y=centerAt(u)+Math.sin(phase+phaseOffset+u*21)*1.8*u+widthAt(u)*scale;
+          g.lineTo(x,y);
+        }
+        g.closePath();g.globalAlpha=alpha*fade;g.fillStyle=flame;g.fill();
+      }
+      // Eight compact flicker tongues keep the Fire Lance lively without costly blur passes.
+      for(let i=0;i<8;i++){
+        const u=.12+i*.105,x=range*u,cy=centerAt(u),base=widthAt(u),flicker=.5+.5*Math.sin(phase*1.4+i*2.31),length=5+flicker*9,height=2.5+flicker*4,side=i%2?1:-1;
+        g.beginPath();g.moveTo(x-3,cy-side*base*.45-height*.4);
+        g.quadraticCurveTo(x+length*.2,cy+side*base*.1,x+length,cy+side*(base+height));
+        g.quadraticCurveTo(x+length*.55,cy+side*(base-height*.15),x-2,cy+side*base*.45);g.closePath();
+        g.globalAlpha=(.42+.28*flicker)*fade;g.fillStyle=i%3===0?"#fff0a6":i%2?"#ff5a17":"#ffb42d";g.fill();
+      }
+      // Tiny embers keep the stream bright at range without rebuilding a shadowed particle layer.
+      for(let i=0;i<5;i++){
+        const u=.16+i*.16,x=range*u+Math.sin(phase+i*1.8)*3,y=centerAt(u)+Math.sin(phase*1.3+i*2.2)*widthAt(u)*.8;
+        g.globalAlpha=(.32+.28*(.5+.5*Math.sin(phase+i*1.7)))*fade;g.fillStyle=i%2?"#fff1a8":"#ffb53d";
+        g.beginPath();g.arc(x,y,1.2+(i%3)*.45,0,Math.PI*2);g.fill();
+      }
+      g.restore();
+    }
+    function drawRamuFlame(p,time){
+      if(!p?.alive||p.ramuMode!=="fire"||p.ramuDiveTimer>0)return;
+      const beam=ramuFlameRange(p),aimed=ramuFlameTargetRange(p,beam),range=Math.min(aimed.range,Math.max(0,p.ramuFireLength||0));if(range<5)return;
+      const fade=p.ramuFireActive?1:Math.min(1,range/Math.max(1,p.ramuFireLengthMax||range));
+      const scale=Math.max(1,Math.min(2,DPR*z)),worldWidth=Math.max(1,(p.k?.fireRange||285)+40),worldHeight=RAMU_FLAME_TEXTURE_HEIGHT;
+      const pixelsW=Math.ceil(worldWidth*scale),pixelsH=Math.ceil(worldHeight*scale);
+      // The animated flame raster is shared across Ramu players. Per-player beam length
+      // remains exact via clipping, so several simultaneous streams add only a few cached
+      // textures instead of re-rendering expensive gradient/shadow paths for every player.
+      const variant=p.ramuFlameVariant??(p.ramuFlameVariant=Math.max(0,P.indexOf(p))%RAMU_FLAME_VARIANTS);
+      const key=`${pixelsW}x${pixelsH}:${variant}`;
+      let cache=ramuFlameTextureCache.get(key);
+      if(!cache){cache={canvas:document.createElement('canvas'),lastTime:-Infinity};cache.canvas.width=pixelsW;cache.canvas.height=pixelsH;ramuFlameTextureCache.set(key,cache);}
+      else if(cache.canvas.width!==pixelsW||cache.canvas.height!==pixelsH){cache.canvas.width=pixelsW;cache.canvas.height=pixelsH;cache.lastTime=-Infinity;}
+      if(time-cache.lastTime>=RAMU_FLAME_FRAME){
+        const ctx=cache.canvas.getContext('2d');
+        ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,pixelsW,pixelsH);
+        ctx.setTransform(pixelsW/worldWidth,0,0,pixelsH/worldHeight,0,0);
+        ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.shadowBlur=0;ctx.setLineDash([]);
+        const main=g;g=ctx;
+        try{drawRamuFlameShape(p,time,beam,worldWidth-40,1,variant*Math.PI*2/RAMU_FLAME_VARIANTS);}finally{g=main;}
+        cache.lastTime=time;
+      }
+      g.save();g.globalCompositeOperation='lighter';g.globalAlpha=fade;g.translate(beam.sx,beam.sy);g.rotate(p.a);
+      g.beginPath();g.rect(0,-worldHeight/2,range,worldHeight);g.clip();g.drawImage(cache.canvas,0,-worldHeight/2,worldWidth,worldHeight);g.restore();
+      if(time-ramuFlameCacheCleanupAt>1){
+        ramuFlameCacheCleanupAt=time;
+        for(const [staleKey,entry] of ramuFlameTextureCache)if(time-entry.lastTime>2)ramuFlameTextureCache.delete(staleKey);
+        while(ramuFlameTextureCache.size>8){let oldestKey=null,oldestTime=Infinity;for(const [candidate,entry]of ramuFlameTextureCache)if(entry.lastTime<oldestTime){oldestTime=entry.lastTime;oldestKey=candidate;}if(oldestKey===null)break;ramuFlameTextureCache.delete(oldestKey);}
+      }
+    }
     function tryFire(p){
-      if(G.ph!='play'||!p.alive||p.am<1||p.cd>0||p.lp||p.k.sy||p.tf>0) return;
+      const ramuFlame=p?.b==='ramu'&&p.ramuMode==='fire';
+      if(G.ph!='play'||!p.alive||(!ramuFlame&&p.am<1)||(!ramuFlame&&p.cd>0)||p.lp||p.k.sy||p.tf>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
+      if(ramuFlame){if(p!==me&&p.aiFireHeld&&(p.fireLock||0)<=0&&(p.fireEnergy||0)>0)p.ramuFireActive=true;return;}
       if(p.b==='deges'){const target=degesAimTarget(p,300);p.a=target.angle;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',target.angle,{targetX:target.x,targetY:target.y,beerRange:target.range});}
-      else if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',p.a,p.b==='ramu'?{ramuMode:p.ramuMode||0}:{});
-      fire(p,0);p.cd=p.b==='deges'? .75:.38;
+      else if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',p.a);
+      fire(p,0);p.cd=p.b==='deges' ? .75 : p.b==='ramu' ? .75 : .38;
     }
     function sup(p){
-      if(G.ph!='play'||!p.alive||p.sc<1||p.tf>0) return;
+      if(G.ph!='play'||!p.alive||p.sc<1||p.tf>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
+      if(p.b==='ramu'){
+        const nextMode=p.ramuMode==='fire'?'ice':'fire';
+        if(networkMode&&window.DaBrawlNet){if(p===me)window.DaBrawlNet.sendAction('super',p.a,{ramuMode:nextMode});else if(isNetworkHost&&p.isBot)window.DaBrawlNet.sendAction('super',p.a,{playerId:p.netId,ramuMode:nextMode});}
+        setRamuMode(p,nextMode);return;
+      }
       if(networkMode && window.DaBrawlNet){
         if(p===me){if(p.b==='deges'){const target=degesAimTarget(p,330);window.DaBrawlNet.sendAction('super',target.angle,{targetX:target.x,targetY:target.y,beerRange:target.range});}else window.DaBrawlNet.sendAction('super',p.a);}
         else if(isNetworkHost && p.isBot) window.DaBrawlNet.sendAction('super',p.a,{playerId:p.netId});
@@ -1151,20 +1280,16 @@
       fire(p,1); p.sc=0;
     }
     function superUltraKame(p){
-      p.chg=0; p.sc=0; p.muiCharging=1.2; setShake(20);
+      p.chg=0; p.sc=0; p.muiCharging=1.2; shake=20;
       for(let i=0;i<30;i++) setTimeout(()=>puff(p.x,p.y,3,'#ffffff',2), i*50);
-      setTimeout(()=>{ p.muiCharging=0; KM.push({o:p,a:p.a,x:p.x,y:p.y,len:MW*T,w:100,d:7000,t:.8,m:.8,tk:0,col:'#ffffff',destroys:true}); setShake(35); playKameSound(); }, 1200);
+      setTimeout(()=>{ p.muiCharging=0; KM.push({o:p,a:p.a,x:p.x,y:p.y,len:MW*T,w:100,d:7000,t:.8,m:.8,tk:0,col:'#ffffff',destroys:true}); shake=35; playKameSound(); }, 1200);
     }
     function fire(p,s){
-      if(p.b==='ramu'&&(p.freeze>0||p.ramuShield>0||p.ramuLeap>0))return;
-      p.nh=0;p.hc=0;
       if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet) window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,super:false});
       K=p.k; if(s&&K.lg){ leap(p,0); return; }
       if(p.b==='ramu'){
-        if(s){p.ramuMode=p.ramuMode?0:1;p.am=p.ramuMode?1:3;p.sc=0;for(let i=0;i<38;i++){const a=Math.random()*Math.PI*2,v=70+Math.random()*220;F.push({k:'p',x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.8,m:.8,c:p.ramuMode?(i%2?'#ff672e':'#ffe36b'):(i%2?'#8ceeff':'#e4fbff'),s:4+Math.random()*7});}F.push({k:'t',x:p.x,y:p.y-42,vx:0,vy:-36,l:1,m:1,tx:p.ramuMode?'FIRE MODE':'ICE MODE',c:p.ramuMode?'#ff8b3d':'#a5edff'});return;}
-        if(p.ramuMode===0){if(p.am<=0||p.rec>0)return;for(let i=0;i<3;i++)B.push({x:p.x+Math.cos(p.a)*24,y:p.y+Math.sin(p.a)*24,vx:Math.cos(p.a)*520,vy:Math.sin(p.a)*520,r:260,d:700,t:p.t,o:p,s:false,z:6,col:'#9cecff',iceBall:true,delay:i*.25,wait:i*.25,iceSize:15});p.am--;p.rec=.5;}
-        else{if(p.fireAmmo<=0)return;}
-        return;
+        if(p.ramuMode==='fire'){p.ramuFireActive=true;return;}
+        startRamuIceBurst(p,p.a);return;
       }
       if(p.b==='deges'){
         const big=!!s,maxRange=big?330:300,speed=big?300:430,target=degesAimTarget(p,maxRange),a=target.angle,range=target.range;
@@ -1183,38 +1308,87 @@
         B.push({x:p.x+Math.cos(p.a)*22, y:p.y+Math.sin(p.a)*22, vx:Math.cos(a)*K.bs*(.92+Math.random()*.16), vy:Math.sin(a)*K.bs*(.92+Math.random()*.16), r:s?K.sr:K.rng, d:(s?K.sd:K.dmg)+((p.kaioken>0)?200:0)+((p.ss2>0)?(s?200:100):0), t:p.t, o:p, s, z:s?0:K.z, isFist:p.b=='shachi', col:bCol});
       }
       if(!s) p.am--; p.rec = K.lg?.22:.14; puff(p.x+Math.cos(p.a)*30, p.y+Math.sin(p.a)*30, s?10:5, '#ffe9a0', .5);
-      if(p===me||s) setShake(s?12:3);
+      if(p===me||s) shake = Math.max(shake, s?12:3);
       if(p.b=='kuku') playGunSound(s); else if(p.b=='shachi') playFistSound(); else beep(s?90:140, s?.35:.18, s?.25:.15, 'sawtooth', -60);
     }
-function gadget(p){
-      if(G.ph!='play'||!p.alive||p.gcd>0||p.dash>0||p.lp||p.tf>0||p.muiCharging>0) return;
-      let gadgetTarget=null;
-      if(p.b==='deges'){gadgetTarget=degesAimTarget(p,230);p.a=gadgetTarget.angle;}
-      // Send the gadget action before character-specific early returns so Ramu's
-      // shield and leap are simulated by both clients.
-      if(networkMode && (p===me||(isNetworkHost&&p.isBot&&p.netId)) && window.DaBrawlNet){
-        const extra={...(p!==me?{playerId:p.netId}:{}),...(p.b==='ramu'?{ramuMode:p.ramuMode||0}:{})};
-        if(gadgetTarget)window.DaBrawlNet.sendAction('gadget',gadgetTarget.angle,{...extra,targetX:gadgetTarget.x,targetY:gadgetTarget.y,beerRange:gadgetTarget.range});
-        else window.DaBrawlNet.sendAction('gadget',p.a,extra);
+function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
+      const backX=-Math.cos(angle),backY=-Math.sin(angle),sideX=-Math.sin(angle),sideY=Math.cos(angle);
+      for(let i=0;i<count;i++){
+        const tail=8+(i%8)*5.2*scale,lateral=(Math.random()-.5)*24*scale,life=1.5+(Math.random()-.5)*.08,speed=18+Math.random()*58;
+        F.push({k:'ramu-fire-tail',x:x+backX*tail+sideX*lateral,y:y+backY*tail+sideY*lateral,vx:backX*speed+(Math.random()-.5)*28,vy:backY*speed-15+(Math.random()-.5)*24,a:angle,l:life,m:life,s:(3.5+Math.random()*4.5)*scale,c:i%3?'#ff6b1d':'#ffe59a'});
       }
-      if(p.b==='ramu'){
-        if(p.ramuMode===0){p.ramuShield=2;p.shieldTimer=2;p.gcd=17;for(let i=0;i<26;i++){const a=i*Math.PI*2/26;F.push({k:'p',x:p.x+Math.cos(a)*30,y:p.y+Math.sin(a)*30,vx:Math.cos(a)*12,vy:Math.sin(a)*12,l:1.2,m:1.2,c:i%2?'#a8f4ff':'#e8fcff',s:8});}F.push({k:'t',x:p.x,y:p.y-40,vx:0,vy:-28,l:1,m:1,tx:'ICE IMMUNITY',c:'#a8f4ff'});}
-        else{p.ramuLeap=4;p.ramuWarned=false;p.ramuLand={x:p.x,y:p.y};p.tf=4;p.gcd=18;F.push({k:'p',x:p.x,y:p.y,vx:0,vy:-50,l:.7,m:.7,c:'#ff8b32',s:32});}
-        return;
+    }
+    function ramuImpactVisual(x,y){
+      ramuFireTrailVisual(x,y,-Math.PI/2,1.15,24);
+      F.push({k:'splash',x,y,rad:78,l:.58,m:.58,c:'#ff7629',seed:Math.random()*6.28});
+      F.push({k:'puddle',x,y,rad:60,l:.72,m:.72,c:'#c2410c',seed:Math.random()*6.28});
+      puff(x,y,24,'#ff7a22',1.8);puff(x,y,12,'#ffe5a1',1.2);shake=Math.max(shake,12);
+    }
+    function ramuTouchesWater(x,y,radius=15){return [[-radius,-radius],[radius,-radius],[-radius,radius],[radius,radius]].some(([dx,dy])=>tile(x+dx,y+dy)==='~');}
+    function ramuSafeLanding(x,y,radius=15){
+      if(!hitW(x,y,radius))return {x,y};
+      const ci=Math.floor(x/T),cj=Math.floor(y/T),maxRadius=Math.max(MW,MH),candidates=[];
+      for(let ring=1;ring<=maxRadius;ring++){
+        candidates.length=0;
+        for(let j=Math.max(1,cj-ring);j<Math.min(MH-1,cj+ring+1);j++)for(let i=Math.max(1,ci-ring);i<Math.min(MW-1,ci+ring+1);i++){
+          if(Math.abs(i-ci)+Math.abs(j-cj)!==ring)continue;
+          const px=(i+.5)*T,py=(j+.5)*T;
+          if(!hitW(px,py,radius))candidates.push({x:px,y:py});
+        }
+        if(candidates.length){candidates.sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y));return candidates[0];}
       }
+      for(let j=1;j<MH-1;j++)for(let i=1;i<MW-1;i++){const px=(i+.5)*T,py=(j+.5)*T;if(!hitW(px,py,radius))candidates.push({x:px,y:py});}
+      candidates.sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y));
+      return candidates[0]||{x,y};
+    }
+    function ramuFireDiveLand(p){
+      if(networkMode&&p.netRemote)return;
+      const fromX=p.x,fromY=p.y,landing=ramuSafeLanding(fromX,fromY),landingHop=Math.hypot(landing.x-fromX,landing.y-fromY)>2,waterHop=landingHop&&ramuTouchesWater(fromX,fromY);
+      p.x=landing.x;p.y=landing.y;p.gcd=p.k?.gadgetDiveCooldown??20;if(landingHop)p.ramuWaterHop=.42;if(waterHop){puff(fromX,fromY,16,'#38d9ff',1.15);F.push({k:'splash',x:fromX,y:fromY,rad:26,l:.42,m:.42,c:'#4bdfff',seed:Math.random()*6.28});}
+      const x=p.x,y=p.y,radius=82;ramuImpactVisual(x,y);
+      if(networkMode&&window.DaBrawlNet&&(p===me||(isNetworkHost&&p.isBot)))window.DaBrawlNet.sendAction('ramu-impact',p.a,{...(p!==me?{playerId:p.netId}:{}),x,y,fromX,fromY,waterHop,landingHop,gadgetCooldownMs:Math.round((p.k?.gadgetDiveCooldown??20)*1000)});
+      for(const e of P){
+        if(e===p||!e.alive||e.lp||e.tf>0||((gameMode==='knockout'||gameMode==='duo')&&e.t===p.t))continue;
+        const dx=e.x-x,dy=e.y-y,d=Math.hypot(dx,dy);if(d>radius)continue;
+        dmg(e,{d:2000,o:p,s:1,vx:dx||1,vy:dy||0,knockback:42,fireBall:true});
+      }
+      const ci=Math.floor(x/T),cj=Math.floor(y/T);
+      for(let j=cj-3;j<=cj+3;j++)for(let i=ci-3;i<=ci+3;i++){
+        if(i<=0||j<=0||i>=MW-1||j>=MH-1||M[j]?.[i]!=='#')continue;
+        const wx=(i+.5)*T,wy=(j+.5)*T;if(Math.hypot(wx-x,wy-y)>radius)continue;
+        if(!breakLocalWall(i,j))continue;puff(wx,wy,8,'#9b6540',1.3);
+        if(networkMode&&window.DaBrawlNet&&(p===me||(isNetworkHost&&p.isBot)))window.DaBrawlNet.sendAction('wall-break',0,{...(p!==me?{playerId:p.netId}:{}),i,j});
+      }
+    }
+    function gadget(p){
+      if(G.ph!='play'||!p.alive||p.gcd>0||p.dash>0||p.lp||p.tf>0||p.muiCharging>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
+      if(networkMode&&(p===me||(isNetworkHost&&p.isBot&&p.netId))&&window.DaBrawlNet){const extra=p!==me?{playerId:p.netId}:{};window.DaBrawlNet.sendAction('gadget',p.a,extra);}
       p.chg=0; p.holdT=0;
+      if(p.b==='ramu'){
+        p.gcd=p.ramuMode==='fire'?0:12;
+        if(p.ramuMode==='fire'){
+          p.ramuDiveTimer=5.22;p.ramuDiveLift=.22;p.ramuDiveWarning=false;p.ramuDiveAim=p.a;p.mx=p.my=0;
+          ramuFireTrailVisual(p.x,p.y,-Math.PI/2,1.15,26);
+          for(let i=0;i<26;i++){const a=Math.random()*Math.PI*2,v=35+Math.random()*110;F.push({k:'p',x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-45,l:.45,m:.45,c:i%2?'#ff922e':'#fff0a0',s:4+Math.random()*6});}
+          beep(120,.22,.08,'sawtooth',-70);return;
+        }
+        p.ramuShieldTimer=2.8;p.ramuIceBurstRemaining=0;p.ramuFireActive=false;for(let i=0;i<22;i++){const a=Math.random()*Math.PI*2,v=35+Math.random()*155;F.push({k:'p',x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-18,l:.45+Math.random()*.2,m:.62,c:i%2?'#baf7ff':'#ffffff',s:4+Math.random()*7});}beep(660,.12,.05,'triangle',180);return;
+      }
+      if(p.b==='deges'){
+        p.smokeTimer=2;p.smokeAim=p.a;p.mx=p.my=0;p.gcd=17;beep(260,.12,.04,'triangle',-25);return;
+      }
       if(p.k.sy){
         // Super Saiyan Red: instant red Kamehameha shot, no charge-up.
         if(p.form===2){
           const c=Math.cos(p.a), sn=Math.sin(p.a);
           KM.push({o:p,a:p.a,x:p.x,y:p.y,len:MW*T,w:36,d:2000,t:.85,m:.85,tk:0,col:'#ff2020',destroys:false,instantRed:true,ignoreWalls:true});
-          p.gcd=7; setShake(12); playKameSound();
+          p.gcd=7; shake=Math.max(shake,12); playKameSound();
           for(let i=0;i<18;i++) puff(p.x+c*24+(Math.random()-.5)*12,p.y+sn*24+(Math.random()-.5)*12,1,'#ff3030',1.1);
           return;
         }
         // Super Saiyan Blue: Kaioken burst — short transformation, red fire-edge and +200 damage.
         if(p.form===3){
-          p.kaioken=6; p.gcd=14; p.tf=.65; p.tfn=3; p.chg=0; setShake(16);
+          p.kaioken=6; p.gcd=14; p.tf=.65; p.tfn=3; p.chg=0; shake=Math.max(shake,16);
           playTransformSound('normal');
           for(let i=0;i<34;i++){ const a=Math.random()*Math.PI*2, v=100+Math.random()*260; F.push({k:'p',x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.55,m:.55,c:i%2?'#ff2020':'#ff8a8a',s:6+Math.random()*8}); }
           return;
@@ -1223,7 +1397,7 @@ function gadget(p){
         if(p.form===1){
           if(p.ss2Cooldown>0) return;
           p.ss2=10; p.ss2Cooldown=0; p.hp=Math.min(p.mh+500,p.hp+500); p.mh+=500;
-          p.gcd=10; p.tf=.8; p.tfn=1; p.sc=0; p.chg=0; setShake(18);
+          p.gcd=10; p.tf=.8; p.tfn=1; p.sc=0; p.chg=0; shake=Math.max(shake,18);
           playTransformSound('normal');
           for(let i=0;i<24;i++){ const a=Math.random()*Math.PI*2, v=100+Math.random()*220; F.push({k:'p',x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:.45,m:.45,c:i%3?'#fff36a':'#9be7ff',s:4+Math.random()*5}); }
           return;
@@ -1232,25 +1406,20 @@ function gadget(p){
         else if(tele(p)) p.gcd=10;
         return;
       }
-      if(p.b==='deges'){
-        const target=degesAimTarget(p,230),a=target.angle,range=target.range,speed=range/.9;
-        p.a=a;
-        B.push({x:p.x+Math.cos(a)*24,y:p.y+Math.sin(a)*24,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,r:range,flightRange:range,flightT:0,flightDuration:.9,arcHeight:142,targetX:target.x,targetY:target.y,d:0,t:p.t,o:p,s:false,z:7,col:'#9b7842',cigar:true,greenBeer:true,splashRadius:126,heal:1000,remoteVisual:networkMode&&p!==me});
-        // Hold the cooldown through the 0.9s toss and 3s pool, then give the requested 15s cooldown.
-        p.gcd=.9+3+15; setShake(5); puff(p.x+Math.cos(a)*26,p.y+Math.sin(a)*26,5,'#c6a27a',.6); beep(260,.16,.07,'triangle',-35); return;
-      }
       if(p.k.lg){ if(asteroid(p)) p.gcd=10; return; }
       p.gcd=10; p.dash=.22; p.dd=(p.mx||p.my)?Math.atan2(p.my,p.mx):p.a; puff(p.x,p.y,8,'#fff'); beep(300,.2,.1,'triangle',400);
     }
-    function mv(p,dx,dy){ const r=15; if(!hitW(p.x+dx,p.y,r)) p.x+=dx; if(!hitW(p.x,p.y+dy,r)) p.y+=dy; }
+    function mv(p,dx,dy){ const r=15;if(p.ramuDiveTimer>0&&p.ramuDiveLift<=0){p.x=Math.max(r,Math.min(MW*T-r,p.x+dx));p.y=Math.max(r,Math.min(MH*T-r,p.y+dy));return;}if(!hitW(p.x+dx,p.y,r))p.x+=dx;if(!hitW(p.x,p.y+dy,r))p.y+=dy; }
     function step(p,ix,iy,dt){
       K=p.k; const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
-      if(p.muiCharging>0 || isBeamShooting || isMaxCharging){ p.mx=p.my=0; return; }
+      if(p.muiCharging>0||isBeamShooting||isMaxCharging||(p.ramuShieldTimer||0)>0||(p.smokeTimer||0)>0||(p.ramuDiveLift||0)>0){p.mx=p.my=0;return;}
       const l = Math.hypot(ix,iy); p.mx = l?ix/l:0; p.my = l?iy/l:0;
       if(p.dash>0){ p.dash-=dt; mv(p, Math.cos(p.dd)*780*dt, Math.sin(p.dd)*780*dt); if(Math.random()<.6) puff(p.x,p.y,1,'#fff',.3); }
-      else if(l>.05&&!(p.freeze>0)&&!(p.ramuShield>0)&&!(p.ramuLeap>0)){ const m = Math.min(1,l); mv(p, p.mx*m*K.spd*dt, p.my*m*K.spd*dt); p.walk+=dt*12; }
+      else if(l>.05){ const m = Math.min(1,l); mv(p, p.mx*m*K.spd*dt, p.my*m*K.spd*dt); p.walk+=dt*12; }
     }
     function dmg(t,b){
+      if(t.ramuDiveTimer>0)return;
+      if((t.shieldTimer||0)>0||(t.ramuShieldTimer||0)>0){F.push({k:'p',x:t.x+(Math.random()-.5)*24,y:t.y+(Math.random()-.5)*30,vx:0,vy:0,l:.18,m:.18,c:'#8be9ff',s:18});return;}
       // Only the target's browser changes their health. The attacker's browser sends a hit request.
       if(networkMode && t.netRemote){
         // The host's bots must be able to damage the other human too.
@@ -1283,31 +1452,26 @@ function gadget(p){
         F.push({k:'p', x:t.x, y:t.y, vx:0, vy:0, l:.3, m:.3, c:'#ffffff', s:20});
         playInstantTransmissionSound(); return;
       }
-      t.lastHitAt=performance.now();
-      if(b.iceBall&&b.o?.b==='ramu'){
-        t.iceHits=t.iceHits instanceof Map?t.iceHits:new Map();
-        const meter=Math.min(1,(t.iceHits.get(b.o)||0)+1/6);t.iceHits.set(b.o,meter);
-        if(meter>=.999){t.freeze=2;t.iceHits.set(b.o,0);}
-      }
-      if(b.fireStream&&b.o?.b==='ramu'){t.fireBurn=2;t.burnOwner=b.o;t.burnTick=.5;}
-      if(!t.isDummy) t.hp-=b.d;
-      t.nh=0; t.fl=.1; if(!b.s && b.o && b.o!==t) b.o.sc = Math.min(1, b.o.sc + b.d*.0004*(b.o.k.cm||0.5));
+      if(b.iceBall){t.freezeMeter=Math.min(1,(t.freezeMeter||0)+1/Math.max(1,b.o?.k?.freezeHits||8));if(t.freezeMeter>=.999){t.freezeMeter=0;t.frozenTimer=Math.max(t.frozenTimer||0,b.o?.k?.freezeDuration||2);puff(t.x,t.y,16,'#a8f3ff',1.1);}}
+      if(b.fireStream){t.burnTimer=Math.max(t.burnTimer||0,.55);t.burnTick=Math.max(t.burnTick||0,3);t.burnOwner=b.o||t.burnOwner;}
+      else if(b.fireBall){t.burnTimer=Math.max(t.burnTimer||0,2.2);t.burnTick=Math.min(t.burnTick||.5,.5);t.burnOwner=b.o||t.burnOwner;}
+      t.lastHitAt=performance.now(); if(!t.isDummy) t.hp-=b.d;
+      t.nh=0; t.fl=.1; if(!b.s&&b.o&&b.o!==t&&(!(b.o.b==='ramu'&&b.o.ramuMode==='fire')||b.fireStream||b.fireBall))b.o.sc=Math.min(1,b.o.sc+(b.fireStream?(b.o.k.fireSuperCharge||6.6)/100:b.d*.0004*(b.o.k.cm||0.5)));
       F.push({k:'t', x:t.x+(Math.random()-.5)*20, y:t.y-30, vx:0, vy:-60, l:.7, m:.7, tx:Math.round(b.d)});
-      if(b.s){ const l=Math.hypot(b.vx,b.vy); mv(t, b.vx/l*13, b.vy/l*13); }
+      if(b.knockback){const l=Math.hypot(b.vx,b.vy)||1;mv(t,b.vx/l*b.knockback,b.vy/l*b.knockback);}else if(b.s){const l=Math.hypot(b.vx,b.vy)||1;mv(t,b.vx/l*13,b.vy/l*13);}
       beep(220,.08,.08,'square',-100); if(!t.isDummy && t.hp<=0) die(t);
     }
-    function die(t){ if(!t.alive)return; t.alive=false; t.hp=0; t.dt=0; t.respawnPending=gameMode==='duo' && !isTestMode; if(gameMode==='showdown'||gameMode==='duo'||gameMode==='trio') t.elimOrder=++matchEliminations; if((gameMode==='duo'||gameMode==='trio')&&!P.some(p=>p!==t&&p.alive&&p.t===t.t)) teamEliminationOrder[t.t]=++teamEliminations; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); setShake(10); }
+    function die(t){ if(!t.alive)return; t.alive=false; t.hp=0; t.dt=0; t.respawnPending=gameMode==='duo' && !isTestMode; if(gameMode==='showdown'||gameMode==='duo') t.elimOrder=++matchEliminations; if(gameMode==='duo'&&!P.some(p=>p!==t&&p.alive&&p.t===t.t)) teamEliminationOrder[t.t]=++teamEliminations; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); shake=10; }
     function tryBotDegešGadget(b,dt){
-      if(b.b!=='deges'||b.gcd>0)return false;
-      const allies=P.filter(p=>p.alive&&p.t===b.t&&p.hp<p.mh-250&&Math.hypot(p.x-b.x,p.y-b.y)<=356&&!aiLineBlocked(b.x,b.y,p.x,p.y));
-      allies.sort((a,c)=>(a.hp/a.mh)-(c.hp/c.mh));
-      const target=allies[0];if(!target||Math.random()>dt*1.6)return false;
-      b.remoteBeerTarget={x:target.x,y:target.y};gadget(b);b.remoteBeerTarget=null;return b.gcd>0;
+      if(b.b!=='deges'||b.gcd>0||b.smokeTimer>0||b.hp/Math.max(1,b.mh)>.38||Math.random()>dt*.7)return false;
+      gadget(b);return b.smokeTimer>0;
     }
     function ai(b,dt){
+      b.aiFireHeld=false;
+      if(b.smokeTimer>0||b.frozenTimer>0){step(b,0,0,dt);return;}
       if(b.isDummy){
         let tg=null,bd=1e9;
-        for(const e of P){if(e===b||!e.alive||((gameMode==='duo'||gameMode==='trio')&&e.t===b.t)||(gameMode!=='showdown'&&gameMode!=='duo'&&gameMode!=='trio'&&e.t===b.t))continue;const d=Math.hypot(e.x-b.x,e.y-b.y);if(d<bd){bd=d;tg=e;}}
+        for(const e of P){if(e===b||!e.alive||(gameMode==='duo'&&e.t===b.t)||(gameMode!=='showdown'&&gameMode!=='duo'&&e.t===b.t))continue;const d=Math.hypot(e.x-b.x,e.y-b.y);if(d<bd){bd=d;tg=e;}}
         if(tg){b.a=Math.atan2(tg.y-b.y,tg.x-b.x);if(b.cd<=0&&bd<b.k.rng+25&&b.am>=1){b.am--;fire(b,0);b.cd=.6;}}
         return;
       }
@@ -1376,21 +1540,29 @@ function gadget(p){
       shake = Math.max(0, shake - dt*30);
       if(G.ph=='play' && !isTestMode){ gasDist += (Math.max(MW, MH) / 960) * dt; }
       for(const p of P){
-        p.fl-=dt; p.rec-=dt; p.cd-=dt; p.gcd-=dt; p.kcd-=dt;
-        if(p.b==='ramu'){
-          p.fireRegen=Math.max(0,(p.fireRegen||0)-dt);
-          if(p.ramuMode===1&&p.fireAmmo<1&&p.fireRegen<=5){p.fireAmmo=Math.min(1,(p.fireAmmo||0)+dt/5);}
-          if(p.ramuMode===1&&p===me&&mdown&&p.fireAmmo>0&&p.ramuShield<=0&&p.ramuLeap<=0&&p.freeze<=0&&G.ph==='play'){
-            const last=p.fireLastSegment||0;
-            if(performance.now()-last>=45){const now=performance.now();p.fireLastSegment=now;p.nh=0;p.hc=0;const a=p.a,px=p.x+Math.cos(a)*26,py=p.y+Math.sin(a)*26;for(let j=0;j<3;j++)F.push({k:'p',x:px+Math.cos(a)*j*13,y:py+Math.sin(a)*j*13,vx:Math.cos(a)*(100+j*25)+(Math.random()-.5)*18,vy:Math.sin(a)*(100+j*25)+(Math.random()-.5)*18,l:.18+j*.035,m:.18+j*.035,c:['#ff3b16','#ff7a1c','#ffd35a'][j],s:15-j*2});B.push({x:px,y:py,vx:Math.cos(a)*600,vy:Math.sin(a)*600,r:260,d:200,t:p.t,o:p,s:false,z:9,col:'#ff6a22',fireStream:true});if(networkMode&&window.DaBrawlNet&&now-(p.fireLastNetSegment||0)>=100){p.fireLastNetSegment=now;window.DaBrawlNet.sendAction('ramu-fire-stream',a,{x:px,y:py});}p.fireAmmo=Math.max(0,p.fireAmmo-.012);if(p.fireAmmo<=0)p.fireRegen=5.3;}
-          }
-          p.ramuShield=Math.max(0,(p.ramuShield||0)-dt);p.ramuLeap=Math.max(0,(p.ramuLeap||0)-dt);
-          if(p.ramuLeap>0){p.ramuLand=p.ramuLand||{x:p.x,y:p.y};if(p===me){let ix=(keys[keyBinds.right]?1:0)-(keys[keyBinds.left]?1:0),iy=(keys[keyBinds.down]?1:0)-(keys[keyBinds.up]?1:0);if(touch&&ts.m.active){ix=ts.m.x;iy=ts.m.y;}const il=Math.hypot(ix,iy);if(il>.05){ix/=il;iy/=il;const stepSize=230*dt,nx=p.ramuLand.x+ix*stepSize,ny=p.ramuLand.y+iy*stepSize,dx=nx-p.x,dy=ny-p.y,d=Math.hypot(nx-(p.ramuLand.startX??p.x),ny-(p.ramuLand.startY??p.y));if(d<=220&&!hitW(nx,ny,16)){p.ramuLand.x=nx;p.ramuLand.y=ny;}}}p.ramuLand.startX=p.ramuLand.startX??p.x;p.ramuLand.startY=p.ramuLand.startY??p.y;p.x=p.ramuLand.x;p.y=p.ramuLand.y;p.mx=p.my=0;if(p.ramuLeap<=1&&!p.ramuWarned){p.ramuWarned=true;F.push({k:'p',x:p.x,y:p.y,vx:0,vy:0,l:1,m:1,c:'#ff6a22',s:64});F.push({k:'t',x:p.x,y:p.y-30,vx:0,vy:-18,l:.8,m:.8,tx:'LANDING!',c:'#ff8b32'});}if(p.ramuLeap<=1){F.push({k:'p',x:p.x,y:p.y,vx:0,vy:0,l:.8,m:.8,c:'#ff6a22',s:42});for(const q of P){if(q!==p&&q.alive&&Math.hypot(q.x-p.x,q.y-p.y)<100){dmg(q,{d:2000,o:p,s:1,vx:0,vy:0,fireStream:true});q.fireBurn=2;}}p.ramuLeap=0;p.tf=0;}}
+        p.fl-=dt;p.rec-=dt;p.cd-=dt;p.gcd-=dt;p.kcd-=dt;p.bt-=dt;p.shieldTimer=Math.max(0,(p.shieldTimer||0)-dt);p.ramuShieldTimer=Math.max(0,(p.ramuShieldTimer||0)-dt);p.ramuTransform=Math.max(0,(p.ramuTransform||0)-dt);p.fireLock=Math.max(0,(p.fireLock||0)-dt);p.ramuDiveLift=Math.max(0,(p.ramuDiveLift||0)-dt);p.ramuWallSyncTimer=Math.max(0,(p.ramuWallSyncTimer||0)-dt);
+        const attackHeld=(p===me&&((mdown&&!touch)||(touch&&!!ts.a.active)))||(p.aiFireHeld&&p.b==='ramu'&&p.ramuMode==='fire');
+        const localAuthority=!networkMode||p===me||(isNetworkHost&&p.isBot&&!p.netRemote);
+        if(p.b==='ramu'&&p.ramuMode==='fire'&&localAuthority){
+          const canFlame=attackHeld&&p.alive&&p.fireEnergy>0&&p.fireLock<=0&&p.ramuDiveTimer<=0&&p.ramuShieldTimer<=0&&p.smokeTimer<=0&&p.frozenTimer<=0&&p.tf<=0&&!p.lp&&G.ph==='play';
+          if(canFlame){p.fireEnergy=Math.max(0,p.fireEnergy-dt*(p.k?.fireEnergyDrain||.18));if(p.fireEnergy<=.001){p.fireEnergy=0;p.fireLock=Math.max(p.fireLock,.2);}}
+          else if(!attackHeld&&p.fireLock<=0)p.fireEnergy=Math.min(1,(p.fireEnergy||0)+dt*.13);
+          setRamuFireActive(p,canFlame&&p.fireEnergy>0);
         }
-        if(p.freeze>0){p.freeze=Math.max(0,p.freeze-dt);p.mx=p.my=0;}
-        if(p.iceHits instanceof Map){for(const [owner,value] of p.iceHits){const next=Math.max(0,value-dt*.018);if(next<=0)p.iceHits.delete(owner);else p.iceHits.set(owner,next);}}
-        if(p.fireBurn>0){p.fireBurn=Math.max(0,p.fireBurn-dt);p.burnTick=(p.burnTick||0)-dt;if(p.burnTick<=0&&p.alive){p.burnTick=.5;dmg(p,{d:100,o:p.burnOwner||null,s:0,vx:0,vy:0});F.push({k:'p',x:p.x,y:p.y,vx:0,vy:-22,l:.3,m:.3,c:'#ff632e',s:12});}}
- p.bt-=dt; p.shieldTimer=Math.max(0,(p.shieldTimer||0)-dt); p.kaioken=Math.max(0,(p.kaioken||0)-dt); if(p.ss2>0){ p.ss2=Math.max(0,p.ss2-dt); if(p.ss2===0){ p.ss2Cooldown=15; p.gcd=Math.max(p.gcd,15); } } if(p.ss2Cooldown>0) p.ss2Cooldown=Math.max(0,p.ss2Cooldown-dt);
+        if(p.b==='ramu'&&p.ramuMode==='fire'){
+          const targetLength=ramuFlameTargetRange(p).range;p.ramuFireLengthMax=targetLength;
+          if(p.ramuFireActive)p.ramuFireLength=Math.min(targetLength,(p.ramuFireLength||0)+dt*720);
+          else p.ramuFireLength=Math.max(0,(p.ramuFireLength||0)-dt*1500);
+        }
+        if(p.b==='ramu'&&p.ramuMode==='fire'&&localAuthority){
+          if(p.ramuFireActive){p.ramuFireTick=(p.ramuFireTick||0)-dt;if(p.ramuFireTick<=0){p.ramuFireTick+=(p.k?.fireTickMs||350)/1000;ramuFlameTick(p);}}else p.ramuFireTick=0;
+        }
+        if(p.ramuIceBurstRemaining>0&&p.alive){p.ramuIceBurstTimer-=dt;while(p.ramuIceBurstRemaining>0&&p.ramuIceBurstTimer<=0){spawnRamuIceBall(p,p.ramuIceBurstAim,p.ramuIceBurstIndex++);p.ramuIceBurstRemaining--;p.ramuIceBurstTimer+=.17;}}
+        const smokeBefore=p.smokeTimer||0;p.smokeTimer=Math.max(0,smokeBefore-dt);if(smokeBefore>0&&p.smokeTimer<=0&&p.alive){p.hp=p.mh;p.nh=0;puff(p.x,p.y,20,'#d1d5db',1);for(let i=0;i<9;i++)F.push({k:'p',x:p.x,y:p.y-8,vx:(Math.random()-.5)*70,vy:-55-Math.random()*50,l:.6,m:.6,c:'#a7f3d0',s:5+Math.random()*5});}
+        p.frozenTimer=Math.max(0,(p.frozenTimer||0)-dt);p.ramuWaterHop=Math.max(0,(p.ramuWaterHop||0)-dt);if(p.freezeMeter>0&&p.frozenTimer<=0)p.freezeMeter=Math.max(0,p.freezeMeter-dt*.035);
+        p.burnTimer=Math.max(0,(p.burnTimer||0)-dt);p.burnTick=(p.burnTick||0)-dt;if(p.alive&&p.burnTimer>0&&p.burnTick<=0){p.burnTick=.5;dmg(p,{d:100,o:p.burnOwner||null,s:0,vx:0,vy:0});}
+        const diveBefore=p.ramuDiveTimer||0;if(diveBefore>0){p.ramuDiveTimer=Math.max(0,diveBefore-dt);p.ramuDiveWarning=p.ramuDiveTimer<=1;if(diveBefore>0&&p.ramuDiveTimer<=0&&p.alive)ramuFireDiveLand(p);}
+        p.kaioken=Math.max(0,(p.kaioken||0)-dt); if(p.ss2>0){ p.ss2=Math.max(0,p.ss2-dt); if(p.ss2===0){ p.ss2Cooldown=15; p.gcd=Math.max(p.gcd,15); } } if(p.ss2Cooldown>0) p.ss2Cooldown=Math.max(0,p.ss2Cooldown-dt);
         p.dodgeFx = Math.max(0, p.dodgeFx-dt); p.autoAimTimer = Math.max(0, (p.autoAimTimer||0)-dt);
         if(p.muiCharging>0) p.muiCharging-=dt;
         if(!p.alive) p.dt+=dt;
@@ -1445,7 +1617,7 @@ function gadget(p){
       wf = Math.max(0, wf);
       for(let i=KM.length-1;i>=0;i--){ const k=KM[i]; k.t-=dt; if(!k.remoteVisual){ k.x=k.o.x; k.y=k.o.y; } k.tk-=dt; if(k.tk<=0){ k.tk=.1; beamHit(k); } if(k.t<=0) KM.splice(i,1); }
       if(G.ph=='count'){ G.t=Math.max(0,((G.endAt||Date.now())-Date.now())/1000); if(G.t<=0) G.ph='play'; }
-      else if(G.ph=='end'){ G.t-=dt; if(G.t<=0){ if(G.w[0]>=2||G.w[1]>=2||gameMode=='showdown'||gameMode==='duo'||gameMode==='trio') finish(); else { G.r++; resetRound(); } } }
+      else if(G.ph=='end'){ G.t-=dt; if(G.t<=0){ if(G.w[0]>=2||G.w[1]>=2||gameMode=='showdown'||gameMode==='duo') finish(); else { G.r++; resetRound(); } } }
       if(G.ph=='play'){
         for(const p of P){
           if(!p.alive) continue;
@@ -1466,10 +1638,10 @@ function gadget(p){
             continue;
           }
           K=p.k; p.am = Math.min(3, p.am + dt/K.rel); p.nh+=dt;
-          if(p.nh>3.5 && p.hp<p.mh && !p.isDummy){
+          if(p.nh>3 && p.hp<p.mh && !p.isDummy){
             p.hc = (p.hc||0) + dt;
             if(p.hc>=.7){ p.hc=0; const h=Math.min(p.mh-p.hp, p.mh*.2); p.hp+=h; F.push({k:'t',x:p.x,y:p.y-30,vx:0,vy:-50,l:.7,m:.7,tx:'+'+Math.round(h),c:'#5f5'}); puff(p.x,p.y,6,'#7f7',.6); beep(700,.12,.06,'triangle',200); }
-          } else if(p.nh<=3.5) p.hc=0;
+          } else if(p.nh<=3) p.hc=0;
           if(p.dodge>0){ p.dodge-=dt; F.push({k:'p',x:p.x+(Math.random()-.5)*10,y:p.y,vx:0,vy:0,l:.3,m:.3,c:'#cfd8ff',s:14}); }
           if(p.tf>0){ tfx(p,dt); continue; }
           if(p.lp){ air(p,dt); continue; }
@@ -1495,18 +1667,24 @@ function gadget(p){
           } else ai(p,dt);
         }
         for(const p of P){const prev=aiFramePositions.get(p);if(!prev||dt<=0)continue;let vx=(p.x-prev.x)/dt,vy=(p.y-prev.y)/dt;const cap=(BR[p.b]?.spd||150)*1.8,v=Math.hypot(vx,vy);if(v>cap){vx*=cap/v;vy*=cap/v;}p.aiVx=(p.aiVx||0)*.35+vx*.65;p.aiVy=(p.aiVy||0)*.35+vy*.65;}
+        updateLocalRamuWallHeat(dt);
         for(let i=B.length-1;i>=0;i--){
-          const b=B[i]; let dead=false; if(b.iceBall&&b.wait>0){b.wait=Math.max(0,b.wait-dt);continue;} const sp=Math.hypot(b.vx,b.vy);
+          const b=B[i]; let dead=false; const sp=Math.hypot(b.vx,b.vy);
           for(let s=0;s<3&&!dead;s++){
-            const k=dt/3; b.x+=b.vx*k; b.y+=b.vy*k; b.r-=sp*k; if(b.beer||b.cigar)b.flightT=(b.flightT||0)+k;
+            const k=dt/3; b.x+=b.vx*k; b.y+=b.vy*k; b.r-=sp*k; if(b.beer)b.flightT=(b.flightT||0)+k;
             const ti=Math.floor(b.x/T), tj=Math.floor(b.y/T);
-            if(b.r<=0){ dead=true; if(b.beer||b.cigar||b.greenBeer) degesSplash(b.x,b.y,b); else if(b.remoteVisual)degesImpactVisual(b.x,b.y,b); else puff(b.x,b.y,1,'#ffe9a0',.3); }
+            if(b.r<=0){ dead=true; if(b.remoteVisual){degesImpactVisual(b.x,b.y,b);}else if(b.beer)degesSplash(b.x,b.y,b); else puff(b.x,b.y,1,'#ffe9a0',.3); }
             else if(b.bn>0 && tile(b.x,b.y)=='#'){ b.x-=b.vx*k; b.y-=b.vy*k; if(tile(b.x+b.vx*k,b.y)=='#') b.vx=-b.vx; else b.vy=-b.vy; b.bn--; }
-            else if(tile(b.x,b.y)=='#'){ dead=true; if(b.beer||b.cigar||b.greenBeer)degesSplash(b.x-b.vx*k*.35,b.y-b.vy*k*.35,b); else if(b.remoteVisual)degesImpactVisual(b.x-b.vx*k*.35,b.y-b.vy*k*.35,b); if(b.s&&!b.beer&&!b.cigar&&!b.greenBeer&&ti>0&&tj>0&&ti<MW-1&&tj<MH-1){ M[tj][ti]='.'; if(networkMode && b.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
+            else if(!b.beer&&tile(b.x,b.y)=='#'){
+              dead=true;
+              if(b.iceBall){if((!networkMode||isNetworkHost)&&registerLocalIceWallHit(ti,tj))puff(b.x,b.y,4,'#9cf4ff',.6);else puff(b.x,b.y,2,'#cfffff',.35);}
+              else if(b.s&&breakLocalWall(ti,tj)){if(networkMode&&b.o===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj});puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2);beep(80,.2,.2,'sawtooth',-40);}
+              else puff(b.x,b.y,2,'#fff',.4);
+            }
             else if(networkMode && b.o?.netRemote){ /* remote owner's browser resolves hits */ }
-          else for(const e of P){ if(!b.beer && !b.greenBeer && e!==b.o && e.alive && !e.lp && !(e.tf>0) && Math.hypot(e.x-b.x,e.y-b.y)<20+(b.z>9?b.z-9:0)){
+          else for(const e of P){ if(!b.beer&&e!==b.o && e.alive && !e.lp && !(e.tf>0) && !(e.ramuDiveTimer>0) && Math.hypot(e.x-b.x,e.y-b.y)<20+(b.z>9?b.z-9:0)){
             const sameTeam=e.t===b.t;
-            if(b.beer||b.cigar){ degesSplash(b.x,b.y,b); }
+            if(b.beer){degesSplash(b.x,b.y,b);}
             else if(!sameTeam && e.t!==b.t) dmg(e,b);
             dead=true; break;
           } }
@@ -1517,23 +1695,16 @@ function gadget(p){
           const nowMs=Date.now();
           for(let zi=Z.length-1;zi>=0;zi--){
             const zone=Z[zi];
-            if(nowMs>=zone.expires){if(zone.greenBeer&&zone.owner){zone.owner.gcd=15;}Z.splice(zi,1);continue;}
+            if(nowMs>=zone.expires){Z.splice(zi,1);continue;}
             if(nowMs<zone.nextTick)continue;
-            if(networkMode&&zone.owner!==me&&!zone.greenBeer)continue;
+            if(networkMode&&zone.owner!==me)continue;
             zone.nextTick=nowMs+(zone.tickMs||600);
             for(const target of P){
               if(!target.alive||Math.hypot(target.x-zone.x,target.y-zone.y)>zone.radius)continue;
               const isOwner=target===zone.owner;
-              if(zone.greenBeer){
-                const teammate=isOwner||(gameMode!=='showdown'&&target.t===zone.team);
-                if(!teammate)continue;
+              if(isOwner||((gameMode==='knockout'||gameMode==='duo')&&target.t===zone.team)){
                 const healed=Math.min(target.mh-target.hp,zone.heal);
-                if(healed>0){target.hp+=healed;F.push({k:'t',x:target.x,y:target.y-28,vx:0,vy:-38,l:.75,m:.75,tx:'+'+Math.round(healed),c:'#72ff78'});puff(target.x,target.y,7,'#a5e978',.9);F.push({k:'bubble',x:target.x,y:target.y-10,vx:(Math.random()-.5)*12,vy:-28,l:.55,m:.55,r:3+Math.random()*3,phase:Math.random()*6.28,c:'#dcffc2'});}
-                continue;
-              }
-              if(isOwner||((gameMode==='knockout'||gameMode==='duo'||gameMode==='trio')&&target.t===zone.team)){
-                const healed=Math.min(target.mh-target.hp,zone.heal);
-                if(healed>0){target.hp+=healed;F.push({k:'t',x:target.x,y:target.y-28,vx:0,vy:-38,l:.75,m:.75,tx:'+'+Math.round(healed),c:'#72ff78'});puff(target.x,target.y,5,'#7df9a5',.7);}
+                if(healed>0){target.hp+=healed;puff(target.x,target.y,5,'#7df9a5',.7);}
               }else{
                 const last=zone.lastHit.get(target)||0;
                 if(nowMs<last)continue;
@@ -1545,11 +1716,11 @@ function gadget(p){
           }
         }
         if(!isTestMode){
-          if(gameMode == 'showdown' || gameMode == 'duel' || gameMode === 'duo' || gameMode === 'trio'){
+          if(gameMode == 'showdown' || gameMode == 'duel' || gameMode === 'duo'){
             const aliveCount = P.filter(p=>p.alive).length;
-            const aliveTeams = (gameMode==='duo'||gameMode==='trio') ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
-            if((gameMode==='duo'||gameMode==='trio') ? aliveTeams.filter(team=>P.some(p=>p.t===team&&p.alive)).length<=1 && !(P.some(p=>!p.alive&&p.respawnPending&&P.some(q=>q!==p&&q.t===p.t&&q.alive))) : (gameMode==='showdown' ? aliveCount<=1 : (aliveCount<=1 || !me.alive))){
-              const win = (gameMode==='duo'||gameMode==='trio') ? aliveTeams[0]===me.t : me.alive && aliveCount==1;
+            const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
+            if(gameMode==='duo' ? aliveTeams.filter(team=>P.some(p=>p.t===team&&p.alive)).length<=1 && !(P.some(p=>!p.alive&&p.respawnPending&&P.some(q=>q!==p&&q.t===p.t&&q.alive))) : (gameMode==='showdown' ? aliveCount<=1 : (aliveCount<=1 || !me.alive))){
+              const win = gameMode==='duo' ? aliveTeams[0]===me.t : me.alive && aliveCount==1;
               if(gameMode==='duel'){
                 const winnerTeam=win?me.t:(me.t===0?1:0);
                 if(winnerTeam===0 || winnerTeam===1) G.w[winnerTeam]++;
@@ -1571,7 +1742,7 @@ function gadget(p){
     function matchmake(){
       if(window.DaBrawlNet){ window.DaBrawlNet.beginMatchmaking(gameMode); return; }
       show('mm'); let remaining=10; clearInterval(mmI); clearTimeout(mmTimeout);
-      const target = gameMode==='duel' ? 2 : gameMode==='trio' ? 12 : (gameMode==='showdown'||gameMode==='duo') ? 10 : 6;
+      const target = gameMode==='duel' ? 2 : (gameMode==='showdown'||gameMode==='duo') ? 10 : 6;
       $('mmTxt').textContent = 'PLAYERS JOINED: 1/'+target+' · '+remaining+'s';
       $('mmHint').textContent = 'Waiting up to 10 seconds for players to join…';
       mmI = setInterval(() => {
@@ -1587,13 +1758,13 @@ function gadget(p){
       if(scr==='res') return;
       try{localStorage.removeItem('dabrawl_active_match');}catch(_){}
       lastMatchWasOnline=!!networkMode; lastQueueMode=gameMode;
-      const aliveTeams = (gameMode==='duo'||gameMode==='trio') ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
+      const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
       const totalTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].length : 0;
       const eliminatedTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].filter(team=>!aliveTeams.includes(team)).length : 0;
-      const place = gameMode==='showdown' ? (me.alive ? 1 : Math.max(2, Math.min(10, 11-(me.elimOrder||matchEliminations||1)))) : (gameMode==='duo'||gameMode==='trio') ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(gameMode==='trio'?4:5, (gameMode==='trio'?5:6)-(teamEliminationOrder[me.t]||teamEliminations||1)))) : (G.w[me.t]>=2 ? 1 : 5);
+      const place = gameMode==='showdown' ? (me.alive ? 1 : Math.max(2, Math.min(10, 11-(me.elimOrder||matchEliminations||1)))) : gameMode==='duo' ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(5, 6-(teamEliminationOrder[me.t]||teamEliminations||1)))) : (G.w[me.t]>=2 ? 1 : 5);
       const soloShowdownTrophies = [10, 8, 5, 0, -2, -5, -8, -10];
-      const d = gameMode==='showdown' ? (soloShowdownTrophies[place-1] ?? -10) : gameMode==='trio' ? ([10,5,0,-4][place-1] ?? -4) : gameMode==='duo' ? (place===1 ? 10 : place===2 ? 8 : place===3 ? 5 : place===4 ? 0 : -5) : (G.w[me.t]>=2 ? 8 : -4);
-      const win = (gameMode==='showdown'||gameMode==='duo'||gameMode==='trio') ? place===1 : G.w[me.t]>=2;
+      const d = gameMode==='showdown' ? (soloShowdownTrophies[place-1] ?? -10) : gameMode==='duo' ? (place===1 ? 10 : place===2 ? 8 : place===3 ? 5 : place===4 ? 0 : -5) : (G.w[me.t]>=2 ? 8 : -4);
+      const win = (gameMode==='showdown'||gameMode==='duo') ? place===1 : G.w[me.t]>=2;
       // Online clients wait for the host's final result before changing trophies.
       if(!networkMode || isNetworkHost){
         tr = Math.max(0, tr + d); bTrophies[selB] = Math.max(0, (bTrophies[selB]||0) + d); saveTrophies();
@@ -1601,7 +1772,7 @@ function gadget(p){
       $('rt').textContent = win ? 'VICTORY!' : 'DEFEAT'; $('rt').style.color = win ? '#ffd21f' : '#ff5a5a'; $('rd').textContent = (d>0?'+':'')+d+' 🏆';
       if(networkMode){
         // Rematch stays host-only; every player can leave a completed match.
-        $('again').style.display=''; $('home').style.display=''; $('home').textContent='LEAVE MATCH';
+        $('again').style.display=isNetworkHost?'':'none'; $('home').style.display=''; $('home').textContent='LEAVE MATCH';
         $('mmHint').textContent='';
         if(isNetworkHost && window.DaBrawlNet) void window.DaBrawlNet.announceMatchEnd(win);
         if(!isNetworkHost){$('rt').textContent='MATCH OVER';$('rd').textContent='Match ended. You can leave whenever you are ready.';}
@@ -1632,7 +1803,7 @@ function gadget(p){
             fallback.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-34%);width:min(180px,28vw);height:min(180px,28vw);display:none;align-items:center;justify-content:center;font-size:min(120px,22vw);z-index:230;pointer-events:none;filter:drop-shadow(0 8px 0 #0008)';
             $('featuredBrawler').appendChild(fallback);
           }
-          fallback.textContent=({kuku:'🐔',saiyan:'⚡',shachi:'🦈',deges:'🍺',ramu:'🧊🔥',pip:'🐧',rex:'🦖',mochi:'🐱',zed:'👾',bolt:'🤖',nova:'🌟',juno:'🦊',taco:'🌮',blaze:'🔥',jax:'🥊',vex:'👻',zane:'😎'})[selB]||'⭐';
+          fallback.textContent=({kuku:'🐔',saiyan:'⚡',shachi:'🦈',pip:'🐧',rex:'🦖',mochi:'🐱',zed:'👾',bolt:'🤖',nova:'🌟',juno:'🦊',taco:'🌮',blaze:'🔥',jax:'🥊',vex:'👻',zane:'😎',ramu:'🧑‍🦲'})[selB]||'⭐';
           // The mobile-mode regression can leave a cleared canvas while the
           // canvas API still reports success. Keep a visible portrait fallback
           // in the lobby whenever mobile layout is enabled.
@@ -1678,28 +1849,13 @@ function gadget(p){
     }
     function det(id){
       show('det'); const bInfo = BR[id], bT = bTrophies[id]||0, bR = getRank(bT), bStyle = getRankBadgeColor(bR);
-      $('dTitle').textContent = bInfo.nm; $('dTitle').style.background = bInfo.rarityCol; $('dClass').textContent = bInfo.cls; $('dRarity').textContent = bInfo.rarity; $('dRarity').style.color = bInfo.rarityCol;
+      $('dTitle').textContent = bInfo.nm; $('dTitle').style.setProperty('--brawler-rarity', bInfo.rarityCol); $('dClass').textContent = bInfo.cls; $('dRarity').textContent = bInfo.rarity; $('dRarity').style.color = bInfo.rarityCol;
       $('dLore').textContent = bInfo.info; $('dHp').textContent = bInfo.hp; $('dAtk').textContent = bInfo.atkNm; $('dSup').textContent = bInfo.supNm; $('dTro').textContent = bT;
       $('dRankIcon').textContent = 'RANK ' + bR; $('dRankIcon').style.background = bStyle.bg; $('dRankIcon').style.borderColor = bStyle.border;
       startShowcaseAnimation(id);
       $('dsel').textContent = id == selB ? 'SELECTED' : 'SELECT';
       $('dsel').onclick = () => { selB = id; try { localStorage.setItem('dabrawl_b', id); } catch(e){} window.DaBrawlNet?.updateBrawler?.(id); show('menu'); updateMenuUI(); playMenuShowcase(id,true); };
-      $('dTry').onclick = () => {
-        selB = id;
-        try { localStorage.setItem('dabrawl_b', id); } catch(e){}
-        window.DaBrawlNet?.updateBrawler?.(id);
-        // Practice mode is local-only; start immediately rather than using the
-        // loading timer, which can strand practice on GET READY.
-        try {
-          startGame(true);
-        } catch(err) {
-          console.error('Practice mode failed to start:',err);
-          $('mmTxt').textContent='PRACTICE START ERROR';
-          $('mmHint').textContent='Could not start practice mode: '+String(err?.message||err);
-          show('mm');
-          status('Practice mode failed to start. Check the browser console for details.',true);
-        }
-      };
+      $('dTry').onclick = () => { selB = id; try { localStorage.setItem('dabrawl_b', id); } catch(e){} window.DaBrawlNet?.updateBrawler?.(id); startLoadingScreen(true); };
     }
     // One-shot character showcase choreography.
     let showcaseFrame=0,showcaseToken=0,menuShowcaseFrame=0,menuShowcaseToken=0;
@@ -1773,7 +1929,7 @@ function gadget(p){
       if(!t) return false; MT.push({x:t.x, y:t.y, t:.9, m:.9, o:p}); beep(500,.5,.1,'triangle',-300); return true;
     }
     function impact(m){
-      setShake(12); F.push({k:'r', x:m.x, y:m.y, vx:0, vy:0, l:.45, m:.45, rad:80}); puff(m.x, m.y, 14, '#ffb347', 1.6); beep(60,.4,.3,'sawtooth',-20);
+      shake=12; F.push({k:'r', x:m.x, y:m.y, vx:0, vy:0, l:.45, m:.45, rad:80}); puff(m.x, m.y, 14, '#ffb347', 1.6); beep(60,.4,.3,'sawtooth',-20);
       // Shachi's Meteor gadget cracks walls around the impact on every client.
       const ci=Math.floor(m.x/T), cj=Math.floor(m.y/T);
       for(let j=cj-3;j<=cj+3;j++) for(let i=ci-3;i<=ci+3;i++){
@@ -1812,7 +1968,7 @@ function gadget(p){
       if(networkMode && p===me && ch>0 && window.DaBrawlNet){
         window.DaBrawlNet.sendAction('charged-ki',p.a,{x:projectile.x,y:projectile.y,vx:projectile.vx,vy:projectile.vy,r:projectile.r,z:projectile.z,col:projectile.col,bn:projectile.bn});
       }
-      p.rec=.1; if(ch>0) setShake(5+ch*6); puff(p.x+c*28, p.y+s*28, 4, kiCol, .6); playKameSound();
+      p.rec=.1; if(ch>0) shake = Math.max(shake, 5+ch*6); puff(p.x+c*28, p.y+s*28, 4, kiCol, .6); playKameSound();
     }
     function bigK(p,ch){ if(p.am<1||p.kcd>0) return; p.am--; ki(p,ch); }
     function kame(p,ch){
@@ -1832,7 +1988,7 @@ function gadget(p){
         else if(isNetworkHost && p.isBot) window.DaBrawlNet.sendAction('kame',p.a,{charge:ch,x:p.x,y:p.y,len,w:14+ch*40,damage:actualDmg,col:kameCol,isMaxChg:isMax,playerId:p.netId});
       }
       KM.push({o:p, a:p.a, x:p.x, y:p.y, len, w:14+ch*40, d:actualDmg, t:.6, m:.6, tk:0, col:kameCol, destroys:false, isMaxChg:isMax});
-      setShake(8+ch*12); playKameSound();
+      shake = 8+ch*12; playKameSound();
     }
     function beamHit(k){
       if(networkMode && k.o?.netRemote) return;
@@ -1866,7 +2022,7 @@ function gadget(p){
     }
     function xform(p){ p.tfn = p.form+1; p.tf = 1.8; p.sc=0; p.chg=0; p.burst=0; p.am=3; p.holdT=0; p.hw=false; if(networkMode && window.DaBrawlNet){ if(p===me) window.DaBrawlNet.sendAction('transform',p.a,{form:p.tfn}); else if(isNetworkHost && p.isBot && p.netId) window.DaBrawlNet.sendAction('transform',p.a,{form:p.tfn,playerId:p.netId}); } playTransformSound(p.tfn >= 4 ? 'galaxy' : 'normal'); }
     function tfx(p,dt){
-      p.tf-=dt; const fm = FM[p.tfn]; setShake(14); const col = fm.aura || '#ffd21f';
+      p.tf-=dt; const fm = FM[p.tfn]; shake = Math.max(shake, 14); const col = fm.aura || '#ffd21f';
       if(p.tfn >= 4 && Math.random()<.6) F.push({k:'pillar', x:p.x, y:p.y, c:'#ffffff', l:.3, m:.3});
       for(let i=0;i<6;i++){
         const ang = -Math.PI/2 + (Math.random()-.5)*1.4, spd = 200 + Math.random()*240;
@@ -1874,7 +2030,7 @@ function gadget(p){
       }
       if(Math.random()<.4) F.push({k:'r', x:p.x, y:p.y+12, vx:0, vy:0, l:.3, m:.3, rad:60+Math.random()*70});
       if(p.form!=p.tfn && p.tf<.9){
-        p.form = p.tfn; p.k = Object.assign({}, BR.saiyan, fm); p.hp += fm.hp - p.mh; p.mh = fm.hp; wf=1; setShake(25);
+        p.form = p.tfn; p.k = Object.assign({}, BR.saiyan, fm); p.hp += fm.hp - p.mh; p.mh = fm.hp; wf=1; shake=25;
         F.push({k:'r', x:p.x, y:p.y, vx:0, vy:0, l:.7, m:.7, rad:190}); puff(p.x,p.y,30,col,2.2); star(p.x,p.y,16);
       }
     }
@@ -1892,9 +2048,9 @@ function gadget(p){
       if(u>=1){ p.lp=null; p.h=0; slam(p,l); }
     }
     function slam(p,l){
-      setShake(14); F.push({k:'r', x:p.x, y:p.y, vx:0, vy:0, l:.45, m:.45, rad:l.r}); puff(p.x, p.y, 14, '#fff', 1.6); beep(70,.4,.3,'sawtooth',-30);
+      shake=14; F.push({k:'r', x:p.x, y:p.y, vx:0, vy:0, l:.45, m:.45, rad:l.r}); puff(p.x, p.y, 14, '#fff', 1.6); beep(70,.4,.3,'sawtooth',-30);
       for(const e of P) if(e!==p && e.alive && !e.lp && (gameMode==='showdown'||(gameMode==='duo'&&e.t!==p.t)||(gameMode!=='showdown'&&gameMode!=='duo'&&e.t!==p.t))){ const dx=e.x-p.x, dy=e.y-p.y, d=Math.hypot(dx,dy); if(d<l.r){ dmg(e, {d:l.d, o:p, s:1, vx:dx||1, vy:dy}); mv(e, dx/(d||1)*45, dy/(d||1)*45); } }
-      if(l.b){ const ci=Math.floor(p.x/T), cj=Math.floor(p.y/T); for(let j=cj-2;j<=cj+2;j++)for(let i=ci-2;i<=ci+2;i++) if(i>0&&j>0&&i<MW-1&&j<MH-1&&M[j][i]=='#'&&Math.hypot((i+.5)*T-p.x, (j+.5)*T-p.y)<l.r){ M[j][i]='.'; puff((i+.5)*T, (j+.5)*T, 6, '#8a5a2b', 1.2); } }
+      if(l.b){ const ci=Math.floor(p.x/T), cj=Math.floor(p.y/T); for(let j=cj-2;j<=cj+2;j++)for(let i=ci-2;i<=ci+2;i++) if(i>0&&j>0&&i<MW-1&&j<MH-1&&M[j][i]=='#'&&Math.hypot((i+.5)*T-p.x, (j+.5)*T-p.y)<l.r&&breakLocalWall(i,j)){ puff((i+.5)*T, (j+.5)*T, 6, '#8a5a2b', 1.2); } }
     }
     function tx(s,x,y,sz,c='#fff',al='center'){ g.font=sz+"px 'Lilita One',Impact,sans-serif"; g.textAlign=al; g.lineWidth=sz/5; g.strokeStyle='#000'; g.lineJoin='round'; g.strokeText(s,x,y); g.fillStyle=c; g.fillText(s,x,y); }
     const circ = (x,y,r,c,o,edgeColor,glowColor,glowBlur=0) => {
@@ -2056,7 +2212,7 @@ function gadget(p){
         const chgRatio = (1.2 - p.muiCharging) / 1.2, chargeRad = 15 + chgRatio * 45;
         // Keep the charging feedback on other forms; UI/MUI use their outline instead of giant rings.
         g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=0.75; if(isUIorMUI){ const rr=7+chgRatio*12+Math.sin(t*24)*2; circ(ca*28, -7+sa*28, rr, mui?'#ffffff':'#93c5fd'); circ(ca*28, -7+sa*28, rr*0.52, '#ffffff'); circ(ca*28, -7+sa*28, rr*1.35, neon, 0.7, edge); } else { circ(ca*38, sa*38, chargeRad, '#ffffff'); circ(ca*38, sa*38, chargeRad*0.6, '#a5f3fc'); } g.restore();
-        setShake(12);
+        shake = Math.max(shake, 12);
         if(Math.random() < 0.6) F.push({k:'p', x: p.x + ca*38 + (Math.random()-.5)*40, y: p.y + sa*38 + (Math.random()-.5)*40, vx: (Math.random()-.5)*40, vy: (Math.random()-.5)*40, l: 0.3, m: 0.3, c: '#ffffff', s: 6});
       } else if(p.chg>0){
         const r = 6 + p.chg*26; if(isUIorMUI){ g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=.85; circ(ca*28,-7+sa*28,7+p.chg*13+Math.sin(t*24)*2,mui?'#fff':'#93c5fd'); circ(ca*28,-7+sa*28,4+p.chg*7,'#fff'); g.restore(); } else { circ(ca*32, sa*32, r+Math.sin(t*40)*2, fm.aura||'#5cf'); circ(ca*32, sa*32, r*.55, '#fff'); }
@@ -2285,24 +2441,19 @@ function gadget(p){
         g.strokeStyle='#4c5058';g.lineWidth=1;g.beginPath();g.moveTo(-7,9);g.lineTo(7,9);g.moveTo(-6,12);g.lineTo(6,12);g.stroke();
         // Hood rim frames the same-sized fighter face and hides ears and hair.
         g.strokeStyle='#34373e';g.lineWidth=2.2;g.beginPath();g.arc(0,-8,16.5,Math.PI*1.08,Math.PI*1.92);g.stroke();
-        // His original beer pint remains as the support-attack prop.
-        g.save();g.translate(Math.cos(p.a)*17,Math.sin(p.a)*14+4);g.rotate(p.a);
-        g.strokeStyle='#e8b34a';g.lineWidth=2;g.beginPath();g.arc(5,1,5,-Math.PI/2,Math.PI/2);g.stroke();
-        g.fillStyle='#b8792f';g.strokeStyle='#563616';g.lineWidth=1.8;g.beginPath();g.roundRect(-3,-7,9,17,2);g.fill();g.stroke();
-        g.fillStyle='#f8dc91';g.fillRect(-2,-5,7,3);g.fillStyle='#f3c34f';g.fillRect(-1,0,5,7);
-        g.fillStyle='#fff8e7';g.beginPath();g.ellipse(1,-7,4.4,2,0,0,Math.PI*2);g.fill();g.restore();
-      }
-      else if(p.b==='ramu'){
-        const bob=1+Math.sin(p.walk)*.035;g.scale(1,bob);
-        // Ramu's own portrait: dark beard, swept silver hair, and split ice/fire armor.
-        g.fillStyle='#111827';g.strokeStyle='#020617';g.lineWidth=2.5;g.beginPath();g.moveTo(-13,4);g.lineTo(-11,17);g.lineTo(-5,22);g.lineTo(0,28);g.lineTo(5,22);g.lineTo(11,17);g.lineTo(13,4);g.closePath();g.fill();g.stroke();
-        g.fillStyle='#d7e0e8';g.strokeStyle='#64748b';g.beginPath();g.moveTo(-14,-19);g.quadraticCurveTo(-21,-27,-11,-30);g.lineTo(-2,-25);g.lineTo(8,-31);g.quadraticCurveTo(20,-27,14,-17);g.lineTo(11,-8);g.lineTo(-12,-8);g.closePath();g.fill();g.stroke();
-        g.fillStyle='#c98e68';g.strokeStyle='#6b4535';g.beginPath();g.ellipse(0,-7,13,15,0,0,Math.PI*2);g.fill();g.stroke();
-        g.fillStyle='#111827';g.beginPath();g.moveTo(-13,-9);g.lineTo(-17,-22);g.lineTo(-5,-18);g.lineTo(0,-24);g.lineTo(8,-17);g.lineTo(15,-21);g.lineTo(12,-7);g.closePath();g.fill();
-        for(const o of[-5,5]){g.fillStyle='#f8fafc';g.beginPath();g.ellipse(o,-7,3.5,2.7,0,0,Math.PI*2);g.fill();g.fillStyle=p.ramuMode?'#ff7a1c':'#38bdf8';g.beginPath();g.arc(o,-7,1.8,0,Math.PI*2);g.fill();}
-        g.fillStyle='#111827';g.strokeStyle='#020617';g.lineWidth=1.8;g.beginPath();g.moveTo(-12,-1);g.lineTo(-9,7);g.lineTo(-5,12);g.lineTo(0,15);g.lineTo(5,12);g.lineTo(9,7);g.lineTo(12,-1);g.lineTo(6,3);g.lineTo(0,6);g.lineTo(-6,3);g.closePath();g.fill();g.stroke();
-        g.fillStyle='#0f172a';g.strokeStyle='#020617';g.lineWidth=2;g.beginPath();g.moveTo(-15,8);g.lineTo(-10,4);g.lineTo(0,11);g.lineTo(10,4);g.lineTo(15,8);g.lineTo(13,20);g.lineTo(2,24);g.lineTo(-13,20);g.closePath();g.fill();g.stroke();
-        g.fillStyle=p.ramuMode?'#ff6a22':'#9cecff';g.fillRect(-13,11,12,5);g.fillStyle=p.ramuMode?'#9cecff':'#ff6a22';g.fillRect(1,11,12,5);
+        if(p.smokeTimer>0){
+          const breath=performance.now()*.001,handX=Math.cos(p.smokeAim||p.a)*16,handY=Math.sin(p.smokeAim||p.a)*12+5;
+          g.save();g.translate(handX,handY);g.rotate(p.smokeAim||p.a);
+          g.strokeStyle='#e5e7eb';g.lineWidth=2;g.beginPath();g.moveTo(-3,0);g.lineTo(8,0);g.stroke();
+          g.fillStyle='#fb923c';g.shadowColor='#ff7a22';g.shadowBlur=6;g.beginPath();g.arc(9,0,1.8,0,Math.PI*2);g.fill();g.shadowBlur=0;
+          for(let j=0;j<3;j++){const rise=((breath*18+j*7)%26),wobble=Math.sin(breath*4+j)*2;g.globalAlpha=Math.max(0,.7-rise/36);g.strokeStyle='#e5e7eb';g.lineWidth=1.5;g.beginPath();g.moveTo(4+wobble,-5-rise);g.quadraticCurveTo(8-wobble,-9-rise,4+wobble,-13-rise);g.stroke();}g.restore();
+        }else{
+          g.save();g.translate(Math.cos(p.a)*17,Math.sin(p.a)*14+4);g.rotate(p.a);
+          g.strokeStyle='#e8b34a';g.lineWidth=2;g.beginPath();g.arc(5,1,5,-Math.PI/2,Math.PI/2);g.stroke();
+          g.fillStyle='#b8792f';g.strokeStyle='#563616';g.lineWidth=1.8;g.beginPath();g.roundRect(-3,-7,9,17,2);g.fill();g.stroke();
+          g.fillStyle='#f8dc91';g.fillRect(-2,-5,7,3);g.fillStyle='#f3c34f';g.fillRect(-1,0,5,7);
+          g.fillStyle='#fff8e7';g.beginPath();g.ellipse(1,-7,4.4,2,0,0,Math.PI*2);g.fill();g.restore();
+        }
       }
       else {
         const bob = 1 + Math.sin(p.walk)*.05; g.scale(1, bob);
@@ -2327,10 +2478,6 @@ function gadget(p){
         g.strokeStyle='#bae6fd'; g.lineWidth=2+p.chg*3; g.beginPath(); g.arc(ca*31,sa*31,rr+5,0,Math.PI*2); g.stroke();
         g.restore();
       }
-      if(p.freeze>0&&p.alive){g.save();g.globalAlpha=.48;g.fillStyle='#38bdf8';g.beginPath();g.arc(0,0,24,0,Math.PI*2);g.fill();g.globalAlpha=1;g.strokeStyle='#dff8ff';g.lineWidth=2;g.beginPath();g.arc(0,0,27,0,Math.PI*2);g.stroke();g.restore();}
-      if(p.fireBurn>0&&p.alive){g.save();g.globalCompositeOperation='lighter';for(let i=0;i<5;i++){const a=Date.now()*.008+i*Math.PI*2/5,rr=17+Math.sin(Date.now()*.02+i)*3;g.fillStyle=i%2?'#ff3b16':'#ffd35a';g.globalAlpha=.8;g.beginPath();g.ellipse(Math.cos(a)*rr,-7+Math.sin(a)*rr*.65,4,8,a,0,Math.PI*2);g.fill();}g.globalAlpha=1;g.restore();}
-      if(p.ramuShield>0&&p.b==='ramu'){g.save();g.strokeStyle='#a8f4ff';g.lineWidth=3;g.shadowColor='#6ee7ff';g.shadowBlur=12;g.beginPath();g.arc(0,0,29+Math.sin(Date.now()*.012)*2,0,Math.PI*2);g.stroke();g.strokeStyle='#e8fcff';g.lineWidth=1.5;g.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3+Date.now()*.0005,x=Math.cos(a)*29,y=Math.sin(a)*29;i?g.lineTo(x,y):g.moveTo(x,y);}g.closePath();g.stroke();g.restore();}
-      if(p.tf>0&&p.b==='ramu'){g.save();g.globalCompositeOperation='lighter';for(let i=0;i<10;i++){const a=Date.now()*.004+i*Math.PI*2/10,rr=34+Math.sin(Date.now()*.01+i)*5;g.fillStyle=p.ramuMode?'#ff6a22':'#9cecff';g.globalAlpha=.85;g.beginPath();g.arc(Math.cos(a)*rr,Math.sin(a)*rr,3,0,Math.PI*2);g.fill();}g.globalAlpha=1;g.restore();}
       if(p.fl>0 && p.alive){ g.globalAlpha=.6; circ(0,0,20,'#fff'); }
       if(p.tf>0 && p.tfn>=4){
         g.globalAlpha = Math.min(1, p.tf); g.fillStyle = '#ffffff';
@@ -2340,37 +2487,116 @@ function gadget(p){
       g.restore();
     }
     function drawUI(p){
-      if(!p.alive || !(p.human||gameMode=='showdown'||gameMode==='duo'||sees(0,p))) return;
+      if(!p.alive||(p.b==='ramu'&&p.ramuDiveTimer>0)||!(p.human||gameMode=='showdown'||gameMode==='duo'||sees(0,p)))return;
       const bw = 50, x = p.x-bw/2, y = p.y-42; g.fillStyle='#000'; g.fillRect(x-2,y-2,bw+4,10); g.fillStyle='#333'; g.fillRect(x,y,bw,6);
       const isTeammate = (gameMode!='showdown' && p.t===me.t && p!==me), isLowHp = !p.isDummy && !isTeammate && (p.hp / p.mh < 0.3);
       const hpColor = isTeammate ? '#39f' : (isLowHp ? '#ff3333' : (p===me ? '#4f4' : (gameMode=='showdown' ? '#f80' : '#f44')));
       g.fillStyle = hpColor; g.fillRect(x,y,p.isDummy?bw:bw*Math.max(0,p.hp)/p.mh,6);
       tx(p.isDummy ? 'INF' : Math.ceil(p.hp), x + bw/2, y + 5, 12, '#fff');
       tx(p.name, p.x, y-6, 15, '#fff');
+      if((p.freezeMeter||0)>0||p.frozenTimer>0){
+        const cx=x+bw+10,cy=y+3,r=6.5,meter=p.frozenTimer>0?1:Math.max(0,Math.min(1,p.freezeMeter||0));
+        g.fillStyle='#061a28';g.beginPath();g.arc(cx,cy,r,0,Math.PI*2);g.fill();
+        if(meter>0){g.fillStyle='#72e7ff';g.beginPath();g.moveTo(cx,cy);g.arc(cx,cy,r-1,-Math.PI/2,-Math.PI/2+Math.PI*2*meter);g.closePath();g.fill();}
+        g.strokeStyle=p.frozenTimer>0?'#e8fdff':'#a5f3fc';g.lineWidth=1.3;g.beginPath();g.arc(cx,cy,r,0,Math.PI*2);g.stroke();
+        if(p.frozenTimer>0){g.strokeStyle='#fff';g.lineWidth=1.1;g.beginPath();g.moveTo(cx-3,cy);g.lineTo(cx+3,cy);g.moveTo(cx,cy-3);g.lineTo(cx,cy+3);g.stroke();}
+      }
+      if(p.smokeTimer>0)tx('SMOKING · '+p.smokeTimer.toFixed(1)+'s',p.x,p.y-57,13,'#d1d5db');
+      if(p===me&&p.b==='ramu'&&p.ramuShieldTimer>0)tx('ICE CUBE · '+p.ramuShieldTimer.toFixed(1)+'s',p.x,p.y-55,13,'#c8f8ff');
       if(p.tf>0) tx((p.tfn===3 && p.kaioken>0)?'KAIOKEN':FM[p.tfn].fn, p.x, p.y-85, 26, (p.tfn===3 && p.kaioken>0)?'#ff2020':FM[p.tfn].aura);
       if(p.kaioken>0 && p.tf<=0) tx('KAIOKEN', p.x, p.y-76, 18, '#ff2020');
       if(p.dodge>0) tx('ULTRA INSTINCT', p.x, p.y-70, 18, '#cfd8ff');
       if(p===me && p.k.sy && p.k.mode===0 && p.kcd>0) tx('KAME '+Math.ceil(p.kcd), p.x, p.y+46, 14, '#6cf');
-      if(p.b==='ramu'&&p.alive){
-        if(p.ramuMode===1){
-          const bx=p.x-29,by=p.y+29,bw=58,bh=7;
-          g.fillStyle='#101010';g.fillRect(bx-2,by-2,bw+4,bh+4);g.fillStyle='#55251a';g.fillRect(bx,by,bw,bh);
-          const amount=Math.max(0,Math.min(1,p.fireAmmo||0)),grad=g.createLinearGradient(bx,by,bx+bw,by);
-          grad.addColorStop(0,'#ff3b16');grad.addColorStop(.55,'#ff7a1c');grad.addColorStop(1,'#ffe36b');g.fillStyle=grad;g.fillRect(bx,by,bw*amount,bh);
-        }else{
-          const amount=Math.max(0,Math.min(1,p.am/3));g.strokeStyle='#10222b';g.lineWidth=5;g.beginPath();g.arc(p.x,p.y-31,24,-Math.PI/2,-Math.PI/2+Math.PI*2*amount);g.stroke();
-          g.strokeStyle='#b8f4ff';g.lineWidth=3;g.beginPath();g.arc(p.x,p.y-31,24,-Math.PI/2,-Math.PI/2+Math.PI*2*amount);g.stroke();
-        }
-      }
-      if(p.iceHits instanceof Map){let meter=0;for(const value of p.iceHits.values())meter=Math.max(meter,value);if(meter>0&&p.freeze<=0){g.strokeStyle='#10222b';g.lineWidth=5;g.beginPath();g.arc(p.x,p.y-32,27,-Math.PI/2,-Math.PI/2+Math.PI*2*meter);g.stroke();g.strokeStyle='#8ceeff';g.lineWidth=3;g.beginPath();g.arc(p.x,p.y-32,27,-Math.PI/2,-Math.PI/2+Math.PI*2*meter);g.stroke();}}
-      if(p===me && p.k.mode!==0){
+      if(p===me&&p.b==='ramu'&&p.ramuMode==='fire'){
+        const bx=p.x-44,by=p.y+28,bw=88,bh=9,energy=Math.max(0,Math.min(1,p.fireEnergy||0));
+        g.fillStyle='#16131b';g.beginPath();g.roundRect(bx-2,by-2,bw+4,bh+4,5);g.fill();
+        g.fillStyle='#3f2530';g.beginPath();g.roundRect(bx,by,bw,bh,4);g.fill();
+        const grad=g.createLinearGradient(bx,by,bx+bw,by);grad.addColorStop(0,'#ffe88b');grad.addColorStop(.48,'#ff8a24');grad.addColorStop(1,'#dc2626');
+        g.fillStyle=grad;g.beginPath();g.roundRect(bx,by,bw*energy,bh,4);g.fill();
+        tx(p.fireLock>0?'LOCK · '+p.fireLock.toFixed(1)+'s':'FLAME',p.x,by+22,10,p.fireLock>0?'#ffe6e6':'#ffca70');
+      }else if(p===me&&p.k.mode!==0){
         for(let i=0;i<3;i++){
-          const f = Math.max(0, Math.min(1, p.am-i));
-          g.fillStyle='#000'; g.fillRect(p.x-24+i*17, p.y+27, 15, 7);
-          g.fillStyle='#555'; g.fillRect(p.x-23+i*17, p.y+28, 13, 5);
-          g.fillStyle='#ff9a1c'; g.fillRect(p.x-23+i*17, p.y+28, 13*f, 5);
+          const f=Math.max(0,Math.min(1,p.am-i));
+          g.fillStyle='#000';g.fillRect(p.x-24+i*17,p.y+27,15,7);g.fillStyle='#555';g.fillRect(p.x-23+i*17,p.y+28,13,5);g.fillStyle=p.b==='ramu'&&p.ramuMode==='ice'?'#74eaff':'#ff9a1c';g.fillRect(p.x-23+i*17,p.y+28,13*f,5);
         }
       }
+    }
+    function drawTerrainFloorTile(i,j){
+      const x=i*T,y=j*T;g.fillStyle=((i+j)&1)?'#334155':'#1e293b';g.fillRect(x,y,T,T);
+    }
+    function drawArenaWall(i,j,wall){
+      const x=i*T,y=j*T,heat=Math.max(0,Math.min(1,(wall?.heat||0)/RAMU_WALL_RULES.heatSeconds)),frost=Math.max(0,Math.min(1,(wall?.iceHits||0)/RAMU_WALL_RULES.iceHits));
+      if(wall?.iced){
+        g.fillStyle='#164e63';g.fillRect(x+2,y+8,T-4,T-10);
+        g.fillStyle='#0891b2';g.beginPath();g.moveTo(x+2,y+9);g.lineTo(x+T/2,y+2);g.lineTo(x+T-2,y+9);g.lineTo(x+T-2,y+T-3);g.lineTo(x+2,y+T-3);g.closePath();g.fill();
+        g.fillStyle='rgba(103,232,249,.48)';g.beginPath();g.moveTo(x+3,y+9);g.lineTo(x+T/2,y+3);g.lineTo(x+T/2,y+T-4);g.lineTo(x+3,y+T-4);g.closePath();g.fill();
+        g.fillStyle='rgba(34,211,238,.42)';g.beginPath();g.moveTo(x+T/2,y+3);g.lineTo(x+T-3,y+9);g.lineTo(x+T-3,y+T-4);g.lineTo(x+T/2,y+T-4);g.closePath();g.fill();
+        g.strokeStyle='#d7fbff';g.lineWidth=2;g.shadowColor='#63eaff';g.shadowBlur=7;g.beginPath();g.moveTo(x+3,y+9);g.lineTo(x+T/2,y+2);g.lineTo(x+T-3,y+9);g.lineTo(x+T-3,y+T-3);g.lineTo(x+T/2,y+T-3);g.lineTo(x+3,y+T-3);g.closePath();g.moveTo(x+T/2,y+2);g.lineTo(x+T/2,y+T-3);g.moveTo(x+5,y+15);g.lineTo(x+T/2-5,y+22);g.lineTo(x+T/2-1,y+29);g.moveTo(x+T-7,y+17);g.lineTo(x+T/2+5,y+23);g.stroke();g.shadowBlur=0;
+      }else{
+        g.fillStyle='#1e1b18';g.fillRect(x,y+8,T,T-8);
+        const rr=Math.round(180+75*heat),gg=Math.round(83+70*heat),bb=Math.round(9+10*heat);
+        g.fillStyle=`rgb(${rr},${gg},${bb})`;g.fillRect(x+2,y+2,T-4,T-12);
+        if(heat>0){g.save();g.globalAlpha=.25+.55*heat;g.shadowColor='#ff5200';g.shadowBlur=4+12*heat;g.fillStyle='#ff6a00';g.fillRect(x+3,y+4,T-6,T-14);g.restore();}
+        if(frost>0){g.save();g.globalAlpha=Math.min(.52,frost*.55);g.fillStyle='#67e8f9';g.fillRect(x+3,y+3,T-6,T-13);g.strokeStyle='#d7fbff';g.lineWidth=1.5;g.beginPath();g.moveTo(x+8,y+17);g.lineTo(x+T/2,y+23);g.lineTo(x+T-9,y+13);g.moveTo(x+T/2,y+23);g.lineTo(x+T/2-4,y+34);g.stroke();g.restore();}
+        const top=Math.round(217+38*heat),topGreen=Math.round(119+38*heat);
+        g.fillStyle=`rgb(${top},${topGreen},${Math.round(6+12*heat)})`;g.fillRect(x+2,y+2,T-4,8);
+        g.strokeStyle='#000';g.lineWidth=3;g.strokeRect(x+2,y+2,T-4,T-4);
+      }
+    }
+    function drawArenaTerrain(now){
+      if(!M)return;
+      const worldW=MW*T,worldH=MH*T,scale=Math.max(1,Math.min(1.5,DPR*z)),pixelW=Math.ceil(worldW*scale),pixelH=Math.ceil(worldH*scale);
+      if(!terrainCanvas)terrainCanvas=document.createElement('canvas');
+      if(terrainCanvas.width!==pixelW||terrainCanvas.height!==pixelH){terrainCanvas.width=pixelW;terrainCanvas.height=pixelH;terrainCacheWidth=pixelW;terrainCacheHeight=pixelH;terrainCacheDirty=true;}
+      if(terrainCacheDirty||terrainCanvas.width!==terrainCacheWidth||terrainCanvas.height!==terrainCacheHeight){
+        const ctx=terrainCanvas.getContext('2d');ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,pixelW,pixelH);ctx.setTransform(pixelW/worldW,0,0,pixelH/worldH,0,0);
+        ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.shadowBlur=0;ctx.setLineDash([]);
+        const main=g;g=ctx;
+        try{
+          for(let j=0;j<MH;j++)for(let i=0;i<MW;i++){
+            const tile=M[j][i],x=i*T,y=j*T;drawTerrainFloorTile(i,j);
+            if(tile==='~'){g.fillStyle='#0284c7';g.fillRect(x,y,T,T);}
+            else if(tile==='#')drawArenaWall(i,j,null);
+          }
+          g.strokeStyle='#000';g.lineWidth=6;g.strokeRect(0,0,worldW,worldH);
+        }finally{g=main;}
+        terrainCacheDirty=false;
+      }
+      g.save();g.globalAlpha=1;g.globalCompositeOperation='source-over';g.drawImage(terrainCanvas,0,0,worldW,worldH);g.restore();
+      // Heat and ice are live state, so draw only changed wall cells over the cached map.
+      for(const wall of localWallStates.values())if(M?.[wall.j]?.[wall.i]==='#'){drawTerrainFloorTile(wall.i,wall.j);drawArenaWall(wall.i,wall.j,wall);}
+      // Water glints remain full-frame animated; only the static tile fill is cached.
+      g.strokeStyle='#38bdf8';g.lineWidth=3;
+      for(const{i,j}of waterTiles){
+        const x=i*T,y=j*T;g.beginPath();g.moveTo(x+6,y+T/2);g.quadraticCurveTo(x+T/4,y+T/2-6+Math.sin(now*3+i)*3,x+T/2,y+T/2);
+        g.quadraticCurveTo(x+3*T/4,y+T/2+6-Math.sin(now*3+i)*3,x+T-6,y+T/2);g.stroke();
+      }
+    }
+    function ensureBushSprite(){
+      const worldSize=56,scale=Math.max(1,Math.min(1.5,DPR*z)),pixels=Math.ceil(worldSize*scale);
+      if(!bushSpriteCanvas)bushSpriteCanvas=document.createElement('canvas');
+      if(bushSpriteCanvas.width!==pixels||bushSpriteCanvas.height!==pixels||bushSpriteScale!==scale){
+        bushSpriteCanvas.width=pixels;bushSpriteCanvas.height=pixels;bushSpriteScale=scale;
+        const ctx=bushSpriteCanvas.getContext('2d');ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,pixels,pixels);ctx.setTransform(pixels/worldSize,0,0,pixels/worldSize,0,0);
+        ctx.globalAlpha=.93;ctx.globalCompositeOperation='source-over';ctx.shadowBlur=0;ctx.setLineDash([]);
+        const main=g;g=ctx;
+        try{
+          const x=28,y=28;for(const[ox,oy,r]of[[-12,6,15],[12,6,15],[0,-8,17],[-2,10,14]])circ(x+ox,y+oy,r,'#15803d',0);
+          g.lineWidth=3;g.strokeStyle='#166534';g.beginPath();g.arc(x,y-8,17,3.4,6);g.stroke();
+        }finally{g=main;}
+      }
+      return bushSpriteCanvas;
+    }
+    function drawBushOverlay(now){
+      if(!M||!bushTiles.length)return;
+      const sprite=ensureBushSprite(),occupied=new Set();
+      for(const p of P)if(p.alive)occupied.add(wallKey(Math.floor(p.x/T),Math.floor(p.y/T)));
+      g.save();g.globalAlpha=1;g.globalCompositeOperation='source-over';
+      for(const{i,j}of bushTiles){
+        const sh=occupied.has(wallKey(i,j))?Math.sin(now*14)*2:0;
+        g.drawImage(sprite,i*T-4+sh,j*T-4,56,56);
+      }
+      g.restore();
     }
     function draw(){
       try {
@@ -2378,27 +2604,20 @@ function gadget(p){
         const cx = vw>=MW*T ? (MW*T-vw)/2 : Math.max(0, Math.min(MW*T-vw, tg.x-vw/2)), cy = vh>=MH*T ? (MH*T-vh)/2 : Math.max(0, Math.min(MH*T-vh, tg.y-vh/2));
         cam.x += (cx-cam.x)*.2; cam.y += (cy-cam.y)*.2;
         g.setTransform(1,0,0,1,0,0); g.fillStyle='#0f172a'; g.fillRect(0,0,cv.width,cv.height);
-        const viewShake=disableShake?0:shake;
-        g.setTransform(DPR*z, 0, 0, DPR*z, (-cam.x*z + (Math.random()-.5)*viewShake)*DPR, (-cam.y*z + (Math.random()-.5)*viewShake)*DPR);
+        g.setTransform(DPR*z, 0, 0, DPR*z, (-cam.x*z + (Math.random()-.5)*shake)*DPR, (-cam.y*z + (Math.random()-.5)*shake)*DPR);
         const now = performance.now()/1000;
-        for(let j=0;j<MH;j++)for(let i=0;i<MW;i++){
-          const t=M[j][i], x=i*T, y=j*T;
-          g.fillStyle = ((i+j)&1) ? '#334155' : '#1e293b'; g.fillRect(x,y,T,T);
-          if(t=='~'){
-            g.fillStyle='#0284c7'; g.fillRect(x,y,T,T); g.strokeStyle='#38bdf8'; g.lineWidth=3;
-            g.beginPath(); g.moveTo(x+6, y+T/2); g.quadraticCurveTo(x+T/4, y+T/2-6+Math.sin(now*3+i)*3, x+T/2, y+T/2);
-            g.quadraticCurveTo(x+3*T/4, y+T/2+6-Math.sin(now*3+i)*3, x+T-6, y+T/2); g.stroke();
-          }
-          if(t=='#'){
-            g.fillStyle='#1e1b18'; g.fillRect(x,y+8,T,T-8); g.fillStyle='#b45309'; g.fillRect(x+2,y+2,T-4,T-12);
-            g.fillStyle='#d97706'; g.fillRect(x+2,y+2,T-4,8); g.strokeStyle='#000'; g.lineWidth=3; g.strokeRect(x+2,y+2,T-4,T-4);
-          }
-        }
-        g.strokeStyle='#000'; g.lineWidth=6; g.strokeRect(0,0,MW*T,MH*T);
+        drawArenaTerrain(now);
         if(gasDist > 0){
           g.fillStyle='rgba(34, 197, 94, 0.45)'; g.fillRect(0, 0, MW*T, gasDist*T); g.fillRect(0, (MH-gasDist)*T, MW*T, gasDist*T);
           g.fillRect(0, gasDist*T, gasDist*T, (MH-gasDist*2)*T); g.fillRect((MW-gasDist)*T, gasDist*T, gasDist*T, (MH-gasDist*2)*T);
           g.strokeStyle='#22c55e'; g.lineWidth=4; g.strokeRect(gasDist*T, gasDist*T, (MW-gasDist*2)*T, (MH-gasDist*2)*T);
+        }
+        for(const p of P)if(p.b==='ramu'&&p.ramuDiveTimer>0){
+          const warning=p.ramuDiveTimer<=1,phase=performance.now()*.001,radius=82;
+          g.save();g.globalAlpha=warning?.42:.22;g.fillStyle=warning?'#ff5a1f':'#ffb347';g.beginPath();g.ellipse(p.x,p.y,radius,radius*.62,0,0,Math.PI*2);g.fill();
+          g.globalAlpha=.88;g.strokeStyle=warning?'#ff9a3d':'#d5fbff';g.lineWidth=warning?3.5:2.2;g.setLineDash(warning?[]:[8,6]);g.beginPath();g.ellipse(p.x,p.y,radius,radius*.62,0,0,Math.PI*2);g.stroke();g.setLineDash([]);
+          if(warning){g.globalCompositeOperation='lighter';for(let i=0;i<12;i++){const a=phase*1.4+i*Math.PI/6,x=p.x+Math.cos(a)*radius*.72,y=p.y+Math.sin(a)*radius*.43;g.globalAlpha=.45+.4*(.5+.5*Math.sin(phase*7+i));g.fillStyle=i%2?'#ff5426':'#ffe69a';g.beginPath();g.arc(x,y,4+2*Math.sin(phase*5+i),0,Math.PI*2);g.fill();}}
+          g.restore();
         }
         for(const f of F){
           const u=f.l/f.m;
@@ -2452,17 +2671,24 @@ function gadget(p){
         }
         for(const p of P) if(p.lp){ g.strokeStyle='#fffa'; g.lineWidth=4; g.beginPath(); g.arc(p.lp.ex, p.lp.ey, p.lp.r, 0, 6.283); g.stroke(); }
         for(const zone of Z){
-          const duration=zone.greenBeer?3000:1800,fade=Math.max(0,Math.min(1,(zone.expires-Date.now())/duration));
-          g.save();g.globalAlpha=(zone.greenBeer ? .48 : .38)*fade;g.fillStyle=zone.greenBeer?'#4bbd47':zone.superBeer?'#f59e0b':'#d99a42';g.beginPath();g.ellipse(zone.x,zone.y,zone.radius,zone.radius*.72,0,0,Math.PI*2);g.fill();
-          g.globalAlpha=.75*fade;g.strokeStyle=zone.greenBeer?'#d9ffc2':'#fef3c7';g.lineWidth=3;g.beginPath();g.ellipse(zone.x,zone.y,zone.radius*.92,zone.radius*.66,0,0,Math.PI*2);g.stroke();
-          if(zone.greenBeer){const phase=performance.now()*.001;for(let i=0;i<12;i++){const a=phase*(.8+(i%3)*.16)+i*2.399,px=zone.x+Math.cos(a)*zone.radius*.73,py=zone.y+Math.sin(a*1.12)*zone.radius*.49-((phase*13+i*9)%(zone.radius*.12));const r=2.2+(i%3)*.75;g.globalAlpha=(.42+.45*(.5+.5*Math.sin(phase*4+i)))*fade;g.strokeStyle='#eaffd6';g.lineWidth=1.5;g.beginPath();g.arc(px,py,r,0,Math.PI*2);g.stroke();g.beginPath();g.arc(px-r*.25,py-r*.25,r*.32,Math.PI*1.1,Math.PI*1.8);g.stroke();}}
+          const fade=Math.max(0,Math.min(1,(zone.expires-Date.now())/1800));g.save();g.globalAlpha=.38*fade;g.fillStyle=zone.superBeer?'#f59e0b':'#d99a42';g.beginPath();g.ellipse(zone.x,zone.y,zone.radius,zone.radius*.72,0,0,Math.PI*2);g.fill();g.globalAlpha=.75*fade;g.strokeStyle='#fef3c7';g.lineWidth=3;g.beginPath();g.ellipse(zone.x,zone.y,zone.radius*.92,zone.radius*.66,0,0,Math.PI*2);g.stroke();
           g.restore();
         }
         for(const b of B){
-          if(b.iceBall){g.save();g.translate(b.x,b.y);g.rotate(Math.atan2(b.vy,b.vx));g.globalCompositeOperation='lighter';g.shadowColor='#9cecff';g.shadowBlur=15;g.fillStyle='#6bdcff';g.beginPath();g.arc(0,0,b.iceSize||15,0,Math.PI*2);g.fill();g.fillStyle='#f1fdff';g.beginPath();g.arc(-3,-3,(b.iceSize||15)*.57,0,Math.PI*2);g.fill();g.fillStyle='#b8f4ff';for(let j=0;j<6;j++){const a=j*Math.PI/3;g.beginPath();g.moveTo(Math.cos(a)*7,Math.sin(a)*7);g.lineTo(Math.cos(a)*22,Math.sin(a)*22);g.lineTo(Math.cos(a+.25)*7,Math.sin(a+.25)*7);g.closePath();g.fill();}g.restore();}
-          else if(b.fireStream){g.save();g.translate(b.x,b.y);g.rotate(Math.atan2(b.vy,b.vx));g.globalCompositeOperation='lighter';g.shadowColor='#ff4a16';g.shadowBlur=18;g.fillStyle='#ff3b16';g.beginPath();g.moveTo(-17,-6);g.quadraticCurveTo(0,-10,20,0);g.quadraticCurveTo(0,10,-17,6);g.closePath();g.fill();g.fillStyle='#ff9a1c';g.beginPath();g.moveTo(-10,-3);g.quadraticCurveTo(3,-6,16,0);g.quadraticCurveTo(3,6,-10,3);g.closePath();g.fill();g.fillStyle='#fff0a6';g.beginPath();g.ellipse(2,0,8,2,0,0,Math.PI*2);g.fill();g.restore();}
-          else if(b.beer || b.cigar){
-            g.save(); const lofted=!!(b.beer||b.greenBeer||(b.cigar&&b.flightDuration)); const arcU=lofted?Math.max(0,Math.min(1,(b.flightT||0)/(b.flightDuration||1))):0; const arcLift=lofted?4*arcU*(1-arcU)*(b.arcHeight||58):0; g.translate(b.x,b.y); if(lofted){g.globalAlpha=.22;g.fillStyle='#000';g.beginPath();g.ellipse(0,10,b.z*1.8,b.z*.7,0,0,Math.PI*2);g.fill();g.globalAlpha=1;} g.translate(0,-arcLift); g.rotate(Math.atan2(b.vy,b.vx));
+          if(b.iceBall||b.fireBall){
+            const r=b.z||12;g.save();g.translate(b.x,b.y);g.rotate(Math.atan2(b.vy,b.vx));
+            if(b.iceBall){
+              g.globalCompositeOperation='lighter';g.globalAlpha=.72;g.strokeStyle='#75eaff';g.lineWidth=2;g.beginPath();g.moveTo(-r*1.8,0);g.lineTo(-r*.7,0);g.stroke();g.globalAlpha=1;
+              const grad=g.createRadialGradient(-r*.3,-r*.35,1,r*.1,r*.1,r*1.2);grad.addColorStop(0,'#f3ffff');grad.addColorStop(.35,'#9ef2ff');grad.addColorStop(1,'#1688cc');
+              g.shadowColor='#50dcff';g.shadowBlur=10;g.fillStyle=grad;g.strokeStyle='#164e73';g.lineWidth=2;g.beginPath();g.arc(0,0,r,0,Math.PI*2);g.fill();g.stroke();g.shadowBlur=0;
+              g.strokeStyle='rgba(255,255,255,.85)';g.lineWidth=1.4;g.beginPath();g.moveTo(-r*.7,-r*.2);g.lineTo(r*.25,-r*.7);g.lineTo(r*.55,r*.15);g.lineTo(-r*.15,r*.7);g.closePath();g.stroke();g.beginPath();g.moveTo(0,-r*.82);g.lineTo(0,r*.78);g.moveTo(-r*.8,0);g.lineTo(r*.8,0);g.stroke();
+            }else{
+              g.globalCompositeOperation='lighter';g.globalAlpha=.8;g.strokeStyle='#ff7a22';g.lineWidth=5;g.beginPath();g.moveTo(-r*2,0);g.lineTo(-r*.4,0);g.stroke();
+              const grad=g.createRadialGradient(-r*.25,-r*.25,1,0,0,r*1.2);grad.addColorStop(0,'#fffbd5');grad.addColorStop(.35,'#ffd166');grad.addColorStop(.72,'#ff651f');grad.addColorStop(1,'#b91c1c');
+              g.globalAlpha=1;g.shadowColor='#ff5a1f';g.shadowBlur=14;g.fillStyle=grad;g.beginPath();g.arc(0,0,r,0,Math.PI*2);g.fill();g.shadowBlur=0;g.strokeStyle='#ffe5a3';g.lineWidth=1.3;g.stroke();
+            }g.restore();
+          }else if(b.beer){
+            g.save(); const lofted=!!(!!b.beer); const arcU=lofted?Math.max(0,Math.min(1,(b.flightT||0)/(b.flightDuration||1))):0; const arcLift=lofted?4*arcU*(1-arcU)*(b.arcHeight||58):0; g.translate(b.x,b.y); if(lofted){g.globalAlpha=.22;g.fillStyle='#000';g.beginPath();g.ellipse(0,10,b.z*1.8,b.z*.7,0,0,Math.PI*2);g.fill();g.globalAlpha=1;} g.translate(0,-arcLift); g.rotate(Math.atan2(b.vy,b.vx));
             if(b.beer){
               g.shadowColor='#fbbf24';g.shadowBlur=b.superBeer?22:12;
               g.fillStyle='#d99a42';g.strokeStyle='#5b3217';g.lineWidth=2.5;
@@ -2539,16 +2765,15 @@ function gadget(p){
         }
         if(wf>0){ g.fillStyle='rgba(255,255,255,'+wf*.85+')'; g.fillRect(0,0,W,H); wf = Math.max(0, wf-.025); }
         g.fillStyle='#000a'; g.beginPath(); g.roundRect(W/2-90, 8, 180, 40, 20); g.fill();
-        if(gameMode == 'showdown' || gameMode === 'duo' || gameMode === 'trio'){
-          const aliveLeft = (gameMode==='duo'||gameMode==='trio') ? new Set(P.filter(p=>p.alive).map(p=>p.t)).size : P.filter(p=>p.alive).length;
-          tx((gameMode==='duo'||gameMode==='trio')?'TEAMS LEFT: '+aliveLeft:'LEFT: '+aliveLeft, W/2, 36, 20, '#ffd21f');
+        if(gameMode == 'showdown' || gameMode === 'duo'){
+          const aliveLeft = gameMode==='duo' ? new Set(P.filter(p=>p.alive).map(p=>p.t)).size : P.filter(p=>p.alive).length;
+          tx(gameMode==='duo'?'TEAMS LEFT: '+aliveLeft:'LEFT: '+aliveLeft, W/2, 36, 20, '#ffd21f');
         } else {
           tx(G.w[0], W/2-50, 38, 30, '#6bb6ff'); tx(isTestMode?'∞':'VS', W/2, 36, 20, '#ffd21f'); tx(G.w[1], W/2+50, 38, 30, '#ff7a7a');
           for(const t of[0,1]) P.filter(p=>p.t==t).forEach((p,i) => circ(W/2+(t?1:-1)*(110+i*22), 28, 8, p.alive?(t?'#f44':'#39f'):'#555', 1));
         }
-        tx(isTestMode?'PRACTICE':gameMode==='showdown'?'SOLO SHOWDOWN':gameMode==='duo'?'DUO SHOWDOWN':gameMode==='trio'?'TRIO SHOWDOWN':gameMode==='duel'?'1V1 DUEL':'KNOCKOUT', 14, 32, 22, '#fff', 'left');
-        tx(gameMode==='showdown'?'10 Players':gameMode==='trio'?'12 Players':gameMode==='duel'?'1v1':'Round '+G.r, 14, 56, 16, '#ffd21f', 'left');
-        if(gameMode==='duo'&&!me.alive&&me.respawnPending&&P.some(p=>p!==me&&p.alive&&p.t===me.t)){g.save();g.fillStyle='#000b';g.fillRect(W*.18,H*.42,W*.64,H*.16);tx('RESPAWN IN '+Math.max(0,Math.ceil(10-me.dt))+'s',W/2,H*.51,Math.min(48,W/12),'#fff');g.restore();}
+        tx(isTestMode?'PRACTICE':gameMode==='showdown'?'SOLO SHOWDOWN':gameMode==='duo'?'DUO SHOWDOWN':gameMode==='duel'?'1V1 DUEL':'KNOCKOUT', 14, 32, 22, '#fff', 'left');
+        tx(gameMode==='showdown'?'10 Players':gameMode==='duel'?'1v1':'Round '+G.r, 14, 56, 16, '#ffd21f', 'left');
         const s = $('sup'), r = Math.round(me.sc*100);
         s.style.background = me.sc>=1 ? 'linear-gradient(#ffe45c,#ff9a00)' : 'linear-gradient(to top,#d9a900 '+r+'%,#444 '+r+'%)';
         s.textContent = me.sc>=1 ? 'SUPER' : r+'%';
@@ -2614,12 +2839,12 @@ function gadget(p){
     window.DaBrawlGame = {
       startNetworkGame(roster, matchId, mode, localId, hostId=localId,startAt=Date.now()+2500){
         networkMode = true; isTestMode = false; isNetworkHost=(localId===hostId); networkResultApplied=false; gameMode = mode || 'knockout';
-        $('modeTxt').textContent = gameMode === 'showdown' ? 'SOLO SHOWDOWN' : gameMode === 'duo' ? 'DUO SHOWDOWN' : gameMode === 'trio' ? 'TRIO SHOWDOWN' : gameMode === 'duel' ? '1v1 DUEL' : 'KNOCKOUT 3v3';
+        $('modeTxt').textContent = gameMode === 'showdown' ? 'SOLO SHOWDOWN' : gameMode === 'duo' ? 'DUO SHOWDOWN' : gameMode === 'duel' ? '1v1 DUEL' : 'KNOCKOUT 3v3';
         mapVariant=0; for(const ch of String(matchId)) mapVariant=(mapVariant*31+ch.charCodeAt(0))%3;
         P=[]; me=null; build(); B=[]; F=[]; Z=[]; MT=[]; KM=[];
         roster.forEach((entry,idx)=>{
-          const team = entry.team!==undefined ? entry.team : gameMode === 'showdown' ? idx : gameMode === 'duo' ? Math.floor(idx/2) : gameMode === 'trio' ? Math.floor(idx/3) : gameMode === 'duel' ? idx % 2 : (idx < 3 ? 0 : 1);
-          const slot = gameMode === 'showdown' ? idx : gameMode === 'duo' ? idx % 3 : gameMode === 'trio' ? idx % 3 : gameMode === 'duel' ? idx % 2 : idx % 3;
+          const team = entry.team!==undefined ? entry.team : gameMode === 'showdown' ? idx : gameMode === 'duo' ? Math.floor(idx/2) : gameMode === 'duel' ? idx % 2 : (idx < 3 ? 0 : 1);
+          const slot = gameMode === 'showdown' ? idx : gameMode === 'duo' ? idx % 3 : gameMode === 'duel' ? idx % 2 : idx % 3;
           const brawler = BR[entry.brawler] ? entry.brawler : 'kuku';
           const p = mk(team,slot,!entry.bot,entry.name,brawler,false);
           p.netId = entry.id;
@@ -2779,8 +3004,7 @@ function gadget(p){
           if(msg.super && p.sc<1) p.sc=1;
           fire(p,!!msg.super);
         }
-        else if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.b==='ramu'&&(msg.ramuMode===0||msg.ramuMode===1))p.ramuMode=msg.ramuMode; if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; if(p.k.sy) sTap(p); else tryFire(p); }
-        else if(msg.action==='ramu-fire-stream'&&p.b==='ramu'&&Number.isFinite(msg.angle)&&Number.isFinite(msg.x)&&Number.isFinite(msg.y)){const a=msg.angle;B.push({x:msg.x,y:msg.y,vx:Math.cos(a)*600,vy:Math.sin(a)*600,r:260,d:200,t:p.t,o:p,s:false,z:9,col:'#ff6a22',fireStream:true});}
+        else if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; if(p.k.sy) sTap(p); else tryFire(p); }
         else if(msg.action==='super'){
           // Remote bot supers must not depend on this browser's local round phase.
           // The host can be a fraction of a tick ahead, otherwise the non-host silently
@@ -2797,7 +3021,7 @@ function gadget(p){
             p.sc=0;
           }
         }
-        else if(msg.action==='gadget'){ p.gcd=0; p.dash=0; if(p.b==='ramu'&&(msg.ramuMode===0||msg.ramuMode===1)){p.ramuMode=msg.ramuMode;p.am=p.ramuMode?1:3;} if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; gadget(p); p.remoteBeerTarget=null; }
+        else if(msg.action==='gadget'){ p.gcd=0; p.dash=0; if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; gadget(p); p.remoteBeerTarget=null; }
       },
       applyMatchResult(payload){
         if(!networkMode || isNetworkHost || !me || networkResultApplied || !payload || !Number.isInteger(payload.hostTeam)) return;
@@ -3043,7 +3267,7 @@ function gadget(p){
       roomExit.title=room.host_id===user?.id?'Close this waiting room for everyone':'Leave this waiting room';
       const roomMode=room.game_mode||'knockout';
       gameMode=roomMode;
-      $('modeTxt').textContent=roomMode==='knockout'?'KNOCKOUT 3v3':roomMode==='showdown'?'SOLO SHOWDOWN':roomMode==='duo'?'DUO SHOWDOWN':roomMode==='trio'?'TRIO SHOWDOWN':'1v1 DUEL';
+      $('modeTxt').textContent=roomMode==='knockout'?'KNOCKOUT 3v3':roomMode==='showdown'?'SOLO SHOWDOWN':roomMode==='duo'?'DUO SHOWDOWN':'1v1 DUEL';
       $('modeBtn').disabled=!!user && room.host_id!==user.id;
       $('modeBtn').title=room.host_id===user?.id?'Choose the party game mode':'Only the party leader chooses the game mode';
       el('startRoomBtn').style.display=user && room.host_id===user.id && players.length>=2 && players.length<=3 && players.every(p=>p.is_ready) ? 'inline-block':'none';
@@ -3054,11 +3278,23 @@ function gadget(p){
         roomStartRequestedFor=null;
       }
       if(roomReadyToStart && roomStartRequestedFor!==room.id){
-        if(roomCountdownTimer){clearInterval(roomCountdownTimer);roomCountdownTimer=null;}
         roomStartRequestedFor=room.id;
-        // Ready parties enter the public player-finding screen immediately;
-        // matchmaking itself owns the 10-second wait for other players.
-        void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Party matchmaking failed: '+(err?.message||String(err)),true);});
+        const target=roomMode==='duel'?2:(roomMode==='showdown'||roomMode==='duo')?10:6;
+        const countdownEnds=Date.now()+10000;
+        const updateRoomCountdown=()=>{
+          if(!currentRoom||currentRoom.id!==room.id||roomStartRequestedFor!==room.id){
+            if(roomCountdownTimer){clearInterval(roomCountdownTimer);roomCountdownTimer=null;}
+            return;
+          }
+          const remaining=Math.max(0,Math.ceil((countdownEnds-Date.now())/1000));
+          status('PLAYERS JOINED: '+Math.min(target,players.length)+'/'+target+' · '+(remaining?'STARTING IN '+remaining+'s':'STARTING MATCH')+' — bots fill empty slots.');
+          if(remaining<=0){
+            if(roomCountdownTimer){clearInterval(roomCountdownTimer);roomCountdownTimer=null;}
+            void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
+          }
+        };
+        updateRoomCountdown();
+        roomCountdownTimer=setInterval(updateRoomCountdown,250);
       }
     }
     async function createRoom(){
@@ -3115,16 +3351,6 @@ function gadget(p){
           const b=el('play');b.textContent='PLAY';b.classList.remove('ready');b.onclick=()=>{beep(500,.1);matchmake();};
           window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';show('menu');status('You were removed from the party.');
         })
-        .on('broadcast',{event:'party-queue-start'},async({payload})=>{
-          if(!payload||!payload.mode||!Array.isArray(payload.members))return;
-          const partyGroup={partyId:payload.partyId,members:payload.members};
-          await leaveMatch();
-          void beginMatchmaking(payload.mode,partyGroup);
-        })
-        .on('broadcast',{event:'party-rematch-request'},async()=>{
-          const {data:{user}}=await db.auth.getUser();
-          if(user&&currentRoom?.host_id===user.id)void startRoomGame();
-        })
         .on('broadcast',{event:'room-match-start'},async({payload})=>{
           if(!payload || !Array.isArray(payload.roster) || activeMatchId) return;
           const {data:{user}}=await db.auth.getUser();
@@ -3134,7 +3360,7 @@ function gadget(p){
           if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'){status('Room live connection failed. Check Supabase Realtime settings.',true);return;}
           if(statusValue==='SUBSCRIBED'){
             const {data:{user}}=await db.auth.getUser();
-            if(user && roomChannel) await roomChannel.track({userId:user.id,clientId,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler:localStorage.getItem('dabrawl_b')||'kuku'});
+            if(user && roomChannel) await roomChannel.track({userId:user.id,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler:localStorage.getItem('dabrawl_b')||'kuku'});
             await refreshRoom();
           }
         });
@@ -3149,30 +3375,32 @@ function gadget(p){
       const {data:players,error}=await db.from('game_room_players').select('player_slot,character_id,user_id,is_ready').eq('room_id',currentRoom.id).order('player_slot');
       if(error){status('Could not load room players: '+error.message,true);return;}
       if(players.length<2||players.length>3){status('A room match needs 2 or 3 players.',true);return;}
-      if(!players.every(p=>p.is_ready)){status('Everyone in the party must press READY before matchmaking.',true);return;}
+      if(!players.every(p=>p.is_ready)){status('Everyone in the party must press READY before the match can start.',true);return;}
       const {data:room,error:roomError}=await db.from('game_rooms').select('game_mode').eq('id',currentRoom.id).single();
       if(roomError){status('Could not read the leader’s game mode: '+roomError.message,true);return;}
       const mode=room?.game_mode||'knockout';
-      if(mode==='duel'){status('1v1 Duel does not support parties. Choose Knockout, Solo Showdown, Duo Showdown, or Trio Showdown.',true);return;}
-      if(mode==='trio'&&players.length!==3){status('Trio Showdown requires exactly 3 party members.',true);return;}
-      if(mode==='duo'&&players.length>2){status('Duo Showdown supports a party of 2. Use Trio Showdown for 3 party members.',true);return;}
       const presence=roomChannel?.presenceState?.()||{};
       const live=Object.values(presence).flat().filter(p=>p&&p.userId);
-      const partyJoinedAt=Date.now();
-      const partyMembers=players.map((p,i)=>{
-        const online=live.find(x=>x.userId===p.user_id);
-        if(!online?.clientId)return null;
-        return {clientId:online.clientId,name:online.name||('Player '+(i+1)),brawler:p.character_id||'kuku',partyId:currentRoom.id,partyOrder:i,joinedAt:partyJoinedAt};
-      }).filter(Boolean);
-      if(partyMembers.length!==players.length){status('A party member is reconnecting. Wait until everyone is online, then try again.',true);return;}
-      const hostClientId=live.find(x=>x.userId===user.id)?.clientId;
-      const leaderIndex=partyMembers.findIndex(p=>p.clientId===hostClientId);
-      if(leaderIndex>0){const [leader]=partyMembers.splice(leaderIndex,1);partyMembers.unshift(leader);partyMembers.forEach((p,i)=>p.partyOrder=i);}
-      const partyGroup={partyId:currentRoom.id,members:partyMembers};
-      const sent=await roomChannel.send({type:'broadcast',event:'party-queue-start',payload:{partyId:partyGroup.partyId,mode,members:partyMembers}});
-      if(sent?.status&&sent.status!=='ok'){status('Could not send your party to matchmaking. Check Realtime settings.',true);return;}
-      status('Party ready — finding players together…');
-      await beginMatchmaking(mode,partyGroup);
+      const roster=players.map((p,i)=>({id:p.user_id,name:live.find(x=>x.userId===p.user_id)?.name||(p.user_id===user.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Player '+p.player_slot),brawler:p.character_id||'kuku',bot:false,team:(mode==='knockout'||mode==='duo')?0:(mode==='showdown'?i:i%2)}));
+      const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax'];
+      const botBrawlers=['kuku','shachi','saiyan','deges','ramu'];
+      const target=mode==='knockout'?6:mode==='showdown'?10:mode==='duo'?(players.length===3?9:10):2;
+      let seed=0; for(const ch of String(currentRoom.id)) seed=(seed*31+ch.charCodeAt(0))>>>0;
+      const seeded=()=>{seed=(seed*1664525+1013904223)>>>0;return seed;};
+      while(roster.length<target){
+        const i=roster.length, botIndex=i-players.length;
+        const team=mode==='knockout'?(i<3?0:1):mode==='duo'?(players.length===3?Math.floor((i-players.length)/2)+1:Math.floor(i/2)):i;
+        roster.push({id:'bot-'+currentRoom.id+'-'+i,name:botNames[botIndex%botNames.length]+' BOT',brawler:botBrawlers[seeded()%botBrawlers.length],bot:true,team});
+      }
+      const matchId='room-'+currentRoom.id+'-'+Date.now().toString(36);
+      const startAt=Date.now()+2500;
+      const payload={matchId,mode,roster,hostId:user.id,startAt};
+      status('Starting '+mode.toUpperCase()+'…');
+      try {
+        const sent=await roomChannel.send({type:'broadcast',event:'room-match-start',payload});
+        if(sent?.status && sent.status!=='ok'){roomStartRequestedFor=null;status('Could not notify your friend: '+(sent.status||'Realtime send failed')+'. Check Supabase Realtime settings.',true);return;}
+        await startOnlineMatch(roster,matchId,mode,user.id,user.id,startAt);
+      } catch(err){roomStartRequestedFor=null;status('Could not start room match: '+(err?.message||String(err)),true);}
     }
 
     // Public quick-play queue: Presence tracks who is waiting; Broadcast carries game state/actions.
@@ -3180,24 +3408,16 @@ function gadget(p){
     let activePlayerId=clientId;
     let queueChannel=null, matchChannel=null, queueTimer=null, stateTimer=null, queueStartedAt=0, queueMode='knockout', queueDone=false, localDisplayName='Brawler', activeMatchId=null, activeMatchRoster=null, activeMatchHostId=null, activeMatchLocalId=null;
     const seenAt = new Map();
-    const randomBrawler = () => ['kuku','shachi','saiyan','deges'][Math.floor(Math.random()*4)];
-    function queueTarget(mode=queueMode){ return mode==='duel' ? 2 : mode==='trio' ? 12 : (mode==='showdown'||mode==='duo') ? 10 : 6; }
+    const randomBrawler = () => ['kuku','shachi','saiyan','deges','ramu'][Math.floor(Math.random()*5)];
+    function queueTarget(mode=queueMode){ return mode==='duel' ? 2 : (mode==='showdown'||mode==='duo') ? 10 : 6; }
     function queuePlayers(){
       const state=queueChannel ? queueChannel.presenceState() : {};
       const all=Object.values(state).flat().filter(p=>p && p.clientId);
-      const unique=new Map();
-      for(const p of all){
-        const members=Array.isArray(p.partyMembers)&&p.partyMembers.length?p.partyMembers:[p];
-        members.forEach((member,index)=>{
-          if(!member?.clientId||unique.has(member.clientId))return;
-          unique.set(member.clientId,{...member,partyId:member.partyId||p.partyId||null,partyOrder:Number.isFinite(member.partyOrder)?member.partyOrder:index,joinedAt:member.joinedAt||p.joinedAt||0});
-        });
-      }
-      return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)||(a.partyId===b.partyId?(a.partyOrder||0)-(b.partyOrder||0):0));
+      const unique=new Map(); for(const p of all) if(!unique.has(p.clientId)) unique.set(p.clientId,p);
+      return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,queueTarget());
     }
-    async function beginMatchmaking(mode, partyGroup=null){
-      // Requeue only after closing the previous match connection; never launch a rematch directly.
-      if(activeMatchId) await leaveMatch();
+    async function beginMatchmaking(mode){
+      // A completed private-room duel can queue again just like any other online match.
       cancelMatchmaking(false); queueMode=mode||'knockout'; queueDone=false; queueStartedAt=Date.now();
       show('mm'); $('mmTxt').textContent='CONNECTING TO PLAYERS…'; $('mmHint').textContent='Connecting to DaBrawl online matchmaking…';
       try {
@@ -3217,7 +3437,7 @@ function gadget(p){
         if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){ $('mmTxt').textContent='CONNECTION ERROR'; $('mmHint').textContent='Online matchmaking could not connect. Check Supabase Realtime settings, then try again.'; status('Online matchmaking connection failed: '+statusValue,true); return; }
         if(statusValue!=='SUBSCRIBED') return;
         try {
-          await queueChannel.track({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt,partyId:partyGroup?.partyId||null,partyMembers:partyGroup?.members||null});
+          await queueChannel.track({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
           $('mmHint').textContent='Waiting up to 10 seconds for real players. Bots fill every remaining slot.';
           const target=queueTarget();
           let deadline=Date.now()+10000;
@@ -3229,37 +3449,18 @@ function gadget(p){
             // real players, then fill any remaining slots with bots.
             if(humansNow.length<target && Date.now()<deadline) return;
             finalized=true; queueDone=true; clearInterval(queueTimer); queueTimer=null;
-            const groupsByKey=new Map();
-            for(const p of humansNow){
-              const key=p.partyId?'party:'+p.partyId:'player:'+p.clientId;
-              if(!groupsByKey.has(key))groupsByKey.set(key,[]);
-              groupsByKey.get(key).push(p);
-            }
-            const groups=[...groupsByKey.values()].map(group=>group.sort((a,b)=>(a.partyOrder||0)-(b.partyOrder||0))).sort((a,b)=>(a[0]?.joinedAt||0)-(b[0]?.joinedAt||0));
-            let humans=[];
-            for(const group of groups){if(humans.length+group.length<=target)humans.push(...group);}
-            if(!humans.some(p=>p.clientId===clientId)){
-              const ownGroup=partyGroup?.members?.length?partyGroup.members:[{clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt}];
-              if(humans.length+ownGroup.length<=target)humans.push(...ownGroup);
-            }
-            if(!humans.length){ $('mmTxt').textContent='WAITING FOR PLAYERS…'; $('mmHint').textContent='Your party is larger than the remaining slots. Waiting for a suitable match.'; queueDone=false; finalized=false; return; }
-            if(humans[0]?.clientId!==clientId){ $('mmTxt').textContent='WAITING FOR MATCH HOST…'; $('mmHint').textContent='The first player or party leader in the queue is starting the match…'; queueDone=false; return; }
+            let humans=humansNow;
+            if(!humans.some(p=>p.clientId===clientId)) humans.push({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
+            humans=humans.sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,target);
+            if(humans[0]?.clientId!==clientId){ $('mmTxt').textContent='WAITING FOR MATCH HOST…'; $('mmHint').textContent='The first player in the queue is starting the match…'; queueDone=false; return; }
             const matchId='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-            const roster=humans.map((p,i)=>({id:p.clientId,name:String(p.name||('Player '+(i+1))).slice(0,20),brawler:p.brawler||'kuku',bot:false,partyId:p.partyId||null,partyOrder:p.partyOrder||0}));
+            const roster=humans.map((p,i)=>({id:p.clientId,name:String(p.name||('Player '+(i+1))).slice(0,20),brawler:p.brawler||'kuku',bot:false}));
             const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax','Vex','Zane'];
             while(roster.length<target){const i=roster.length;roster.push({id:'bot-'+matchId+'-'+i,name:botNames[Math.floor(Math.random()*botNames.length)]+' BOT',brawler:randomBrawler(),bot:true});}
-            if(queueMode==='duel'||queueMode==='showdown') roster.forEach((p,i)=>p.team=i);
-            else {
-              const capacity=queueMode==='duo'?2:3, counts=[];
-              const groups=new Map();
-              roster.forEach(p=>{const key=p.bot?'bot:'+p.id:(p.partyId?'party:'+p.partyId:'player:'+p.id);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p);});
-              for(const group of groups.values()){
-                let team=counts.findIndex(n=>n+group.length<=capacity);
-                if(team<0)team=counts.length;
-                counts[team]=(counts[team]||0)+group.length;
-                group.forEach(p=>p.team=team);
-              }
-            }
+            if(queueMode==='duel') roster.forEach((p,i)=>p.team=i);
+            if(queueMode==='showdown') roster.forEach((p,i)=>p.team=i);
+            if(queueMode==='duo') roster.forEach((p,i)=>p.team=Math.floor(i/2));
+            if(queueMode==='knockout'){const teams=[0,0,0,1,1,1];for(let i=teams.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[teams[i],teams[j]]=[teams[j],teams[i]];}roster.forEach((p,i)=>p.team=teams[i]);}
             const payload={matchId,mode:queueMode,roster,hostId:clientId};
             $('mmTxt').textContent='MATCH FOUND!'; $('mmHint').textContent='Starting with '+humans.length+' real player(s) and '+(target-humans.length)+' bots…';
             try {
@@ -3282,35 +3483,11 @@ function gadget(p){
       if(activeMatchId || !roster.some(p=>p.id===localId)) return;
       activeMatchId=matchId; activePlayerId=localId;
       clearInterval(queueTimer); queueTimer=null;
-      if(queueChannel){
-        const old=queueChannel;
-        if(queueChannel===old) queueChannel=null;
-        // Channel removal can occasionally stall during a quickplay handoff.
-        // Never leave the player stranded on GET READY while cleanup is pending.
-        await new Promise(resolve=>setTimeout(resolve,250));
-        await Promise.race([
-          db.removeChannel(old).catch(()=>null),
-          new Promise(resolve=>setTimeout(resolve,1500))
-        ]);
-      }
+      if(queueChannel){const old=queueChannel;await new Promise(resolve=>setTimeout(resolve,1200)); if(queueChannel===old) queueChannel=null; await db.removeChannel(old);}
       seenAt.clear();
       $('mmTxt').textContent='GET READY!'; $('mmHint').textContent='Match found. Syncing players…';
       $('ldFill').style.width='100%'; $('ldPct').textContent='100%'; show('loading');
       activeMatchRoster=roster.map(p=>({...p})); activeMatchHostId=hostId; activeMatchLocalId=localId;
-      // Start the watchdog before channel setup, so even a synchronous setup error
-      // or a realtime client that never reports status cannot strand GET READY.
-      let matchConnectWatchdog=setTimeout(()=>{
-        if(activeMatchId!==matchId) return;
-        $('mmTxt').textContent='ONLINE CONNECTION TIMED OUT';
-        $('mmHint').textContent='Online sync did not finish. Starting a playable offline match instead…';
-        const old=matchChannel; matchChannel=null;
-        activeMatchId=null; activePlayerId=clientId;
-        clearInterval(stateTimer); stateTimer=null;
-        if(old) void db.removeChannel(old).catch(()=>{});
-        try { window.DaBrawlGame?.endNetworkGame(); } catch(err) { console.warn('Network cleanup failed:',err); }
-        status('Online match startup timed out; started offline quickplay so you can keep playing.',true);
-        startLoadingScreen(false);
-      },8000);
       matchChannel=db.channel('dabrawl-match-'+matchId,{config:{broadcast:{self:false}}});
       matchChannel.on('broadcast',{event:'match-state'},({payload})=>{if(Array.isArray(payload?.players))for(const player of payload.players){window.DaBrawlGame?.applyRemoteState(player);seenAt.set(player.id,Date.now());}if(payload?.hostId===activeMatchHostId&&payload?.world)window.DaBrawlGame?.applyRemoteWorldState?.(payload.world);});
       matchChannel.on('broadcast',{event:'player-state'},({payload})=>{if(payload?.player) {window.DaBrawlGame?.applyRemoteState(payload.player);seenAt.set(payload.player.id,Date.now());}});
@@ -3318,11 +3495,6 @@ function gadget(p){
       matchChannel.on('broadcast',{event:'match-ended'},({payload})=>{ if(!payload || activeMatchId!==matchId) return; window.DaBrawlGame?.applyMatchResult?.(payload); });
       matchChannel.on('broadcast',{event:'match-control'},async({payload})=>{
         if(!payload || activeMatchId!==matchId || payload.hostId!==activeMatchHostId) return;
-        if(payload.action==='queue-again'){
-          await leaveMatch();
-          void beginMatchmaking(lastQueueMode);
-          return;
-        }
         if(payload.action==='leave'){
           // Reset only this signed-in player's ready flag so the same party can queue again.
           if(currentRoom && activeMatchLocalId){
@@ -3339,46 +3511,11 @@ function gadget(p){
         }
       });
       matchChannel.subscribe(statusValue=>{
-        if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){
-          clearTimeout(matchConnectWatchdog);
-          $('mmTxt').textContent='CONNECTION LOST';
-          $('mmHint').textContent='Could not connect to the match. Returning to playable offline quickplay…';
-          const old=matchChannel; matchChannel=null;
-          activeMatchId=null; activePlayerId=clientId;
-          if(old) void db.removeChannel(old).catch(()=>{});
-          window.DaBrawlGame?.endNetworkGame();
-          status('Online match connection failed; started offline quickplay instead.',true);
-          startLoadingScreen(false);
-          return;
-        }
+        if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){ $('mmTxt').textContent='CONNECTION LOST'; $('mmHint').textContent='Could not connect to the match. Check Supabase Realtime settings and try again.'; return; }
         if(statusValue!=='SUBSCRIBED') return;
-        clearTimeout(matchConnectWatchdog);
         setTimeout(()=>{
           if(!matchChannel || activeMatchId!==matchId) return;
-          try {
-            if(typeof window.DaBrawlGame?.startNetworkGame!=='function'){
-              throw new Error('Game engine multiplayer bridge did not load');
-            }
-            window.DaBrawlGame.startNetworkGame(roster,matchId,mode,localId,hostId,startAt);
-            // Optional chaining alone can silently do nothing if the game bridge is
-            // missing or startup returns without changing screens. Verify the result.
-            if(scr!=='game' || !networkMode || !me){
-              throw new Error('Match startup returned without entering gameplay');
-            }
-          } catch(err) {
-            clearTimeout(matchConnectWatchdog);
-            console.error('Could not start online match:',err);
-            const old=matchChannel; matchChannel=null;
-            activeMatchId=null; activePlayerId=clientId;
-            clearInterval(stateTimer); stateTimer=null;
-            if(old) void db.removeChannel(old).catch(()=>{});
-            try { window.DaBrawlGame?.endNetworkGame(); } catch(cleanupErr) { console.warn('Network cleanup failed:',cleanupErr); }
-            $('mmTxt').textContent='STARTUP ERROR';
-            $('mmHint').textContent='Online match failed to start. Launching offline quickplay…';
-            status('Online match failed during startup; switched to offline quickplay.',true);
-            startLoadingScreen(false);
-            return;
-          }
+          window.DaBrawlGame?.startNetworkGame(roster,matchId,mode,localId,hostId,startAt);
           clearInterval(stateTimer);
           stateTimer=setInterval(()=>{
             if(!matchChannel || activeMatchId!==matchId) return;
@@ -3392,18 +3529,11 @@ function gadget(p){
     }
     async function announceMatchEnd(win){ if(!matchChannel || !activeMatchId || !isNetworkHost) return; const local=window.DaBrawlGame?.getLocalState?.(); await matchChannel.send({type:'broadcast',event:'match-ended',payload:{win:!!win,hostTeam:local?.t,hostId:activeMatchHostId,matchId:activeMatchId}}); }
     async function requestRematch(){
-      if(!activeMatchId||!matchChannel)return;
-      if(currentRoom){
-        const {data:{user}}=await db.auth.getUser();
-        if(user&&currentRoom.host_id===user.id){await startRoomGame();return;}
-        await roomChannel?.send({type:'broadcast',event:'party-rematch-request',payload:{at:Date.now()}});
-        status('Asked the party leader to find a new match.');
-        return;
-      }
-      const ch=matchChannel;
-      await ch.send({type:'broadcast',event:'match-control',payload:{action:'queue-again',hostId:activeMatchHostId}});
-      await leaveMatch();
-      void beginMatchmaking(lastQueueMode);
+      if(!isNetworkHost || !matchChannel || !activeMatchRoster) return;
+      const nextId='rematch-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6), startAt=Date.now()+3000;
+      const payload={action:'rematch',matchId:nextId,mode:lastQueueMode,roster:activeMatchRoster,hostId:activeMatchHostId,startAt};
+      const ch=matchChannel; await ch.send({type:'broadcast',event:'match-control',payload});
+      await leaveMatch(); await startOnlineMatch(payload.roster,payload.matchId,payload.mode,activeMatchLocalId,payload.hostId,payload.startAt);
     }
     async function hostLeaveMatch(){
       if(!isNetworkHost || !matchChannel) return;
@@ -3721,7 +3851,7 @@ function gadget(p){
       const {data:{user}}=await db.auth.getUser();if(!user)return;
       const {error}=await db.from('game_room_players').update({character_id:brawler,is_ready:false}).eq('room_id',currentRoom.id).eq('user_id',user.id);
       if(error){status('Brawler selection sync failed: '+error.message,true);return;}
-      await roomChannel?.track({userId:user.id,clientId,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler});
+      await roomChannel?.track({userId:user.id,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler});
       await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
       await roomChannel?.send({type:'broadcast',event:'brawler-showcase',payload:{brawler,userId:user.id}});
       await refreshRoom();
@@ -3733,16 +3863,10 @@ function gadget(p){
       
       
       next=next||'knockout';
-      if(!['knockout','showdown','duo','trio'].includes(next)){status('This game mode does not support parties.',true);return;}
-      if(next==='duel'){status('1v1 Duel does not support parties. Choose another mode.',true);return;}
-      const {data:partyPlayers,error:partyPlayersError}=await db.from('game_room_players').select('user_id').eq('room_id',currentRoom.id);
-      if(partyPlayersError){status('Could not check party size: '+partyPlayersError.message,true);return;}
-      if(next==='trio'&&partyPlayers.length!==3){status('Trio Showdown requires a party of 3.',true);return;}
-      if(next==='duo'&&partyPlayers.length>2){status('Duo Showdown supports a party of 2. Choose Trio Showdown for 3 members.',true);return;}
       const {error}=await db.from('game_rooms').update({game_mode:next}).eq('id',currentRoom.id).eq('host_id',user.id);
       if(error){status('Could not change party mode: '+error.message,true);return;}
       currentRoom.game_mode=next;gameMode=next;
-      $('modeTxt').textContent=next==='knockout'?'KNOCKOUT 3v3':next==='showdown'?'SOLO SHOWDOWN':next==='duo'?'DUO SHOWDOWN':next==='trio'?'TRIO SHOWDOWN':'1v1 DUEL';
+      $('modeTxt').textContent=next==='knockout'?'KNOCKOUT 3v3':next==='showdown'?'SOLO SHOWDOWN':next==='duo'?'DUO SHOWDOWN':'1v1 DUEL';
       status('Party leader selected '+next.toUpperCase()+'.');
       await roomChannel?.send({type:'broadcast',event:'room-refresh',payload:{at:Date.now()}});
       await refreshRoom();
