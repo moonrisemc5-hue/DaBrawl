@@ -1084,9 +1084,9 @@
       fire(p,1); p.sc=0;
     }
     function superUltraKame(p){
-      p.chg=0; p.sc=0; p.muiCharging=1.2; shake=20;
+      p.chg=0; p.sc=0; p.muiCharging=1.2; setShake(20);
       for(let i=0;i<30;i++) setTimeout(()=>puff(p.x,p.y,3,'#ffffff',2), i*50);
-      setTimeout(()=>{ p.muiCharging=0; KM.push({o:p,a:p.a,x:p.x,y:p.y,len:MW*T,w:100,d:7000,t:.8,m:.8,tk:0,col:'#ffffff',destroys:true}); shake=35; playKameSound(); }, 1200);
+      setTimeout(()=>{ p.muiCharging=0; KM.push({o:p,a:p.a,x:p.x,y:p.y,len:MW*T,w:100,d:7000,t:.8,m:.8,tk:0,col:'#ffffff',destroys:true}); setShake(35); playKameSound(); }, 1200);
     }
     function fire(p,s){
       if(p.b==='ramu'&&(p.freeze>0||p.ramuShield>0||p.ramuLeap>0))return;
@@ -1115,7 +1115,7 @@
         B.push({x:p.x+Math.cos(p.a)*22, y:p.y+Math.sin(p.a)*22, vx:Math.cos(a)*K.bs*(.92+Math.random()*.16), vy:Math.sin(a)*K.bs*(.92+Math.random()*.16), r:s?K.sr:K.rng, d:(s?K.sd:K.dmg)+((p.kaioken>0)?200:0)+((p.ss2>0)?(s?200:100):0), t:p.t, o:p, s, z:s?0:K.z, isFist:p.b=='shachi', col:bCol});
       }
       if(!s) p.am--; p.rec = K.lg?.22:.14; puff(p.x+Math.cos(p.a)*30, p.y+Math.sin(p.a)*30, s?10:5, '#ffe9a0', .5);
-      if(p===me||s) shake = Math.max(shake, s?12:3);
+      if(p===me||s) setShake(s?12:3);
       if(p.b=='kuku') playGunSound(s); else if(p.b=='shachi') playFistSound(); else beep(s?90:140, s?.35:.18, s?.25:.15, 'sawtooth', -60);
     }
 function gadget(p){
@@ -1228,7 +1228,7 @@ function gadget(p){
       if(b.s){ const l=Math.hypot(b.vx,b.vy); mv(t, b.vx/l*13, b.vy/l*13); }
       beep(220,.08,.08,'square',-100); if(!t.isDummy && t.hp<=0) die(t);
     }
-    function die(t){ if(!t.alive)return; t.alive=false; t.hp=0; t.dt=0; t.respawnPending=gameMode==='duo' && !isTestMode; if(gameMode==='showdown'||gameMode==='duo'||gameMode==='trio') t.elimOrder=++matchEliminations; if((gameMode==='duo'||gameMode==='trio')&&!P.some(p=>p!==t&&p.alive&&p.t===t.t)) teamEliminationOrder[t.t]=++teamEliminations; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); shake=10; }
+    function die(t){ if(!t.alive)return; t.alive=false; t.hp=0; t.dt=0; t.respawnPending=gameMode==='duo' && !isTestMode; if(gameMode==='showdown'||gameMode==='duo'||gameMode==='trio') t.elimOrder=++matchEliminations; if((gameMode==='duo'||gameMode==='trio')&&!P.some(p=>p!==t&&p.alive&&p.t===t.t)) teamEliminationOrder[t.t]=++teamEliminations; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); setShake(10); }
     function tryBotDegešGadget(b,dt){
       if(b.b!=='deges'||b.gcd>0)return false;
       const allies=P.filter(p=>p.alive&&p.t===b.t&&p.hp<p.mh-250&&Math.hypot(p.x-b.x,p.y-b.y)<=356&&!aiLineBlocked(b.x,b.y,p.x,p.y));
@@ -1681,7 +1681,7 @@ function gadget(p){
       if(!t) return false; MT.push({x:t.x, y:t.y, t:.9, m:.9, o:p}); beep(500,.5,.1,'triangle',-300); return true;
     }
     function impact(m){
-      shake=12; F.push({k:'r', x:m.x, y:m.y, vx:0, vy:0, l:.45, m:.45, rad:80}); puff(m.x, m.y, 14, '#ffb347', 1.6); beep(60,.4,.3,'sawtooth',-20);
+      setShake(12); F.push({k:'r', x:m.x, y:m.y, vx:0, vy:0, l:.45, m:.45, rad:80}); puff(m.x, m.y, 14, '#ffb347', 1.6); beep(60,.4,.3,'sawtooth',-20);
       // Shachi's Meteor gadget cracks walls around the impact on every client.
       const ci=Math.floor(m.x/T), cj=Math.floor(m.y/T);
       for(let j=cj-3;j<=cj+3;j++) for(let i=ci-3;i<=ci+3;i++){
@@ -1720,7 +1720,7 @@ function gadget(p){
       if(networkMode && p===me && ch>0 && window.DaBrawlNet){
         window.DaBrawlNet.sendAction('charged-ki',p.a,{x:projectile.x,y:projectile.y,vx:projectile.vx,vy:projectile.vy,r:projectile.r,z:projectile.z,col:projectile.col,bn:projectile.bn});
       }
-      p.rec=.1; if(ch>0) shake = Math.max(shake, 5+ch*6); puff(p.x+c*28, p.y+s*28, 4, kiCol, .6); playKameSound();
+      p.rec=.1; if(ch>0) setShake(5+ch*6); puff(p.x+c*28, p.y+s*28, 4, kiCol, .6); playKameSound();
     }
     function bigK(p,ch){ if(p.am<1||p.kcd>0) return; p.am--; ki(p,ch); }
     function kame(p,ch){
@@ -1740,7 +1740,7 @@ function gadget(p){
         else if(isNetworkHost && p.isBot) window.DaBrawlNet.sendAction('kame',p.a,{charge:ch,x:p.x,y:p.y,len,w:14+ch*40,damage:actualDmg,col:kameCol,isMaxChg:isMax,playerId:p.netId});
       }
       KM.push({o:p, a:p.a, x:p.x, y:p.y, len, w:14+ch*40, d:actualDmg, t:.6, m:.6, tk:0, col:kameCol, destroys:false, isMaxChg:isMax});
-      shake = 8+ch*12; playKameSound();
+      setShake(8+ch*12); playKameSound();
     }
     function beamHit(k){
       if(networkMode && k.o?.netRemote) return;
@@ -1774,7 +1774,7 @@ function gadget(p){
     }
     function xform(p){ p.tfn = p.form+1; p.tf = 1.8; p.sc=0; p.chg=0; p.burst=0; p.am=3; p.holdT=0; p.hw=false; if(networkMode && window.DaBrawlNet){ if(p===me) window.DaBrawlNet.sendAction('transform',p.a,{form:p.tfn}); else if(isNetworkHost && p.isBot && p.netId) window.DaBrawlNet.sendAction('transform',p.a,{form:p.tfn,playerId:p.netId}); } playTransformSound(p.tfn >= 4 ? 'galaxy' : 'normal'); }
     function tfx(p,dt){
-      p.tf-=dt; const fm = FM[p.tfn]; shake = Math.max(shake, 14); const col = fm.aura || '#ffd21f';
+      p.tf-=dt; const fm = FM[p.tfn]; setShake(14); const col = fm.aura || '#ffd21f';
       if(p.tfn >= 4 && Math.random()<.6) F.push({k:'pillar', x:p.x, y:p.y, c:'#ffffff', l:.3, m:.3});
       for(let i=0;i<6;i++){
         const ang = -Math.PI/2 + (Math.random()-.5)*1.4, spd = 200 + Math.random()*240;
@@ -1782,7 +1782,7 @@ function gadget(p){
       }
       if(Math.random()<.4) F.push({k:'r', x:p.x, y:p.y+12, vx:0, vy:0, l:.3, m:.3, rad:60+Math.random()*70});
       if(p.form!=p.tfn && p.tf<.9){
-        p.form = p.tfn; p.k = Object.assign({}, BR.saiyan, fm); p.hp += fm.hp - p.mh; p.mh = fm.hp; wf=1; shake=25;
+        p.form = p.tfn; p.k = Object.assign({}, BR.saiyan, fm); p.hp += fm.hp - p.mh; p.mh = fm.hp; wf=1; setShake(25);
         F.push({k:'r', x:p.x, y:p.y, vx:0, vy:0, l:.7, m:.7, rad:190}); puff(p.x,p.y,30,col,2.2); star(p.x,p.y,16);
       }
     }
@@ -1800,7 +1800,7 @@ function gadget(p){
       if(u>=1){ p.lp=null; p.h=0; slam(p,l); }
     }
     function slam(p,l){
-      shake=14; F.push({k:'r', x:p.x, y:p.y, vx:0, vy:0, l:.45, m:.45, rad:l.r}); puff(p.x, p.y, 14, '#fff', 1.6); beep(70,.4,.3,'sawtooth',-30);
+      setShake(14); F.push({k:'r', x:p.x, y:p.y, vx:0, vy:0, l:.45, m:.45, rad:l.r}); puff(p.x, p.y, 14, '#fff', 1.6); beep(70,.4,.3,'sawtooth',-30);
       for(const e of P) if(e!==p && e.alive && !e.lp && (gameMode==='showdown'||(gameMode==='duo'&&e.t!==p.t)||(gameMode!=='showdown'&&gameMode!=='duo'&&e.t!==p.t))){ const dx=e.x-p.x, dy=e.y-p.y, d=Math.hypot(dx,dy); if(d<l.r){ dmg(e, {d:l.d, o:p, s:1, vx:dx||1, vy:dy}); mv(e, dx/(d||1)*45, dy/(d||1)*45); } }
       if(l.b){ const ci=Math.floor(p.x/T), cj=Math.floor(p.y/T); for(let j=cj-2;j<=cj+2;j++)for(let i=ci-2;i<=ci+2;i++) if(i>0&&j>0&&i<MW-1&&j<MH-1&&M[j][i]=='#'&&Math.hypot((i+.5)*T-p.x, (j+.5)*T-p.y)<l.r){ M[j][i]='.'; puff((i+.5)*T, (j+.5)*T, 6, '#8a5a2b', 1.2); } }
     }
@@ -1964,7 +1964,7 @@ function gadget(p){
         const chgRatio = (1.2 - p.muiCharging) / 1.2, chargeRad = 15 + chgRatio * 45;
         // Keep the charging feedback on other forms; UI/MUI use their outline instead of giant rings.
         g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=0.75; if(isUIorMUI){ const rr=7+chgRatio*12+Math.sin(t*24)*2; circ(ca*28, -7+sa*28, rr, mui?'#ffffff':'#93c5fd'); circ(ca*28, -7+sa*28, rr*0.52, '#ffffff'); circ(ca*28, -7+sa*28, rr*1.35, neon, 0.7, edge); } else { circ(ca*38, sa*38, chargeRad, '#ffffff'); circ(ca*38, sa*38, chargeRad*0.6, '#a5f3fc'); } g.restore();
-        shake = Math.max(shake, 12);
+        setShake(12);
         if(Math.random() < 0.6) F.push({k:'p', x: p.x + ca*38 + (Math.random()-.5)*40, y: p.y + sa*38 + (Math.random()-.5)*40, vx: (Math.random()-.5)*40, vy: (Math.random()-.5)*40, l: 0.3, m: 0.3, c: '#ffffff', s: 6});
       } else if(p.chg>0){
         const r = 6 + p.chg*26; if(isUIorMUI){ g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=.85; circ(ca*28,-7+sa*28,7+p.chg*13+Math.sin(t*24)*2,mui?'#fff':'#93c5fd'); circ(ca*28,-7+sa*28,4+p.chg*7,'#fff'); g.restore(); } else { circ(ca*32, sa*32, r+Math.sin(t*40)*2, fm.aura||'#5cf'); circ(ca*32, sa*32, r*.55, '#fff'); }
