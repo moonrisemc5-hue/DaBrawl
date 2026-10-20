@@ -2714,23 +2714,11 @@ function gadget(p){
         roomStartRequestedFor=null;
       }
       if(roomReadyToStart && roomStartRequestedFor!==room.id){
+        if(roomCountdownTimer){clearInterval(roomCountdownTimer);roomCountdownTimer=null;}
         roomStartRequestedFor=room.id;
-        const target=roomMode==='duel'?2:roomMode==='trio'?12:(roomMode==='showdown'||roomMode==='duo')?10:6;
-        const countdownEnds=Date.now()+10000;
-        const updateRoomCountdown=()=>{
-          if(!currentRoom||currentRoom.id!==room.id||roomStartRequestedFor!==room.id){
-            if(roomCountdownTimer){clearInterval(roomCountdownTimer);roomCountdownTimer=null;}
-            return;
-          }
-          const remaining=Math.max(0,Math.ceil((countdownEnds-Date.now())/1000));
-          status('PLAYERS JOINED: '+Math.min(target,players.length)+'/'+target+' · '+(remaining?'STARTING IN '+remaining+'s':'STARTING MATCH')+' — bots fill empty slots.');
-          if(remaining<=0){
-            if(roomCountdownTimer){clearInterval(roomCountdownTimer);roomCountdownTimer=null;}
-            void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Auto-start failed: '+(err?.message||String(err)),true);});
-          }
-        };
-        updateRoomCountdown();
-        roomCountdownTimer=setInterval(updateRoomCountdown,250);
+        // Ready parties enter the public player-finding screen immediately;
+        // matchmaking itself owns the 10-second wait for other players.
+        void startRoomGame().catch(err=>{roomStartRequestedFor=null;status('Party matchmaking failed: '+(err?.message||String(err)),true);});
       }
     }
     async function createRoom(){
