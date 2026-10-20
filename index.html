@@ -1478,7 +1478,7 @@ function gadget(p){
       $('rt').textContent = win ? 'VICTORY!' : 'DEFEAT'; $('rt').style.color = win ? '#ffd21f' : '#ff5a5a'; $('rd').textContent = (d>0?'+':'')+d+' 🏆';
       if(networkMode){
         // Rematch stays host-only; every player can leave a completed match.
-        $('again').style.display=isNetworkHost?'':'none'; $('home').style.display=''; $('home').textContent='LEAVE MATCH';
+        $('again').style.display=''; $('home').style.display=''; $('home').textContent='LEAVE MATCH';
         $('mmHint').textContent='';
         if(isNetworkHost && window.DaBrawlNet) void window.DaBrawlNet.announceMatchEnd(win);
         if(!isNetworkHost){$('rt').textContent='MATCH OVER';$('rd').textContent='Match ended. You can leave whenever you are ready.';}
@@ -2784,6 +2784,16 @@ function gadget(p){
           const b=el('play');b.textContent='PLAY';b.classList.remove('ready');b.onclick=()=>{beep(500,.1);matchmake();};
           window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';show('menu');status('You were removed from the party.');
         })
+        .on('broadcast',{event:'party-queue-start'},async({payload})=>{
+          if(!payload||!payload.mode||!Array.isArray(payload.members)||activeMatchId)return;
+          const partyGroup={partyId:payload.partyId,members:payload.members};
+          await leaveMatch();
+          void beginMatchmaking(payload.mode,partyGroup);
+        })
+        .on('broadcast',{event:'party-rematch-request'},async()=>{
+          const {data:{user}}=await db.auth.getUser();
+          if(user&&currentRoom?.host_id===user.id&&!activeMatchId)void startRoomGame();
+        })
         .on('broadcast',{event:'room-match-start'},async({payload})=>{
           if(!payload || !Array.isArray(payload.roster) || activeMatchId) return;
           const {data:{user}}=await db.auth.getUser();
@@ -2793,7 +2803,7 @@ function gadget(p){
           if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'){status('Room live connection failed. Check Supabase Realtime settings.',true);return;}
           if(statusValue==='SUBSCRIBED'){
             const {data:{user}}=await db.auth.getUser();
-            if(user && roomChannel) await roomChannel.track({userId:user.id,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler:localStorage.getItem('dabrawl_b')||'kuku'});
+            if(user && roomChannel) await roomChannel.track({userId:user.id,clientId,name:user.user_metadata?.username||(user.email||'').split('@')[0],brawler:localStorage.getItem('dabrawl_b')||'kuku'});
             await refreshRoom();
           }
         });
@@ -2808,32 +2818,29 @@ function gadget(p){
       const {data:players,error}=await db.from('game_room_players').select('player_slot,character_id,user_id,is_ready').eq('room_id',currentRoom.id).order('player_slot');
       if(error){status('Could not load room players: '+error.message,true);return;}
       if(players.length<2||players.length>3){status('A room match needs 2 or 3 players.',true);return;}
-      if(!players.every(p=>p.is_ready)){status('Everyone in the party must press READY before the match can start.',true);return;}
+      if(!players.every(p=>p.is_ready)){status('Everyone in the party must press READY before matchmaking.',true);return;}
       const {data:room,error:roomError}=await db.from('game_rooms').select('game_mode').eq('id',currentRoom.id).single();
       if(roomError){status('Could not read the leader’s game mode: '+roomError.message,true);return;}
       const mode=room?.game_mode||'knockout';
+      if(mode==='duel'){status('1v1 Duel does not support parties. Choose Knockout, Solo Showdown, Duo Showdown, or Trio Showdown.',true);return;}
+      if(mode==='trio'&&players.length!==3){status('Trio Showdown requires exactly 3 party members.',true);return;}
+      if(mode==='duo'&&players.length>2){status('Duo Showdown supports a party of 2. Use Trio Showdown for 3 party members.',true);return;}
       const presence=roomChannel?.presenceState?.()||{};
       const live=Object.values(presence).flat().filter(p=>p&&p.userId);
-      const roster=players.map((p,i)=>({id:p.user_id,name:live.find(x=>x.userId===p.user_id)?.name||(p.user_id===user.id?(user.user_metadata?.username||(user.email||'').split('@')[0]):'Player '+p.player_slot),brawler:p.character_id||'kuku',bot:false,team:(mode==='knockout'||mode==='duo')?0:(mode==='showdown'?i:i%2)}));
-      const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax'];
-      const botBrawlers=['kuku','shachi','saiyan','deges'];
-      const target=mode==='knockout'?6:mode==='showdown'?10:mode==='duo'?(players.length===3?9:10):2;
-      let seed=0; for(const ch of String(currentRoom.id)) seed=(seed*31+ch.charCodeAt(0))>>>0;
-      const seeded=()=>{seed=(seed*1664525+1013904223)>>>0;return seed;};
-      while(roster.length<target){
-        const i=roster.length, botIndex=i-players.length;
-        const team=mode==='knockout'?(i<3?0:1):mode==='duo'?(players.length===3?Math.floor((i-players.length)/2)+1:Math.floor(i/2)):i;
-        roster.push({id:'bot-'+currentRoom.id+'-'+i,name:botNames[botIndex%botNames.length]+' BOT',brawler:botBrawlers[seeded()%botBrawlers.length],bot:true,team});
-      }
-      const matchId='room-'+currentRoom.id+'-'+Date.now().toString(36);
-      const startAt=Date.now()+2500;
-      const payload={matchId,mode,roster,hostId:user.id,startAt};
-      status('Starting '+mode.toUpperCase()+'…');
-      try {
-        const sent=await roomChannel.send({type:'broadcast',event:'room-match-start',payload});
-        if(sent?.status && sent.status!=='ok'){roomStartRequestedFor=null;status('Could not notify your friend: '+(sent.status||'Realtime send failed')+'. Check Supabase Realtime settings.',true);return;}
-        await startOnlineMatch(roster,matchId,mode,user.id,user.id,startAt);
-      } catch(err){roomStartRequestedFor=null;status('Could not start room match: '+(err?.message||String(err)),true);}
+      const partyMembers=players.map((p,i)=>{
+        const online=live.find(x=>x.userId===p.user_id);
+        if(!online?.clientId)return null;
+        return {clientId:online.clientId,name:online.name||('Player '+(i+1)),brawler:p.character_id||'kuku',partyId:currentRoom.id,partyOrder:i,joinedAt:queueStartedAt||Date.now()};
+      }).filter(Boolean);
+      const leaderIndex=partyMembers.findIndex(p=>players.find(x=>x.user_id===user.id)?.player_slot===players.find(x=>x.user_id===user.id)?.player_slot && p.clientId===live.find(x=>x.userId===user.id)?.clientId);
+      if(partyMembers.length!==players.length){status('A party member is reconnecting. Wait until everyone is online, then try again.',true);return;}
+      const leader=partyMembers.find(p=>p.clientId===clientId)||partyMembers.find(p=>p.name===(user.user_metadata?.username||(user.email||'').split('@')[0]));
+      if(leaderIndex>0){const current=partyMembers.findIndex(p=>p.clientId===clientId);if(current>0){const [own]=partyMembers.splice(current,1);partyMembers.unshift(own);partyMembers.forEach((p,i)=>p.partyOrder=i);}}
+      const partyGroup={partyId:currentRoom.id,members:partyMembers};
+      const sent=await roomChannel.send({type:'broadcast',event:'party-queue-start',payload:{partyId:partyGroup.partyId,mode,members:partyMembers}});
+      if(sent?.status&&sent.status!=='ok'){status('Could not send your party to matchmaking. Check Realtime settings.',true);return;}
+      status('Party ready — finding players together…');
+      await beginMatchmaking(mode,partyGroup);
     }
 
     // Public quick-play queue: Presence tracks who is waiting; Broadcast carries game state/actions.
@@ -2846,10 +2853,17 @@ function gadget(p){
     function queuePlayers(){
       const state=queueChannel ? queueChannel.presenceState() : {};
       const all=Object.values(state).flat().filter(p=>p && p.clientId);
-      const unique=new Map(); for(const p of all) if(!unique.has(p.clientId)) unique.set(p.clientId,p);
-      return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,queueTarget());
+      const unique=new Map();
+      for(const p of all){
+        const members=Array.isArray(p.partyMembers)&&p.partyMembers.length?p.partyMembers:[p];
+        members.forEach((member,index)=>{
+          if(!member?.clientId||unique.has(member.clientId))return;
+          unique.set(member.clientId,{...member,partyId:member.partyId||p.partyId||null,partyOrder:Number.isFinite(member.partyOrder)?member.partyOrder:index,joinedAt:member.joinedAt||p.joinedAt||0});
+        });
+      }
+      return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)||(a.partyId===b.partyId?(a.partyOrder||0)-(b.partyOrder||0):0));
     }
-    async function beginMatchmaking(mode){
+    async function beginMatchmaking(mode, partyGroup=null){
       // A completed private-room duel can queue again just like any other online match.
       cancelMatchmaking(false); queueMode=mode||'knockout'; queueDone=false; queueStartedAt=Date.now();
       show('mm'); $('mmTxt').textContent='CONNECTING TO PLAYERS…'; $('mmHint').textContent='Connecting to DaBrawl online matchmaking…';
@@ -2870,7 +2884,7 @@ function gadget(p){
         if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){ $('mmTxt').textContent='CONNECTION ERROR'; $('mmHint').textContent='Online matchmaking could not connect. Check Supabase Realtime settings, then try again.'; status('Online matchmaking connection failed: '+statusValue,true); return; }
         if(statusValue!=='SUBSCRIBED') return;
         try {
-          await queueChannel.track({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
+          await queueChannel.track({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt,partyId:partyGroup?.partyId||null,partyMembers:partyGroup?.members||null});
           $('mmHint').textContent='Waiting up to 10 seconds for real players. Bots fill every remaining slot.';
           const target=queueTarget();
           let deadline=Date.now()+10000;
@@ -2882,18 +2896,37 @@ function gadget(p){
             // real players, then fill any remaining slots with bots.
             if(humansNow.length<target && Date.now()<deadline) return;
             finalized=true; queueDone=true; clearInterval(queueTimer); queueTimer=null;
-            let humans=humansNow;
-            if(!humans.some(p=>p.clientId===clientId)) humans.push({clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt});
-            humans=humans.sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)).slice(0,target);
-            if(humans[0]?.clientId!==clientId){ $('mmTxt').textContent='WAITING FOR MATCH HOST…'; $('mmHint').textContent='The first player in the queue is starting the match…'; queueDone=false; return; }
+            const groupsByKey=new Map();
+            for(const p of humansNow){
+              const key=p.partyId?'party:'+p.partyId:'player:'+p.clientId;
+              if(!groupsByKey.has(key))groupsByKey.set(key,[]);
+              groupsByKey.get(key).push(p);
+            }
+            const groups=[...groupsByKey.values()].map(group=>group.sort((a,b)=>(a.partyOrder||0)-(b.partyOrder||0))).sort((a,b)=>(a[0]?.joinedAt||0)-(b[0]?.joinedAt||0));
+            let humans=[];
+            for(const group of groups){if(humans.length+group.length<=target)humans.push(...group);}
+            if(!humans.some(p=>p.clientId===clientId)){
+              const ownGroup=partyGroup?.members?.length?partyGroup.members:[{clientId,name:localDisplayName,brawler:localStorage.getItem('dabrawl_b')||'kuku',joinedAt:queueStartedAt}];
+              if(humans.length+ownGroup.length<=target)humans.push(...ownGroup);
+            }
+            if(!humans.length){ $('mmTxt').textContent='WAITING FOR PLAYERS…'; $('mmHint').textContent='Your party is larger than the remaining slots. Waiting for a suitable match.'; queueDone=false; finalized=false; return; }
+            if(humans[0]?.clientId!==clientId){ $('mmTxt').textContent='WAITING FOR MATCH HOST…'; $('mmHint').textContent='The first player or party leader in the queue is starting the match…'; queueDone=false; return; }
             const matchId='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-            const roster=humans.map((p,i)=>({id:p.clientId,name:String(p.name||('Player '+(i+1))).slice(0,20),brawler:p.brawler||'kuku',bot:false}));
+            const roster=humans.map((p,i)=>({id:p.clientId,name:String(p.name||('Player '+(i+1))).slice(0,20),brawler:p.brawler||'kuku',bot:false,partyId:p.partyId||null,partyOrder:p.partyOrder||0}));
             const botNames=['Pip','Rex','Mochi','Zed','Bolt','Nova','Juno','Taco','Blaze','Jax','Vex','Zane'];
             while(roster.length<target){const i=roster.length;roster.push({id:'bot-'+matchId+'-'+i,name:botNames[Math.floor(Math.random()*botNames.length)]+' BOT',brawler:randomBrawler(),bot:true});}
-            if(queueMode==='duel') roster.forEach((p,i)=>p.team=i);
-            if(queueMode==='showdown') roster.forEach((p,i)=>p.team=i);
-            if(queueMode==='duo') roster.forEach((p,i)=>p.team=Math.floor(i/2));
-            if(queueMode==='knockout'){const teams=[0,0,0,1,1,1];for(let i=teams.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[teams[i],teams[j]]=[teams[j],teams[i]];}roster.forEach((p,i)=>p.team=teams[i]);}
+            if(queueMode==='duel'||queueMode==='showdown') roster.forEach((p,i)=>p.team=i);
+            else {
+              const capacity=queueMode==='duo'?2:3, counts=[];
+              const groups=new Map();
+              roster.forEach(p=>{const key=p.bot?'bot:'+p.id:(p.partyId?'party:'+p.partyId:'player:'+p.id);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p);});
+              for(const group of groups.values()){
+                let team=counts.findIndex(n=>n+group.length<=capacity);
+                if(team<0)team=counts.length;
+                counts[team]=(counts[team]||0)+group.length;
+                group.forEach(p=>p.team=team);
+              }
+            }
             const payload={matchId,mode:queueMode,roster,hostId:clientId};
             $('mmTxt').textContent='MATCH FOUND!'; $('mmHint').textContent='Starting with '+humans.length+' real player(s) and '+(target-humans.length)+' bots…';
             try {
@@ -2928,6 +2961,11 @@ function gadget(p){
       matchChannel.on('broadcast',{event:'match-ended'},({payload})=>{ if(!payload || activeMatchId!==matchId) return; window.DaBrawlGame?.applyMatchResult?.(payload); });
       matchChannel.on('broadcast',{event:'match-control'},async({payload})=>{
         if(!payload || activeMatchId!==matchId || payload.hostId!==activeMatchHostId) return;
+        if(payload.action==='queue-again'){
+          await leaveMatch();
+          void beginMatchmaking(lastQueueMode);
+          return;
+        }
         if(payload.action==='leave'){
           // Reset only this signed-in player's ready flag so the same party can queue again.
           if(currentRoom && activeMatchLocalId){
@@ -2962,11 +3000,18 @@ function gadget(p){
     }
     async function announceMatchEnd(win){ if(!matchChannel || !activeMatchId || !isNetworkHost) return; const local=window.DaBrawlGame?.getLocalState?.(); await matchChannel.send({type:'broadcast',event:'match-ended',payload:{win:!!win,hostTeam:local?.t,hostId:activeMatchHostId,matchId:activeMatchId}}); }
     async function requestRematch(){
-      if(!isNetworkHost || !matchChannel || !activeMatchRoster) return;
-      const nextId='rematch-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6), startAt=Date.now()+3000;
-      const payload={action:'rematch',matchId:nextId,mode:lastQueueMode,roster:activeMatchRoster,hostId:activeMatchHostId,startAt};
-      const ch=matchChannel; await ch.send({type:'broadcast',event:'match-control',payload});
-      await leaveMatch(); await startOnlineMatch(payload.roster,payload.matchId,payload.mode,activeMatchLocalId,payload.hostId,payload.startAt);
+      if(!activeMatchId||!matchChannel)return;
+      if(currentRoom){
+        const {data:{user}}=await db.auth.getUser();
+        if(user&&currentRoom.host_id===user.id){await startRoomGame();return;}
+        await roomChannel?.send({type:'broadcast',event:'party-rematch-request',payload:{at:Date.now()}});
+        status('Asked the party leader to find a new match.');
+        return;
+      }
+      const ch=matchChannel;
+      await ch.send({type:'broadcast',event:'match-control',payload:{action:'queue-again',hostId:activeMatchHostId}});
+      await leaveMatch();
+      void beginMatchmaking(lastQueueMode);
     }
     async function hostLeaveMatch(){
       if(!isNetworkHost || !matchChannel) return;
@@ -3296,6 +3341,11 @@ function gadget(p){
       
       
       next=next||'knockout';
+      if(next==='duel'){status('1v1 Duel does not support parties. Choose another mode.',true);return;}
+      const {data:partyPlayers,error:partyPlayersError}=await db.from('game_room_players').select('user_id').eq('room_id',currentRoom.id);
+      if(partyPlayersError){status('Could not check party size: '+partyPlayersError.message,true);return;}
+      if(next==='trio'&&partyPlayers.length!==3){status('Trio Showdown requires a party of 3.',true);return;}
+      if(next==='duo'&&partyPlayers.length>2){status('Duo Showdown supports a party of 2. Choose Trio Showdown for 3 members.',true);return;}
       const {error}=await db.from('game_rooms').update({game_mode:next}).eq('id',currentRoom.id).eq('host_id',user.id);
       if(error){status('Could not change party mode: '+error.message,true);return;}
       currentRoom.game_mode=next;gameMode=next;
