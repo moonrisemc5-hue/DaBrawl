@@ -1319,7 +1319,7 @@
     }
     function fire(p,s){
       p.nh=0;p.hc=0;
-      if(p.b==='hacker'&&!s){if(p.hackerDroneControl||p.am<1||p.cd>0||p.tf>0)return;const ox=p.hackerDroneX,oy=p.hackerDroneY,target=degesAimTarget({...p,x:ox,y:oy},p.k.rng),a=target.angle,level=p.hackerUpgrades||0,damage=p.k.dmg+level*85;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',a,{droneX:ox,droneY:oy});B.push({x:ox+Math.cos(a)*16,y:oy+Math.sin(a)*16,vx:Math.cos(a)*p.k.bs,vy:Math.sin(a)*p.k.bs,r:p.k.rng,flightRange:p.k.rng,d:damage,t:p.t,o:p,s:false,z:8+level*.5,col:'#39ffb6',malware:true,malwareType:['MALWARE DETECTED','RANSOMWARE','SPYWARE','CORRUPTED DATA'][Math.floor(Math.random()*4)],remoteVisual:networkMode&&p!==me});p.hackerUpgrades=Math.min(10,level+1);p.am--;p.cd=p.k.rel;p.rec=.12;shake=Math.max(shake,2);beep(520,.08,.035,'square',90);for(let i=0;i<7;i++)puff(ox+Math.cos(a)*14,oy+Math.sin(a)*14,1,'#39ffb6',.7);return;}
+      if(p.b==='hacker'&&!s){if(p.hackerDroneControl||p.cd>0||p.tf>0)return;const target=hackerSelectedTarget;if(!target||!target.alive||target===p||(gameMode!=='showdown'&&target.t===p.t)||Math.hypot(target.x-p.hackerDroneX,target.y-p.hackerDroneY)>p.k.rng){beep(160,.13,.04,'square',-30);return;}const ox=p.hackerDroneX,oy=p.hackerDroneY,level=p.hackerUpgrades||0,malwareTypes=['MALWARE DETECTED','RANSOMWARE','SPYWARE','CORRUPTED DATA'],malwareType=malwareTypes[Math.floor(Math.random()*malwareTypes.length)],damage=Math.max(1,Math.round((p.k.dmg+level*85)*(.88+Math.random()*.24)));if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',Math.atan2(target.y-oy,target.x-ox),{targetId:target.netId||target.id,droneX:ox,droneY:oy});else dmg(target,{d:damage,o:p,malware:true,malwareType});p.hackerUpgrades=Math.min(10,level+1);p.cd=p.k.rel;p.rec=.12;shake=Math.max(shake,2);beep(520,.08,.035,'square',90);for(let i=0;i<16;i++)puff(target.x+(Math.random()-.5)*28,target.y+(Math.random()-.5)*30,1,'#39ffb6',.8);return;}
       if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet){
         const target=p.b==='deges'?degesAimTarget(p,300):null;
         window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,...(target?{targetX:target.x,targetY:target.y,beerRange:target.range}:{})});
@@ -1451,7 +1451,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     function mv(p,dx,dy){ const r=15;if(p.ramuDiveTimer>0&&p.ramuDiveLift<=0){p.x=Math.max(r,Math.min(MW*T-r,p.x+dx));p.y=Math.max(r,Math.min(MH*T-r,p.y+dy));return;}if(!hitW(p.x+dx,p.y,r))p.x+=dx;if(!hitW(p.x,p.y+dy,r))p.y+=dy; }
     function step(p,ix,iy,dt){
       K=p.k;
-      if(p.b==='hacker'&&p.hackerDroneControl){const l=Math.hypot(ix,iy);p.mx=l?ix/l:0;p.my=l?iy/l:0;if(l>.05){const m=Math.min(1,l);p.hackerDroneX=Math.max(18,Math.min(MW*T-18,p.hackerDroneX+p.mx*m*220*dt));p.hackerDroneY=Math.max(18,Math.min(MH*T-18,p.hackerDroneY+p.my*m*220*dt));}if(networkMode){p.mx=p.my=0;}return;}
+      if(p.b==='hacker'&&p.hackerDroneControl){const l=Math.hypot(ix,iy);p.mx=l?ix/l:0;p.my=l?iy/l:0;if(l>.05){const m=Math.min(1,l);p.hackerDroneX=Math.max(18,Math.min(MW*T-18,p.hackerDroneX+p.mx*m*220*dt));p.hackerDroneY=Math.max(18,Math.min(MH*T-18,p.hackerDroneY+p.my*m*220*dt));}return;}
       const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
       if(p.muiCharging>0||isBeamShooting||isMaxCharging||(p.ramuShieldTimer||0)>0||(p.smokeTimer||0)>0||(p.ramuDiveLift||0)>0){p.mx=p.my=0;return;}
       const l = Math.hypot(ix,iy); p.mx = l?ix/l:0; p.my = l?iy/l:0;
@@ -1581,7 +1581,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     function upd(dt){
       const aiFramePositions=new Map(P.map(p=>[p,{x:p.x,y:p.y}]));
       if(hackerHackTimer>0){hackerHackTimer=Math.max(0,hackerHackTimer-dt);hackerBinaryRain=Math.max(0,hackerBinaryRain-dt);if(hackerHackTarget){hackerHackTarget.hackerControlTimer=Math.max(0,(hackerHackTarget.hackerControlTimer||0)-dt);if(hackerHackTarget.hackerControlTimer<=0){hackerHackTarget.hackerControlledBy=null;hackerHackTarget=null;}}}
-      for(const q of P){if(q.b==='hacker'&&!q.hackerDroneControl){q.hackerDroneX+=(q.x+Math.cos(q.a+0.65)*48-q.hackerDroneX)*Math.min(1,dt*2.5);q.hackerDroneY+=(q.y+Math.sin(q.a+0.65)*48-q.hackerDroneY)*Math.min(1,dt*2.5);}}
+      for(const q of P){if(q.b==='hacker'){q.hackerDroneX=Math.max(18,Math.min(MW*T-18,q.hackerDroneX));q.hackerDroneY=Math.max(18,Math.min(MH*T-18,q.hackerDroneY));}}
       shake = Math.max(0, shake - dt*30);
       if(G.ph=='play' && !isTestMode){ gasDist += (Math.max(MW, MH) / 960) * dt; }
       for(const p of P){
@@ -2409,7 +2409,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       g.restore();
     }
     function drawP(p,frameTime=performance.now()/1000){
-      if(p.b==='hacker'){g.save();g.translate(p.x,p.y);g.globalAlpha=.9;g.fillStyle='#0b1820';g.strokeStyle='#39ffb6';g.lineWidth=2;g.beginPath();g.roundRect(-25,8,50,18,4);g.fill();g.stroke();g.fillStyle='#163c37';g.fillRect(-18,11,36,10);g.fillStyle='#7bffe0';g.font='bold 7px monospace';g.fillText('ROOT_ACCESS',-17,18);g.strokeStyle='#39ffb6';g.beginPath();g.moveTo(-10,8);g.lineTo(-7,1);g.lineTo(8,1);g.lineTo(11,8);g.stroke();g.restore();}
+      
       const v = p.preview || p.human || gameMode=='showdown' || gameMode==='duo' || sees(0,p); if(!v) return;
       const ramuLifting=p.b==='ramu'&&p.ramuDiveTimer>0&&p.ramuDiveLift>0;if(p.b==='ramu'&&p.ramuDiveTimer>0&&!ramuLifting)return;
       if(p.afterimages){
@@ -2444,7 +2444,17 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         g.beginPath(); g.ellipse(0,2,27+Math.sin(Date.now()*.012)*3,35+Math.sin(Date.now()*.015)*5,0,0,Math.PI*2); g.stroke(); g.restore();
       }
       if(ramuLifting){const lift=Math.max(0,Math.min(1,1-p.ramuDiveLift/.22));g.globalAlpha=Math.max(0,1-lift);g.translate(0,-lift*150);g.scale(1-lift*.98,1-lift*.98);}
-      if(p.b == 'shachi') drawSh(p);
+      if(p.b === 'hacker'){
+        const bob=1+Math.sin(p.walk)*.025;g.scale(1,bob);
+        g.fillStyle='#151725';g.strokeStyle='#070812';g.lineWidth=2.8;g.beginPath();g.moveTo(-13,7);g.lineTo(-10,18);g.lineTo(-3,20);g.lineTo(-2,8);g.closePath();g.fill();g.stroke();g.beginPath();g.moveTo(3,8);g.lineTo(10,18);g.lineTo(15,17);g.lineTo(12,5);g.closePath();g.fill();g.stroke();
+        g.fillStyle='#202335';g.strokeStyle='#090b16';g.lineWidth=3;g.beginPath();g.moveTo(-16,-12);g.quadraticCurveTo(-23,-9,-20,2);g.lineTo(-15,10);g.lineTo(-12,5);g.lineTo(-13,-5);g.closePath();g.fill();g.stroke();g.beginPath();g.moveTo(16,-12);g.quadraticCurveTo(23,-9,20,2);g.lineTo(15,10);g.lineTo(12,5);g.lineTo(13,-5);g.closePath();g.fill();g.stroke();
+        g.beginPath();g.moveTo(-14,-15);g.lineTo(-9,-20);g.lineTo(9,-20);g.lineTo(14,-14);g.lineTo(16,8);g.quadraticCurveTo(0,18,-16,8);g.closePath();g.fill();g.stroke();g.save();g.beginPath();g.roundRect(-13,-13,26,27,5);g.clip();for(let yy=-10;yy<15;yy+=5){g.strokeStyle='#41445c';g.lineWidth=2;g.beginPath();g.moveTo(-17,yy);g.quadraticCurveTo(0,yy+2,17,yy);g.stroke();}g.strokeStyle='#39ffb6';g.lineWidth=1.6;g.beginPath();g.moveTo(8,-7);g.lineTo(8,10);g.stroke();g.restore();
+        g.fillStyle='#141522';g.strokeStyle='#080912';g.lineWidth=2.5;g.beginPath();g.ellipse(0,-12,16,18,0,0,Math.PI*2);g.fill();g.stroke();g.fillStyle='#d2a6ef';g.beginPath();g.moveTo(-13,-18);g.lineTo(-8,-29);g.lineTo(-2,-22);g.lineTo(4,-31);g.lineTo(7,-22);g.lineTo(14,-26);g.lineTo(13,-12);g.closePath();g.fill();g.stroke();
+        g.fillStyle='#9aa3bb';g.strokeStyle='#070812';g.lineWidth=2;g.beginPath();g.roundRect(-13,-14,26,9,3);g.fill();g.stroke();g.fillStyle='#39ffb6';g.shadowColor='#39ffb6';g.shadowBlur=8;g.fillRect(-9,-11,7,2);g.fillRect(2,-11,7,2);g.shadowBlur=0;g.fillStyle='#111522';g.strokeStyle='#070812';g.lineWidth=2;g.beginPath();g.moveTo(-10,-5);g.lineTo(10,-5);g.lineTo(8,4);g.lineTo(-8,4);g.closePath();g.fill();g.stroke();
+        g.fillStyle='#11131e';g.strokeStyle='#39ffb6';g.lineWidth=2;g.beginPath();g.roundRect(-17,5,34,17,5);g.fill();g.stroke();g.fillStyle='#292d42';g.fillRect(-12,8,24,10);g.strokeStyle='#b9c5d9';g.lineWidth=1;for(let yy=10;yy<17;yy+=3){g.beginPath();g.moveTo(-10,yy);g.lineTo(10,yy);g.stroke();}g.fillStyle='#39ffb6';g.fillRect(-2,7,4,12);
+        g.save();g.translate(Math.cos(p.a)*15,Math.sin(p.a)*12+16);g.rotate(p.a);g.fillStyle='#111522';g.strokeStyle='#39ffb6';g.lineWidth=2;g.beginPath();g.moveTo(-11,-5);g.lineTo(10,-5);g.lineTo(13,4);g.lineTo(-13,4);g.closePath();g.fill();g.stroke();g.fillStyle='#163b38';g.fillRect(-8,-4,16,6);g.fillStyle='#39ffb6';g.font='bold 4px monospace';g.fillText('ROOT',-5,0);g.restore();
+      }
+      else if(p.b == 'shachi') drawSh(p);
       else if(p.b == 'saiyan') drawSa(p);
       else if(p.b === 'ramu'){if(p.preview)drawRamu(p,frameTime);else{drawRamuCached(p,frameTime);drawRamuHandsOverlay(p);}if(p.ramuShieldTimer>0)drawRamuShield();}
       else if(p.b === 'deges') {
@@ -2952,10 +2962,10 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       getLocalState(){
         if(!me) return null;
         const p=me;
-        return {id:p.netId,brawler:p.b,t:p.t,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,ramuMode:p.ramuMode,ramuTransform:p.ramuTransform,ramuTransformTarget:p.ramuTransformTarget,fireEnergy:p.fireEnergy,fireLock:p.fireLock,ramuDiveTimer:p.ramuDiveTimer,ramuDiveLift:p.ramuDiveLift,ramuWaterHop:p.ramuWaterHop||0,ramuFireActive:p.ramuFireActive,ramuIceBurstRemaining:p.ramuIceBurstRemaining,ramuIceBurstTimer:p.ramuIceBurstTimer,ramuShieldTimer:p.ramuShieldTimer,smokeTimer:p.smokeTimer,freezeMeter:p.freezeMeter,frozenTimer:p.frozenTimer,burnTimer:p.burnTimer,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my,shieldTimer:p.shieldTimer||0,lp:p.lp?{...p.lp}:null,h:p.h||0};
+        return {id:p.netId,brawler:p.b,t:p.t,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,hackerDroneX:p.hackerDroneX,hackerDroneY:p.hackerDroneY,hackerDroneControl:p.hackerDroneControl,hackerUpgrades:p.hackerUpgrades,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,ramuMode:p.ramuMode,ramuTransform:p.ramuTransform,ramuTransformTarget:p.ramuTransformTarget,fireEnergy:p.fireEnergy,fireLock:p.fireLock,ramuDiveTimer:p.ramuDiveTimer,ramuDiveLift:p.ramuDiveLift,ramuWaterHop:p.ramuWaterHop||0,ramuFireActive:p.ramuFireActive,ramuIceBurstRemaining:p.ramuIceBurstRemaining,ramuIceBurstTimer:p.ramuIceBurstTimer,ramuShieldTimer:p.ramuShieldTimer,smokeTimer:p.smokeTimer,freezeMeter:p.freezeMeter,frozenTimer:p.frozenTimer,burnTimer:p.burnTimer,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my,shieldTimer:p.shieldTimer||0,lp:p.lp?{...p.lp}:null,h:p.h||0};
       },
       getNetworkStates(){
-        const pack=p=>({id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,ramuMode:p.ramuMode,ramuTransform:p.ramuTransform,ramuTransformTarget:p.ramuTransformTarget,fireEnergy:p.fireEnergy,fireLock:p.fireLock,ramuDiveTimer:p.ramuDiveTimer,ramuDiveLift:p.ramuDiveLift,ramuWaterHop:p.ramuWaterHop||0,ramuFireActive:p.ramuFireActive,ramuIceBurstRemaining:p.ramuIceBurstRemaining,ramuIceBurstTimer:p.ramuIceBurstTimer,ramuShieldTimer:p.ramuShieldTimer,smokeTimer:p.smokeTimer,freezeMeter:p.freezeMeter,frozenTimer:p.frozenTimer,burnTimer:p.burnTimer,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my,shieldTimer:p.shieldTimer||0,lp:p.lp?{...p.lp}:null,h:p.h||0});
+        const pack=p=>({id:p.netId,x:p.x,y:p.y,a:p.a,hp:p.hp,mh:p.mh,alive:p.alive,sc:p.sc,hackerDroneX:p.hackerDroneX,hackerDroneY:p.hackerDroneY,hackerDroneControl:p.hackerDroneControl,hackerUpgrades:p.hackerUpgrades,am:p.am,cd:p.cd,gcd:p.gcd,kcd:p.kcd,tf:p.tf,tfn:p.tfn,form:p.form,ramuMode:p.ramuMode,ramuTransform:p.ramuTransform,ramuTransformTarget:p.ramuTransformTarget,fireEnergy:p.fireEnergy,fireLock:p.fireLock,ramuDiveTimer:p.ramuDiveTimer,ramuDiveLift:p.ramuDiveLift,ramuWaterHop:p.ramuWaterHop||0,ramuFireActive:p.ramuFireActive,ramuIceBurstRemaining:p.ramuIceBurstRemaining,ramuIceBurstTimer:p.ramuIceBurstTimer,ramuShieldTimer:p.ramuShieldTimer,smokeTimer:p.smokeTimer,freezeMeter:p.freezeMeter,frozenTimer:p.frozenTimer,burnTimer:p.burnTimer,chg:p.chg,holdT:p.holdT,hw:p.hw,muiCharging:p.muiCharging,burst:p.burst,bt:p.bt,dash:p.dash,dodge:p.dodge,kaioken:p.kaioken,ss2:p.ss2,ss2Cooldown:p.ss2Cooldown,walk:p.walk,rec:p.rec,fl:p.fl,sw:p.sw,sd:p.sd,nh:p.nh,mx:p.mx,my:p.my,shieldTimer:p.shieldTimer||0,lp:p.lp?{...p.lp}:null,h:p.h||0});
         if(!me) return [];
         const states=[pack(me)];
         if(isNetworkHost) for(const p of P) if(p!==me && p.isBot) states.push(pack(p));
@@ -2972,7 +2982,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         const maxSpeed=900, speed=Math.hypot(p.netVx,p.netVy);
         if(speed>maxSpeed){p.netVx=p.netVx/speed*maxSpeed;p.netVy=p.netVy/speed*maxSpeed;}
         p.netTarget = {x:nx,y:ny,a:state.a ?? p.a}; p.netTargetAt=now;
-        for(const k of ['hp','mh','alive','sc','am','cd','gcd','kcd','tf','tfn','form','ramuMode','ramuTransform','ramuTransformTarget','fireEnergy','fireLock','ramuDiveTimer','ramuDiveLift','ramuWaterHop','ramuFireActive','ramuShieldTimer','smokeTimer','freezeMeter','frozenTimer','burnTimer','chg','holdT','hw','muiCharging','burst','bt','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my','shieldTimer','lp','h','hackTargetId','hackedById','hackUntil']) if(state[k]!==undefined) p[k]=state[k];
+        for(const k of ['hp','mh','alive','sc','am','cd','gcd','kcd','tf','tfn','form','ramuMode','ramuTransform','ramuTransformTarget','fireEnergy','fireLock','ramuDiveTimer','ramuDiveLift','ramuWaterHop','ramuFireActive','ramuShieldTimer','smokeTimer','freezeMeter','frozenTimer','burnTimer','chg','holdT','hw','muiCharging','burst','bt','dash','dodge','kaioken','ss2','ss2Cooldown','walk','rec','fl','sw','sd','nh','mx','my','shieldTimer','lp','h','hackTargetId','hackedById','hackUntil','hackerDroneX','hackerDroneY','hackerDroneControl','hackerUpgrades']) if(state[k]!==undefined) p[k]=state[k];
         if(p.b==='saiyan' && Number.isFinite(state.form)) p.k=Object.assign({},BR.saiyan,FM[state.form]||{});
         p.netLast=now;
       },
