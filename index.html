@@ -1059,7 +1059,7 @@
     };
     $('settingsBack').onclick = () => { waitingForBind=null; show('menu'); };
     // The legacy settingsAccount button was replaced by inline sign-in/sign-out controls.
-    $('resetKeybinds').onclick = () => { keyBinds={...DEFAULT_BINDS};waitingForBind=null;$('keybindHint').textContent='Default controls restored.';saveKeyBinds(); };
+    $('resetKeybinds').onclick = () => { keyBinds={...DEFAULT_BINDS};mouseBinds={...DEFAULT_MOUSE_BINDS};waitingForBind=null;$('keybindHint').textContent='Default controls restored.';$('mouseBindHint').textContent='Mouse controls restored to defaults.';saveMouseBinds();renderMouseBinds();saveKeyBinds(); };
     $('bk1').onclick = () => show('menu');
     function applyGameMode(mode){
       if(!['knockout','showdown','duo','duel'].includes(mode))return;
@@ -1088,7 +1088,7 @@
         if(distance<bestDistance){bestDistance=distance;bestEnemy=enemy;}
       }
       if(bestEnemy){
-        if(p.b==='deges'){const lead=aiPredictPoint(p,bestEnemy,430,.8);p.a=Math.atan2(lead.y-p.y,lead.x-p.x);}
+        if(p.b==='deges'){const lead=aiPredictPoint(p,bestEnemy,430,.45);p.a=Math.atan2(lead.y-p.y,lead.x-p.x);p.remoteBeerTarget={x:lead.x,y:lead.y};}
         else p.a=Math.atan2(bestEnemy.y-p.y,bestEnemy.x-p.x);
         p.autoAimTarget=bestEnemy;p.autoAimTimer=p.b==='ramu'?2.5:.4;return true;
       }
