@@ -760,7 +760,7 @@
       saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'TRANSFORMER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'},
       deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b16cff', hp:7600, spd:138, pel:1, dmg:1062, spr:0, rng:300, bs:430, rel:2.4, sd:1375.5, sr:110, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'1062 DMG', supNm:'BEER BARRAGE', gadgetNm:'2s SMOKE · FULL HEAL', info:'Hooded masked gangster in a black puffer and grey joggers. His gadget is a stationary two-second smoke channel that fully heals him; he remains vulnerable.'},
       ramu: {nm:'RAMU', rarity:'MYTHIC', rarityCol:'#ef4444', hp:8000, spd:142, pel:1, dmg:1000, spr:0, rng:250, bs:480, rel:1.25, mode:1, sd:2000, sr:110, w:120, z:12, cm:0.55, freezeHits:8, fireDamage:1000, fireTickMs:350, fireInitialReach:.4, fireRange:285, fireEnergyDrain:.18, fireSuperCharge:6.6, freezeDuration:2, gadgetDiveCooldown:20, cls:'TRANSFORMER', atkNm:'ICE BURST / FIRE LANCE', supNm:'TRANSFORM MODE', gadgetNm:'ICE CUBE / FLAME DIVE', info:'Transform into fire or ice.'},
-      hacker: {nm:'HACKER', rarity:'LEGENDARY', rarityCol:'#39ffb6', hp:6800, spd:125, pel:1, dmg:620, spr:0, rng:470, bs:520, rel:2.8, sd:0, sr:0, w:74, z:5, cm:0.45, cls:'CONTROL / DAMAGE', atkNm:'MALWARE DRONE', supNm:'SYSTEM TAKEOVER', gadgetNm:'REMOTE LINK · 3S', info:'Move the drone with Remote Link, park it anywhere, then use the laptop to select a target and install randomized malware. System Takeover controls a nearby enemy for 4 seconds.'}
+      hacker: {nm:'HACKER', rarity:'LEGENDARY', rarityCol:'#39ffb6', hp:6800, spd:125, pel:1, dmg:620, spr:0, rng:470, bs:520, rel:2.8, sd:0, sr:0, w:74, z:5, cm:0.45, cls:'CONTROL / DAMAGE', atkNm:'MALWARE DRONE', supNm:'SYSTEM TAKEOVER', gadgetNm:'REMOTE LINK · 2S', info:'Move the drone with Remote Link, park it anywhere, then use the laptop to select a target and install randomized malware. System Takeover controls a nearby enemy for 4 seconds.'}
     };
     const FM = [
       {},
@@ -801,7 +801,7 @@
         if(!valid){ xPos = 2.5 * T; yPos = 2.5 * T; }
       } else { xPos = (t?26.5:1.5)*T; yPos = ([5,7,10][i%3]+.5)*T; }
       const maxH = BR[b].hp;
-      return {b, k:BR[b], hackerDroneX:xPos+44, hackerDroneY:yPos-24, hackerDroneControl:false, hackerUpgrades:0, hackerMalwareTimer:0, lp:null, h:0, ramuWaterHop:0, form:0, ramuMode:'ice', ramuTransform:b==='ramu'?1.05:0, ramuTransformTarget:b==='ramu'?'ice':'none', fireEnergy:1, fireLock:0, ramuDiveTimer:0, ramuDiveLift:0, ramuFireActive:false, ramuFireTick:0, ramuFireLength:0, ramuFireLengthMax:0, ramuWallSyncTimer:0, ramuIceBurstRemaining:0, ramuIceBurstTimer:0, ramuIceBurstIndex:0, ramuIceBurstAim:0, ramuShieldTimer:0, smokeTimer:0, freezeMeter:0, frozenTimer:0, burnTimer:0, burnTick:0, burnOwner:null, burst:0, holdT:0, chg:0, dodge:0, dodgeFx:0, tf:0, kcd:0, bt:0, kmt:0, hw:0, alt:0, t, human, name, x:xPos, y:yPos, hp:isDummy?99999:maxH, mh:isDummy?99999:maxH, am:3, sc:0, a:t?Math.PI:0, alive:true, dt:0, fl:0, dash:0, dd:0, gcd:0, cd:0, nh:9, mx:0, my:0, walk:0, rec:0, sw:0, sd:1, isDummy, autoAimTimer:0, wasOnCd:false, gasTimer:0, muiCharging:0, kaioken:0, ss2:0, ss2Cooldown:0, afterimages:[]};
+      return {b, k:BR[b], hackerDroneX:xPos+44, hackerDroneY:yPos-24, hackerDroneControl:false, hackerUpgrades:0, hackerMalwareTimer:0, lp:null, h:0, ramuWaterHop:0, form:0, ramuMode:'ice', ramuTransform:b==='ramu'?1.05:0, ramuTransformTarget:b==='ramu'?'ice':'none', fireEnergy:1, fireLock:0, ramuDiveTimer:0, ramuDiveLift:0, ramuFireActive:false, ramuFireTick:0, ramuFireLength:0, ramuFireLengthMax:0, ramuWallSyncTimer:0, ramuIceBurstRemaining:0, ramuIceBurstTimer:0, ramuIceBurstIndex:0, ramuIceBurstAim:0, ramuShieldTimer:0, smokeTimer:0, freezeMeter:0, frozenTimer:0, burnTimer:0, burnTick:0, burnOwner:null, burst:0, holdT:0, chg:0, dodge:0, dodgeFx:0, tf:0, kcd:0, bt:0, kmt:0, hw:0, alt:0, t, human, name, x:xPos, y:yPos, hp:isDummy?99999:maxH, mh:isDummy?99999:maxH, am:b==='hacker'?2:3, sc:0, a:t?Math.PI:0, alive:true, dt:0, fl:0, dash:0, dd:0, gcd:0, cd:0, nh:9, mx:0, my:0, walk:0, rec:0, sw:0, sd:1, isDummy, autoAimTimer:0, wasOnCd:false, gasTimer:0, muiCharging:0, kaioken:0, ss2:0, ss2Cooldown:0, afterimages:[]};
     }
     let activeLoadingTimer=null, loadingGeneration=0;
     function startLoadingScreen(test=false){
@@ -1288,7 +1288,7 @@
     }
     function tryFire(p){
       const ramuFlame=p?.b==='ramu'&&p.ramuMode==='fire';
-      if(G.ph!='play'||!p.alive||(!ramuFlame&&p.am<1&&p.b!=='hacker')||(!ramuFlame&&p.cd>0)||p.lp||p.k.sy||p.tf>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
+      if(G.ph!='play'||!p.alive||(!ramuFlame&&p.am<1)||(!ramuFlame&&p.cd>0)||p.lp||p.k.sy||p.tf>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
       if(ramuFlame){if((p.fireEnergy||0)>0&&(p.fireLock||0)<=0){p.nh=0;p.hc=0;}if(p!==me&&p.aiFireHeld&&(p.fireLock||0)<=0&&(p.fireEnergy||0)>0)p.ramuFireActive=true;return;}
       p.nh=0;p.hc=0;
       if(p.b==='deges'){const target=degesAimTarget(p,300);p.a=target.angle;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',target.angle,{targetX:target.x,targetY:target.y,beerRange:target.range});}
@@ -1319,7 +1319,7 @@
     }
     function fire(p,s){
       p.nh=0;p.hc=0;
-      if(p.b==='hacker'&&!s){if(p.hackerDroneControl||p.cd>0||p.tf>0)return;const target=hackerSelectedTarget;if(!target||!target.alive||target===p||(gameMode!=='showdown'&&target.t===p.t)||Math.hypot(target.x-p.hackerDroneX,target.y-p.hackerDroneY)>p.k.rng){beep(160,.13,.04,'square',-30);return;}const ox=p.hackerDroneX,oy=p.hackerDroneY,level=p.hackerUpgrades||0,malwareTypes=['MALWARE DETECTED','RANSOMWARE','SPYWARE','CORRUPTED DATA'],malwareType=malwareTypes[Math.floor(Math.random()*malwareTypes.length)],damage=Math.max(1,Math.round((p.k.dmg+level*85)*(.88+Math.random()*.24)));if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',Math.atan2(target.y-oy,target.x-ox),{targetId:target.netId||target.id,droneX:ox,droneY:oy,damage,malwareType});dmg(target,{d:damage,o:p,malware:true,malwareType});p.hackerUpgrades=Math.min(10,level+1);p.cd=p.k.rel;p.rec=.12;shake=Math.max(shake,2);beep(520,.08,.035,'square',90);for(let i=0;i<16;i++)puff(target.x+(Math.random()-.5)*28,target.y+(Math.random()-.5)*30,1,'#39ffb6',.8);return;}
+      if(p.b==='hacker'&&!s){if(p.hackerDroneControl||p.am<1||p.cd>0||p.tf>0)return;const target=hackerSelectedTarget;if(!target||!target.alive||target===p||(gameMode!=='showdown'&&target.t===p.t)||Math.hypot(target.x-p.hackerDroneX,target.y-p.hackerDroneY)>p.k.rng){beep(160,.13,.04,'square',-30);return;}const ox=p.hackerDroneX,oy=p.hackerDroneY,level=p.hackerUpgrades||0,malwareTypes=['MALWARE DETECTED','RANSOMWARE','SPYWARE','CORRUPTED DATA'],malwareType=malwareTypes[Math.floor(Math.random()*malwareTypes.length)],damage=Math.max(1,Math.round((p.k.dmg+level*85)*(.88+Math.random()*.24)));if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',Math.atan2(target.y-oy,target.x-ox),{targetId:target.netId||target.id,droneX:ox,droneY:oy,damage,malwareType});dmg(target,{d:damage,o:p,malware:true,malwareType});p.am=Math.max(0,p.am-1);p.hackerUpgrades=Math.min(10,level+1);p.cd=p.k.rel;p.rec=.12;shake=Math.max(shake,2);beep(520,.08,.035,'square',90);for(let i=0;i<16;i++)puff(target.x+(Math.random()-.5)*28,target.y+(Math.random()-.5)*30,1,'#39ffb6',.8);return;}
       if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet){
         const target=p.b==='deges'?degesAimTarget(p,300):null;
         window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,...(target?{targetX:target.x,targetY:target.y,beerRange:target.range}:{})});
@@ -1400,7 +1400,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     }
     function gadget(p){
       if(G.ph!='play'||!p.alive||p.gcd>0||p.dash>0||p.lp||p.tf>0||p.muiCharging>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
-      if(p.b==='hacker'){if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('gadget',p.a);p.hackerDroneControl=!p.hackerDroneControl;p.gcd=3;p.chg=0;p.holdT=0;beep(p.hackerDroneControl?720:420,.12,.04,'triangle',p.hackerDroneControl?180:-100);return;}
+      if(p.b==='hacker'){if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('gadget',p.a);p.hackerDroneControl=!p.hackerDroneControl;p.gcd=2;p.chg=0;p.holdT=0;beep(p.hackerDroneControl?720:420,.12,.04,'triangle',p.hackerDroneControl?180:-100);return;}
       if(networkMode&&(p===me||(isNetworkHost&&p.isBot&&p.netId))&&window.DaBrawlNet){const extra=p!==me?{playerId:p.netId}:{};window.DaBrawlNet.sendAction('gadget',p.a,extra);}
       p.chg=0; p.holdT=0;
       if(p.b==='ramu'){
@@ -1682,7 +1682,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
             else if(p.k?.sy && p.burst>0) burstU(p,dt); // Remote Saiyans must animate their released ki-blast burst too.
             continue;
           }
-          K=p.k; p.am = Math.min(3, p.am + dt/K.rel); p.nh+=dt;
+          K=p.k; p.am = Math.min(p.b==='hacker'?2:3, p.am + dt/K.rel); p.nh+=dt;
           if(p.nh>3.5 && p.hp<p.mh && !p.isDummy){
             p.hc = (p.hc||0) + dt;
             if(p.hc>=.7){ p.hc=0; const h=Math.min(p.mh-p.hp, p.mh*.2); p.hp+=h; F.push({k:'t',x:p.x,y:p.y-30,vx:0,vy:-50,l:.7,m:.7,tx:'+'+Math.round(h),c:'#5f5'}); puff(p.x,p.y,6,'#7f7',.6); beep(700,.12,.06,'triangle',200); }
@@ -2974,7 +2974,8 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       applyRemoteState(state){
         if(!state || !state.id) return;
         const p=P.find(q=>q.netId===state.id);
-        if(!p || p===me) return;
+        if(!p) return;
+        if(p===me){if(p.b==='hacker'&&Number.isFinite(state.hackerAmmo))p.am=Math.max(0,Math.min(2,state.hackerAmmo));if(p.b==='hacker'&&state.hackerDroneControl!==undefined)p.hackerDroneControl=!!state.hackerDroneControl;if(p.b==='hacker'&&Number.isFinite(state.hackerUpgrades))p.hackerUpgrades=state.hackerUpgrades;if(state.hackTargetId&&p.b==='hacker'){const controlled=P.find(q=>q.netId===state.hackTargetId||q.id===state.hackTargetId);if(controlled&&controlled.alive){hackerSelectedTarget=controlled;hackerHackTarget=controlled;hackerHackTimer=Math.max(hackerHackTimer,Math.max(0,(state.hackUntil-Date.now())/1000));hackerBinaryRain=Math.max(hackerBinaryRain,hackerHackTimer);}}return;}
         // Keep position smooth; update health/combat fields from the owner's snapshot.
         const nx=state.x ?? p.x, ny=state.y ?? p.y, now=Date.now();
         const elapsed=Math.max(0.025,Math.min(0.20,(now-(p.netTargetAt||now))/1000));
@@ -3068,6 +3069,13 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         }
         else if(msg.action==='fire'){ if(p.b==='hacker')return; p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; if(p.k.sy) sTap(p); else tryFire(p); }
         else if(msg.action==='super'){
+          if(p.b==='hacker'){
+            const target=P.find(q=>q.netId===msg.targetId||q.id===msg.targetId);
+            if(!target||!target.alive||target===p)return;
+            hackerSelectedTarget=target;hackerHackTarget=target;hackerHackTimer=4;hackerBinaryRain=4;
+            target.hackerControlledBy=p;target.hackerControlTimer=4;p.hackerDroneControl=false;p.sc=0;p.chg=0;p.holdT=0;
+            beep(880,.22,.06,'sawtooth',-260);for(let i=0;i<24;i++)puff(target.x+(Math.random()-.5)*36,target.y+(Math.random()-.5)*42,1,'#39ffb6',1.2);return;
+          }
           // Remote bot supers must not depend on this browser's local round phase.
           // The host can be a fraction of a tick ahead, otherwise the non-host silently
           // drops the bot's super when its local G.ph is still counting/ending.
