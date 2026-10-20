@@ -3282,6 +3282,20 @@ function gadget(p){
       $('mmTxt').textContent='GET READY!'; $('mmHint').textContent='Match found. Syncing players…';
       $('ldFill').style.width='100%'; $('ldPct').textContent='100%'; show('loading');
       activeMatchRoster=roster.map(p=>({...p})); activeMatchHostId=hostId; activeMatchLocalId=localId;
+      // Start the watchdog before channel setup, so even a synchronous setup error
+      // or a realtime client that never reports status cannot strand GET READY.
+      let matchConnectWatchdog=setTimeout(()=>{
+        if(activeMatchId!==matchId) return;
+        $('mmTxt').textContent='ONLINE CONNECTION TIMED OUT';
+        $('mmHint').textContent='Online sync did not finish. Starting a playable offline match instead…';
+        const old=matchChannel; matchChannel=null;
+        activeMatchId=null; activePlayerId=clientId;
+        clearInterval(stateTimer); stateTimer=null;
+        if(old) void db.removeChannel(old).catch(()=>{});
+        try { window.DaBrawlGame?.endNetworkGame(); } catch(err) { console.warn('Network cleanup failed:',err); }
+        status('Online match startup timed out; started offline quickplay so you can keep playing.',true);
+        startLoadingScreen(false);
+      },8000);
       matchChannel=db.channel('dabrawl-match-'+matchId,{config:{broadcast:{self:false}}});
       matchChannel.on('broadcast',{event:'match-state'},({payload})=>{if(Array.isArray(payload?.players))for(const player of payload.players){window.DaBrawlGame?.applyRemoteState(player);seenAt.set(player.id,Date.now());}if(payload?.hostId===activeMatchHostId&&payload?.world)window.DaBrawlGame?.applyRemoteWorldState?.(payload.world);});
       matchChannel.on('broadcast',{event:'player-state'},({payload})=>{if(payload?.player) {window.DaBrawlGame?.applyRemoteState(payload.player);seenAt.set(payload.player.id,Date.now());}});
@@ -3309,20 +3323,6 @@ function gadget(p){
           await startOnlineMatch(next.roster,next.matchId,next.mode,activeMatchLocalId,next.hostId,next.startAt);
         }
       });
-      // Start the watchdog before channel setup, so even a synchronous setup error
-      // or a realtime client that never reports status cannot strand GET READY.
-      let matchConnectWatchdog=setTimeout(()=>{
-        if(activeMatchId!==matchId) return;
-        $('mmTxt').textContent='ONLINE CONNECTION TIMED OUT';
-        $('mmHint').textContent='Online sync did not finish. Starting a playable offline match instead…';
-        const old=matchChannel; matchChannel=null;
-        activeMatchId=null; activePlayerId=clientId;
-        clearInterval(stateTimer); stateTimer=null;
-        if(old) void db.removeChannel(old).catch(()=>{});
-        try { window.DaBrawlGame?.endNetworkGame(); } catch(err) { console.warn('Network cleanup failed:',err); }
-        status('Online match startup timed out; started offline quickplay so you can keep playing.',true);
-        startLoadingScreen(false);
-      },8000);
       matchChannel.subscribe(statusValue=>{
         if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){
           clearTimeout(matchConnectWatchdog);
