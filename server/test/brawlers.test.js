@@ -15,7 +15,7 @@ test("Kuku's server baseline matches the browser balance", () => {
 });
 
 test("Shachi has tank stats and a slam super", () => {
-  assert.equal(BRAWLERS.shachi.hp, 8000);
+  assert.equal(BRAWLERS.shachi.hp, 10000);
   assert.equal(BRAWLERS.shachi.pellets, 2);
   assert.equal(BRAWLERS.shachi.superKind, "slam");
 });
