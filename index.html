@@ -1070,7 +1070,7 @@
     function tryFire(p){
       if(G.ph!='play'||!p.alive||p.am<1||p.cd>0||p.lp||p.k.sy||p.tf>0) return;
       if(p.b==='deges'){const target=degesAimTarget(p,300);p.a=target.angle;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',target.angle,{targetX:target.x,targetY:target.y,beerRange:target.range});}
-      else if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',p.a);
+      else if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',p.a,p.b==='ramu'?{ramuMode:p.ramuMode||0}:{});
       fire(p,0);p.cd=p.b==='deges'? .75:.38;
     }
     function sup(p){
@@ -1125,7 +1125,7 @@ function gadget(p){
       // Send the gadget action before character-specific early returns so Ramu's
       // shield and leap are simulated by both clients.
       if(networkMode && (p===me||(isNetworkHost&&p.isBot&&p.netId)) && window.DaBrawlNet){
-        const extra=p!==me?{playerId:p.netId}:{};
+        const extra={...(p!==me?{playerId:p.netId}:{}),...(p.b==='ramu'?{ramuMode:p.ramuMode||0}:{})};
         if(gadgetTarget)window.DaBrawlNet.sendAction('gadget',gadgetTarget.angle,{...extra,targetX:gadgetTarget.x,targetY:gadgetTarget.y,beerRange:gadgetTarget.range});
         else window.DaBrawlNet.sendAction('gadget',p.a,extra);
       }
@@ -1310,7 +1310,7 @@ function gadget(p){
           if(p.ramuMode===1&&p.fireAmmo<1&&p.fireRegen<=5){p.fireAmmo=Math.min(1,(p.fireAmmo||0)+dt/5);}
           if(p.ramuMode===1&&p===me&&mdown&&p.fireAmmo>0&&p.ramuShield<=0&&p.ramuLeap<=0&&p.freeze<=0&&G.ph==='play'){
             const last=p.fireLastSegment||0;
-            if(performance.now()-last>=45){p.fireLastSegment=performance.now();const a=p.a,px=p.x+Math.cos(a)*26,py=p.y+Math.sin(a)*26;for(let j=0;j<3;j++)F.push({k:'p',x:px+Math.cos(a)*j*13,y:py+Math.sin(a)*j*13,vx:Math.cos(a)*(100+j*25)+(Math.random()-.5)*18,vy:Math.sin(a)*(100+j*25)+(Math.random()-.5)*18,l:.18+j*.035,m:.18+j*.035,c:['#ff3b16','#ff7a1c','#ffd35a'][j],s:15-j*2});B.push({x:px,y:py,vx:Math.cos(a)*600,vy:Math.sin(a)*600,r:260,d:200,t:p.t,o:p,s:false,z:9,col:'#ff6a22',fireStream:true});p.fireAmmo=Math.max(0,p.fireAmmo-.012);if(p.fireAmmo<=0)p.fireRegen=5.3;}
+            if(performance.now()-last>=45){const now=performance.now();p.fireLastSegment=now;const a=p.a,px=p.x+Math.cos(a)*26,py=p.y+Math.sin(a)*26;for(let j=0;j<3;j++)F.push({k:'p',x:px+Math.cos(a)*j*13,y:py+Math.sin(a)*j*13,vx:Math.cos(a)*(100+j*25)+(Math.random()-.5)*18,vy:Math.sin(a)*(100+j*25)+(Math.random()-.5)*18,l:.18+j*.035,m:.18+j*.035,c:['#ff3b16','#ff7a1c','#ffd35a'][j],s:15-j*2});B.push({x:px,y:py,vx:Math.cos(a)*600,vy:Math.sin(a)*600,r:260,d:200,t:p.t,o:p,s:false,z:9,col:'#ff6a22',fireStream:true});if(networkMode&&window.DaBrawlNet&&now-(p.fireLastNetSegment||0)>=100){p.fireLastNetSegment=now;window.DaBrawlNet.sendAction('ramu-fire-stream',a,{x:px,y:py});}p.fireAmmo=Math.max(0,p.fireAmmo-.012);if(p.fireAmmo<=0)p.fireRegen=5.3;}
           }
           p.ramuShield=Math.max(0,(p.ramuShield||0)-dt);p.ramuLeap=Math.max(0,(p.ramuLeap||0)-dt);
           if(p.ramuLeap>0){p.ramuLand=p.ramuLand||{x:p.x,y:p.y};if(p===me){let ix=(keys[keyBinds.right]?1:0)-(keys[keyBinds.left]?1:0),iy=(keys[keyBinds.down]?1:0)-(keys[keyBinds.up]?1:0);if(touch&&ts.m.active){ix=ts.m.x;iy=ts.m.y;}const il=Math.hypot(ix,iy);if(il>.05){ix/=il;iy/=il;const stepSize=230*dt,nx=p.ramuLand.x+ix*stepSize,ny=p.ramuLand.y+iy*stepSize,dx=nx-p.x,dy=ny-p.y,d=Math.hypot(nx-(p.ramuLand.startX??p.x),ny-(p.ramuLand.startY??p.y));if(d<=220&&!hitW(nx,ny,16)){p.ramuLand.x=nx;p.ramuLand.y=ny;}}}p.ramuLand.startX=p.ramuLand.startX??p.x;p.ramuLand.startY=p.ramuLand.startY??p.y;p.x=p.ramuLand.x;p.y=p.ramuLand.y;p.mx=p.my=0;if(p.ramuLeap<=1&&!p.ramuWarned){p.ramuWarned=true;F.push({k:'p',x:p.x,y:p.y,vx:0,vy:0,l:1,m:1,c:'#ff6a22',s:64});F.push({k:'t',x:p.x,y:p.y-30,vx:0,vy:-18,l:.8,m:.8,tx:'LANDING!',c:'#ff8b32'});}if(p.ramuLeap<=1){F.push({k:'p',x:p.x,y:p.y,vx:0,vy:0,l:.8,m:.8,c:'#ff6a22',s:42});for(const q of P){if(q!==p&&q.alive&&Math.hypot(q.x-p.x,q.y-p.y)<100){dmg(q,{d:2000,o:p,s:1,vx:0,vy:0,fireStream:true});q.fireBurn=2;}}p.ramuLeap=0;p.tf=0;}}
@@ -2516,7 +2516,8 @@ function gadget(p){
           if(msg.super && p.sc<1) p.sc=1;
           fire(p,!!msg.super);
         }
-        else if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; if(p.k.sy) sTap(p); else tryFire(p); }
+        else if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.b==='ramu'&&(msg.ramuMode===0||msg.ramuMode===1))p.ramuMode=msg.ramuMode; if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; if(p.k.sy) sTap(p); else tryFire(p); }
+        else if(msg.action==='ramu-fire-stream'&&p.b==='ramu'&&Number.isFinite(msg.angle)&&Number.isFinite(msg.x)&&Number.isFinite(msg.y)){const a=msg.angle;B.push({x:msg.x,y:msg.y,vx:Math.cos(a)*600,vy:Math.sin(a)*600,r:260,d:200,t:p.t,o:p,s:false,z:9,col:'#ff6a22',fireStream:true});}
         else if(msg.action==='super'){
           // Remote bot supers must not depend on this browser's local round phase.
           // The host can be a fraction of a tick ahead, otherwise the non-host silently
@@ -2532,7 +2533,7 @@ function gadget(p){
             p.sc=0;
           }
         }
-        else if(msg.action==='gadget'){ p.gcd=0; p.dash=0; if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; gadget(p); p.remoteBeerTarget=null; }
+        else if(msg.action==='gadget'){ p.gcd=0; p.dash=0; if(p.b==='ramu'&&(msg.ramuMode===0||msg.ramuMode===1)){p.ramuMode=msg.ramuMode;p.am=p.ramuMode?1:3;} if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; gadget(p); p.remoteBeerTarget=null; }
       },
       applyMatchResult(payload){
         if(!networkMode || isNetworkHost || !me || networkResultApplied || !payload || !Number.isInteger(payload.hostTeam)) return;
