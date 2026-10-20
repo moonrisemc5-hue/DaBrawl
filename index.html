@@ -1319,7 +1319,7 @@
     }
     function fire(p,s){
       p.nh=0;p.hc=0;
-      if(p.b==='hacker'&&!s){if(p.hackerDroneControl||p.cd>0||p.tf>0)return;const target=hackerSelectedTarget;if(!target||!target.alive||target===p||(gameMode!=='showdown'&&target.t===p.t)||Math.hypot(target.x-p.hackerDroneX,target.y-p.hackerDroneY)>p.k.rng){beep(160,.13,.04,'square',-30);return;}const ox=p.hackerDroneX,oy=p.hackerDroneY,level=p.hackerUpgrades||0,malwareTypes=['MALWARE DETECTED','RANSOMWARE','SPYWARE','CORRUPTED DATA'],malwareType=malwareTypes[Math.floor(Math.random()*malwareTypes.length)],damage=Math.max(1,Math.round((p.k.dmg+level*85)*(.88+Math.random()*.24)));if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',Math.atan2(target.y-oy,target.x-ox),{targetId:target.netId||target.id,droneX:ox,droneY:oy});else dmg(target,{d:damage,o:p,malware:true,malwareType});p.hackerUpgrades=Math.min(10,level+1);p.cd=p.k.rel;p.rec=.12;shake=Math.max(shake,2);beep(520,.08,.035,'square',90);for(let i=0;i<16;i++)puff(target.x+(Math.random()-.5)*28,target.y+(Math.random()-.5)*30,1,'#39ffb6',.8);return;}
+      if(p.b==='hacker'&&!s){if(p.hackerDroneControl||p.cd>0||p.tf>0)return;const target=hackerSelectedTarget;if(!target||!target.alive||target===p||(gameMode!=='showdown'&&target.t===p.t)||Math.hypot(target.x-p.hackerDroneX,target.y-p.hackerDroneY)>p.k.rng){beep(160,.13,.04,'square',-30);return;}const ox=p.hackerDroneX,oy=p.hackerDroneY,level=p.hackerUpgrades||0,malwareTypes=['MALWARE DETECTED','RANSOMWARE','SPYWARE','CORRUPTED DATA'],malwareType=malwareTypes[Math.floor(Math.random()*malwareTypes.length)],damage=Math.max(1,Math.round((p.k.dmg+level*85)*(.88+Math.random()*.24)));if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',Math.atan2(target.y-oy,target.x-ox),{targetId:target.netId||target.id,droneX:ox,droneY:oy,damage,malwareType});dmg(target,{d:damage,o:p,malware:true,malwareType});p.hackerUpgrades=Math.min(10,level+1);p.cd=p.k.rel;p.rec=.12;shake=Math.max(shake,2);beep(520,.08,.035,'square',90);for(let i=0;i<16;i++)puff(target.x+(Math.random()-.5)*28,target.y+(Math.random()-.5)*30,1,'#39ffb6',.8);return;}
       if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet){
         const target=p.b==='deges'?degesAimTarget(p,300):null;
         window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,...(target?{targetX:target.x,targetY:target.y,beerRange:target.range}:{})});
@@ -1469,7 +1469,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         const canRequestHit = b?.o===me || (isNetworkHost && b?.o?.isBot);
         if(canRequestHit && t.netId && window.DaBrawlNet){
           const damage=Math.max(0,Number(b.d)||0);
-          window.DaBrawlNet.sendAction('damage',0,{targetId:t.netId,damage,vx:Number(b.vx)||0,vy:Number(b.vy)||0,knockback:Number(b.knockback)||0,iceBall:!!b.iceBall,fireBall:!!b.fireBall,fireStream:!!b.fireStream});
+          window.DaBrawlNet.sendAction('damage',0,{targetId:t.netId,damage,vx:Number(b.vx)||0,vy:Number(b.vy)||0,knockback:Number(b.knockback)||0,iceBall:!!b.iceBall,fireBall:!!b.fireBall,fireStream:!!b.fireStream,malware:!!b.malware,malwareType:b.malwareType});
           // Give the attacker immediate hit confirmation; health remains authoritative on the victim.
           t.fl=.12;
           F.push({k:'t',x:t.x,y:t.y-30,vx:0,vy:-60,l:.7,m:.7,tx:String(Math.round(damage)),c:'#ffe45c'});
@@ -3008,9 +3008,9 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
           // A client can request damage to another human, but only that human's
           // own client applies it. The host alone applies damage to authoritative bots.
           if(target && target===me && me.alive){
-            dmg(me,{d:amount,o:p,s:0,vx:Number(msg.vx)||0,vy:Number(msg.vy)||0,knockback:Number(msg.knockback)||0,iceBall:!!msg.iceBall,fireBall:!!msg.fireBall,fireStream:!!msg.fireStream});
+            dmg(me,{d:amount,o:p,s:0,vx:Number(msg.vx)||0,vy:Number(msg.vy)||0,knockback:Number(msg.knockback)||0,iceBall:!!msg.iceBall,fireBall:!!msg.fireBall,fireStream:!!msg.fireStream,malware:!!msg.malware,malwareType:msg.malwareType});
           } else if(isNetworkHost && target && target.isBot && target!==me && target.alive){
-            dmg(target,{d:amount,o:p,s:0,vx:Number(msg.vx)||0,vy:Number(msg.vy)||0,knockback:Number(msg.knockback)||0,iceBall:!!msg.iceBall,fireBall:!!msg.fireBall,fireStream:!!msg.fireStream});
+            dmg(target,{d:amount,o:p,s:0,vx:Number(msg.vx)||0,vy:Number(msg.vy)||0,knockback:Number(msg.knockback)||0,iceBall:!!msg.iceBall,fireBall:!!msg.fireBall,fireStream:!!msg.fireStream,malware:!!msg.malware,malwareType:msg.malwareType});
           }
           return;
         }
@@ -3066,7 +3066,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
           if(msg.super && p.sc<1) p.sc=1;
           fire(p,!!msg.super);
         }
-        else if(msg.action==='fire'){ p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; if(p.k.sy) sTap(p); else tryFire(p); }
+        else if(msg.action==='fire'){ if(p.b==='hacker')return; p.am=Math.max(1,p.am); p.cd=0; p.burst=0; p.bt=0; if(p.b==='deges'&&Number.isFinite(msg.targetX)&&Number.isFinite(msg.targetY))p.remoteBeerTarget={x:msg.targetX,y:msg.targetY}; if(p.k.sy) sTap(p); else tryFire(p); }
         else if(msg.action==='super'){
           // Remote bot supers must not depend on this browser's local round phase.
           // The host can be a fraction of a tick ahead, otherwise the non-host silently
