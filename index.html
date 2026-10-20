@@ -1451,7 +1451,7 @@ function gadget(p){
     function matchmake(){
       if(window.DaBrawlNet){ window.DaBrawlNet.beginMatchmaking(gameMode); return; }
       show('mm'); let remaining=10; clearInterval(mmI); clearTimeout(mmTimeout);
-      const target = gameMode==='duel' ? 2 : (gameMode==='showdown'||gameMode==='duo') ? 10 : 6;
+      const target = gameMode==='duel' ? 2 : gameMode==='trio' ? 12 : (gameMode==='showdown'||gameMode==='duo') ? 10 : 6;
       $('mmTxt').textContent = 'PLAYERS JOINED: 1/'+target+' · '+remaining+'s';
       $('mmHint').textContent = 'Waiting up to 10 seconds for players to join…';
       mmI = setInterval(() => {
