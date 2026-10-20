@@ -51,6 +51,7 @@ export function parseClientMessage(raw) {
       optionalString("targetId", 96);
       if (message.droneX !== undefined && !Number.isFinite(message.droneX)) throw new Error("Invalid drone X");
       if (message.droneY !== undefined && !Number.isFinite(message.droneY)) throw new Error("Invalid drone Y");
+      if (message.targetId !== undefined && typeof message.targetId !== "string") throw new Error("Invalid target ID");
       break;
     case "ping":
       onlyKeys("type", "clientSentAt");
