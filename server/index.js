@@ -41,6 +41,7 @@ function makePlayer(user, msg, slot) {
   const brawler = BRAWLERS[msg.brawler] ? msg.brawler : "default";
   return { id: user.id, name: cleanText(msg.name), brawler, team: slot % 2, slot,
     x: slot % 2 ? 620 : 180, y: 150 + Math.floor(slot / 2) * 70, aim: slot % 2 ? Math.PI : 0,
+    hackerDroneX:(slot % 2 ? 620 : 180)+44,hackerDroneY:126,hackerDroneControl:false,hackerUpgrades:0,
     hp: BRAWLERS[brawler].hp, maxHp: BRAWLERS[brawler].hp, alive: true, meter: 0,
     form: 0, ramuMode: "ice", fireEnergy: 1, fireLockUntil: 0, ramuFlameHeld: false, ramuFlameStartedAt: 0, ramuFlameLength: 0, ramuFlameNextHitAt: 0, ramuDiveUntil: 0, ramuDiveMoveAt: 0, ramuShieldUntil: 0, freezeMeter: 0, frozenUntil: 0,
     burnUntil: 0, burnNextAt: 0, burnOwnerId: null, smokeUntil: 0,
@@ -54,7 +55,7 @@ function emit(room, type, data = {}) {
 function snapshot(room) {
   return { mode: room.mode, phase: room.phase, startedAt: room.startedAt, endsAt: room.endsAt,
     winner: room.winner, ownerId: room.ownerId, tick: room.tick, destroyedWalls: room.world.destroyedWalls, wallStates: snapshotArenaWallStates(room.world), beams: room.beams.map(b => ({ id:b.id, ownerId:b.ownerId, x:b.x, y:b.y, aim:b.aim, length:b.length, width:b.width, expiresAt:b.expiresAt })), players: [...room.players.values()].map(p => ({
-      id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,
+      id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,hackerDroneX:p.hackerDroneX,hackerDroneY:p.hackerDroneY,hackerDroneControl:!!p.hackerDroneControl,hackerUpgrades:p.hackerUpgrades||0,
       hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,ramuMode:p.ramuMode,fireEnergy:p.fireEnergy,hackTargetId:p.hackTargetId||null,hackedById:p.hackedById||null,hackUntil:p.hackUntil||0,fireLockMs:Math.max(0,(p.fireLockUntil||0)-now()),
       ramuDiveUntil:p.ramuDiveUntil||0,ramuDiveMoveMs:Math.max(0,(p.ramuDiveMoveAt||0)-now()),ramuFlameHeld:!!p.ramuFlameHeld,ramuShieldMs:Math.max(0,(p.ramuShieldUntil||0)-now()),freezeMeter:p.freezeMeter||0,frozenMs:Math.max(0,(p.frozenUntil||0)-now()),burnMs:Math.max(0,(p.burnUntil||0)-now()),smokeMs:Math.max(0,(p.smokeUntil||0)-now()),
       gadgetCharges:gadgetCharges(p),gadgetCooldownMs:Math.max(0,p.gadgetReadyAt-now()),
@@ -112,12 +113,15 @@ function doFire(room, p, isSuper = false, options = {}) {
   if (!p.alive || p.transformUntil > t || p.kameChargeStartedAt > 0 || p.smokeUntil > t || p.frozenUntil > t || p.ramuDiveUntil > t || p.ramuShieldUntil > t) return;
   if(!isSuper&&p.brawler==="hacker"&&p.hackTargetId&&p.hackUntil>t){const controlled=room.players.get(p.hackTargetId);if(controlled?.alive){controlled.aim=p.aim;return doFire(room,controlled,false);}p.hackTargetId=null;p.hackUntil=0;}
   if(!isSuper&&p.brawler==="hacker"){
-    if(t-p.lastFire<stats.cooldown)return;p.lastFire=t;
-    const ox=clamp(finite(options.droneX,p.x),Math.max(PLAYER_RADIUS,p.x-600),Math.min(room.world.width-PLAYER_RADIUS,p.x+600));
-    const oy=clamp(finite(options.droneY,p.y),Math.max(PLAYER_RADIUS,p.y-600),Math.min(room.world.height-PLAYER_RADIUS,p.y+600));
-    const level=Math.min(10,p.hackerUpgrades||0),damage=stats.damage+level*85;p.hackerUpgrades=Math.min(10,level+1);
-    room.projectiles.push({id:nextProjectileId++,ownerId:p.id,team:p.team,x:ox+Math.cos(p.aim)*16,y:oy+Math.sin(p.aim)*16,angle:p.aim,speed:stats.bulletSpeed,damage,range:stats.range,traveled:0,super:false});
-    p.meter=clamp(p.meter+8,0,100);event(room,"attack-fired",{playerId:p.id,aim:p.aim,kind:"malware-drone",upgrade:p.hackerUpgrades});return;
+    if(t-p.lastFire<stats.cooldown)return;
+    const target=room.players.get(options.targetId||"");if(!target||!isTargetDamageable(target,p,t)||target===p)return;
+    const ox=Number.isFinite(options.droneX)?options.droneX:p.hackerDroneX,oy=Number.isFinite(options.droneY)?options.droneY:p.hackerDroneY;
+    if(Math.hypot(target.x-ox,target.y-oy)>stats.range)return;
+    p.lastFire=t;const level=Math.min(10,p.hackerUpgrades||0),damage=Math.max(1,Math.round((stats.damage+level*85)*(.88+Math.random()*.24))),types=["MALWARE DETECTED","RANSOMWARE","SPYWARE","CORRUPTED DATA"],malwareType=types[Math.floor(Math.random()*types.length)];p.hackerUpgrades=Math.min(10,level+1);
+    target.lastHitAt=t;target.hp=Math.max(0,target.hp-damage);target.meter=clamp(target.meter+12,0,100);p.meter=clamp(p.meter+8,0,100);
+    event(room,"hit",{attackerId:p.id,targetId:target.id,damage,hp:target.hp,malware:true,malwareType,upgrade:p.hackerUpgrades});
+    if(target.hp<=0){target.alive=false;cancelKameCharge(target);target.input={x:0,y:0};event(room,"knockout",{playerId:target.id,by:p.id});}
+    event(room,"attack-fired",{playerId:p.id,aim:p.aim,kind:"malware-install",upgrade:p.hackerUpgrades});sendState(room);return;
   }
   if(isSuper&&p.brawler==="hacker"){
     const target=room.players.get(options.targetId||"");
@@ -270,7 +274,7 @@ function startSmokeChannel(room,player,at){
 function useGadget(room,player,at){
   if(!isCombatPhase(room.phase)||!player.alive||player.transformUntil>at||player.smokeUntil>at||player.frozenUntil>at||player.ramuDiveUntil>at||player.ramuShieldUntil>at||player.kameChargeStartedAt>0||!tryConsumeGadget(player,at))return false;
   const a=player.aim;
-  if(player.brawler==="hacker"){player.hackerDroneControl=!player.hackerDroneControl;event(room,"gadget",{playerId:player.id,kind:"remote-link",droneControl:player.hackerDroneControl,cooldownMs:Math.max(0,player.gadgetReadyAt-at)});return true;}
+  if(player.brawler==="hacker"){player.hackerDroneControl=!player.hackerDroneControl;player.input={x:0,y:0};event(room,"gadget",{playerId:player.id,kind:"remote-link",droneControl:player.hackerDroneControl,cooldownMs:Math.max(0,player.gadgetReadyAt-at)});return true;}
   if(player.brawler==="deges"){startSmokeChannel(room,player,at);return true;}
   if(player.brawler==="ramu"){
     setRamuFlameHeld(room,player,false,at);
@@ -376,7 +380,9 @@ function stepRoom(room, dt) {
       if (t - p.lastSeen > INPUT_TIMEOUT_MS) p.input = { x: 0, y: 0 };
       const stats=getBrawlerStats(p),oldX=p.x,oldY=p.y;
       if(p.smokeUntil>t||p.frozenUntil>t||p.ramuShieldUntil>t||(p.ramuDiveUntil>t&&t<(p.ramuDiveMoveAt||0)))p.input={x:0,y:0};
-      const movementInput=(p.brawler==="hacker"&&((p.hackTargetId&&p.hackUntil>t)||p.hackerDroneControl))?{x:0,y:0}:p.input;
+      const droneMoving=p.brawler==="hacker"&&p.hackerDroneControl&&!(p.hackTargetId&&p.hackUntil>t);
+      const movementInput=(p.brawler==="hacker"&&!droneMoving)||(p.hackTargetId&&p.hackUntil>t)?{x:0,y:0}:p.input;
+      if(droneMoving){const d=movementDelta(p.input.x,p.input.y,220,dt);p.hackerDroneX=clamp(p.hackerDroneX+d.x,room.world.margin+PLAYER_RADIUS,room.world.width-room.world.margin-PLAYER_RADIUS);p.hackerDroneY=clamp(p.hackerDroneY+d.y,room.world.margin+PLAYER_RADIUS,room.world.height-room.world.margin-PLAYER_RADIUS);}
       const {x:dx,y:dy}=movementDelta(movementInput.x,movementInput.y,stats.speed,dt);
       if(p.ramuDiveUntil>t&&t>=(p.ramuDiveMoveAt||0)){const divePosition=clampPlayerPosition(p.x+dx,p.y+dy,room.world,PLAYER_RADIUS);p.x=divePosition.x;p.y=divePosition.y;}
       else{const nextPosition=movePlayerWithObstacles(p.x,p.y,dx,dy,room.world,PLAYER_RADIUS);p.x=nextPosition.x;p.y=nextPosition.y;}
@@ -616,7 +622,7 @@ wss.on("connection", (ws,_req,meta) => {
         player.seq=seq;if(player.hackedById){const controller=room.players.get(player.hackedById);if(controller&&controller.hackUntil>now()){player.lastSeen=now();ws.send(JSON.stringify({type:"ack",seq,serverTime:now()}));return;}player.hackedById=null;}player.input=validAxes(m.x,m.y);if(player.smokeUntil<=now()&&player.frozenUntil<=now()&&player.ramuShieldUntil<=now())player.aim=clamp(finite(m.aim,player.aim),-Math.PI*2,Math.PI*2);
         player.lastSeen=now(); ws.send(JSON.stringify({type:"ack",seq,serverTime:now()}));
       } else if (m.type==="action") {
-        if (m.action==="fire") {if(m.angle!==undefined)player.aim=clamp(finite(m.angle,player.aim),-Math.PI*2,Math.PI*2);doFire(room,player,false,{droneX:m.droneX,droneY:m.droneY});}
+        if (m.action==="fire") {if(m.angle!==undefined)player.aim=clamp(finite(m.angle,player.aim),-Math.PI*2,Math.PI*2);doFire(room,player,false,{droneX:m.droneX,droneY:m.droneY,targetId:m.targetId});}
         else if(m.action==="ramu-flame-start"){
           const at=now();player.aim=clamp(finite(m.angle,player.aim),-Math.PI*2,Math.PI*2);
           if(isCombatPhase(room.phase)&&player.alive&&player.brawler==="ramu"&&player.ramuMode==="fire"&&player.transformUntil<=at&&player.smokeUntil<=at&&player.frozenUntil<=at&&player.ramuDiveUntil<=at&&player.ramuShieldUntil<=at)setRamuFlameHeld(room,player,true,at);
