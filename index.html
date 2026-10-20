@@ -919,7 +919,7 @@
     function initAccountControlPositions(){void loadStickPositionsAccount().then(applyControlPositions);}
     window.addEventListener('resize',applyControlPositions);
     function getTouchPos(t){ const rect = cv.getBoundingClientRect(); return { x: (t.clientX - rect.left) * (W / rect.width), y: (t.clientY - rect.top) * (H / rect.height) }; }
-    cv.addEventListener('click',e=>{if(scr!=='game'||!me||me.b!=='hacker'||touch||hackerBinaryRain>0)return;const pos=getTouchPos(e),wx=pos.x/z+cam.x,wy=pos.y/z+cam.y;let best=null,bd=34;for(const q of P){if(q===me||!q.alive||(gameMode!=='showdown'&&q.t===me.t))continue;const d=Math.hypot(q.x-wx,q.y-wy);if(d<bd){bd=d;best=q;}}if(best){hackerSelectedTarget=best;me.a=Math.atan2(best.y-me.y,best.x-me.x);beep(680,.08,.03,'triangle',100);}});
+    cv.addEventListener('click',e=>{if(scr!=='game'||!me||me.b!=='hacker'||hackerBinaryRain>0)return;const pos=getTouchPos(e),wx=pos.x/z+cam.x,wy=pos.y/z+cam.y;let best=null,bd=34;for(const q of P){if(q===me||!q.alive||(gameMode!=='showdown'&&q.t===me.t))continue;const d=Math.hypot(q.x-wx,q.y-wy);if(d<bd){bd=d;best=q;}}if(best){hackerSelectedTarget=best;me.a=Math.atan2(best.y-me.y,best.x-me.x);beep(680,.08,.03,'triangle',100);}});
     addEventListener('keydown',e=>{if(scr!=='game'||!me||me.b!=='hacker'||e.key!=='Tab')return;e.preventDefault();const enemies=P.filter(q=>q!==me&&q.alive&&(gameMode==='showdown'||q.t!==me.t));if(!enemies.length)return;const i=enemies.indexOf(hackerSelectedTarget);hackerSelectedTarget=enemies[(i+1)%enemies.length];me.a=Math.atan2(hackerSelectedTarget.y-me.y,hackerSelectedTarget.x-me.x);});
     cv.addEventListener('touchstart', e => {
       e.preventDefault(); touch=true;
@@ -957,6 +957,7 @@
           // A system interruption (notification, app switch, gesture) must release the
           // joystick cleanly and must never fire an accidental shot or Super.
           if(!cancelled&&scr==='game'&&me&&(me.smokeTimer||0)<=0&&(me.ramuShieldTimer||0)<=0){
+            if(me.b==='hacker'&&Math.hypot(state.x-state.ox,state.y-state.oy)>18){const wx=state.x/z+cam.x,wy=state.y/z+cam.y;let target=null,bestDistance=38;for(const q of P){if(q===me||!q.alive||(gameMode!=='showdown'&&q.t===me.t))continue;const d=Math.hypot(q.x-wx,q.y-wy);if(d<bestDistance){bestDistance=d;target=q;}}if(target){hackerSelectedTarget=target;me.a=Math.atan2(target.y-me.y,target.x-me.x);beep(680,.08,.03,'triangle',100);state.active=false;state.id=null;continue;}}
             if(k==='a'){
               if(Math.hypot(state.x-state.ox,state.y-state.oy)>18){
                 me.a=Math.atan2(state.y-state.oy,state.x-state.ox);
@@ -1318,7 +1319,7 @@
     }
     function fire(p,s){
       p.nh=0;p.hc=0;
-      if(p.b==='hacker'&&!s){if(p.hackerDroneControl||p.am<1||p.cd>0||p.tf>0)return;const ox=p.hackerDroneX,oy=p.hackerDroneY,target=degesAimTarget({...p,x:ox,y:oy},p.k.rng),a=target.angle,level=p.hackerUpgrades||0,damage=p.k.dmg+level*85;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',a,{targetX:target.x,targetY:target.y});B.push({x:ox+Math.cos(a)*16,y:oy+Math.sin(a)*16,vx:Math.cos(a)*p.k.bs,vy:Math.sin(a)*p.k.bs,r:p.k.rng,flightRange:p.k.rng,d:damage,t:p.t,o:p,s:false,z:8+level*.5,col:'#39ffb6',malware:true,malwareType:['MALWARE DETECTED','RANSOMWARE','SPYWARE','CORRUPTED DATA'][Math.floor(Math.random()*4)],remoteVisual:networkMode&&p!==me});p.hackerUpgrades=Math.min(10,level+1);p.am--;p.cd=p.k.rel;p.rec=.12;shake=Math.max(shake,2);beep(520,.08,.035,'square',90);for(let i=0;i<7;i++)puff(ox+Math.cos(a)*14,oy+Math.sin(a)*14,1,'#39ffb6',.7);return;}
+      if(p.b==='hacker'&&!s){if(p.hackerDroneControl||p.am<1||p.cd>0||p.tf>0)return;const ox=p.hackerDroneX,oy=p.hackerDroneY,target=degesAimTarget({...p,x:ox,y:oy},p.k.rng),a=target.angle,level=p.hackerUpgrades||0,damage=p.k.dmg+level*85;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',a);B.push({x:ox+Math.cos(a)*16,y:oy+Math.sin(a)*16,vx:Math.cos(a)*p.k.bs,vy:Math.sin(a)*p.k.bs,r:p.k.rng,flightRange:p.k.rng,d:damage,t:p.t,o:p,s:false,z:8+level*.5,col:'#39ffb6',malware:true,malwareType:['MALWARE DETECTED','RANSOMWARE','SPYWARE','CORRUPTED DATA'][Math.floor(Math.random()*4)],remoteVisual:networkMode&&p!==me});p.hackerUpgrades=Math.min(10,level+1);p.am--;p.cd=p.k.rel;p.rec=.12;shake=Math.max(shake,2);beep(520,.08,.035,'square',90);for(let i=0;i<7;i++)puff(ox+Math.cos(a)*14,oy+Math.sin(a)*14,1,'#39ffb6',.7);return;}
       if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet){
         const target=p.b==='deges'?degesAimTarget(p,300):null;
         window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,...(target?{targetX:target.x,targetY:target.y,beerRange:target.range}:{})});
