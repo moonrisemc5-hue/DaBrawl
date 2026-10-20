@@ -86,6 +86,15 @@ test("slides along obstacle faces and validates obstacle geometry", async () => 
   assert.throws(() => movePlayerWithObstacles(100, 100, 1, 1, { ...world, obstacles: [{ x: 0, y: 0, width: -1, height: 10 }] }), /Invalid world obstacle/);
 });
 
+test("landing on water can be resolved to the nearest safe dry position", () => {
+  const waterWorld = { width: 320, height: 240, margin: 0, obstacles: [{ x: 96, y: 72, width: 48, height: 48, tile: "~" }] };
+  const [landing] = resolvePlayerCollisions([{ x: 120, y: 96 }], waterWorld, PLAYER_RADIUS);
+  const nearestX = Math.max(96, Math.min(144, landing.x));
+  const nearestY = Math.max(72, Math.min(120, landing.y));
+  assert.ok(Math.hypot(landing.x - nearestX, landing.y - nearestY) >= PLAYER_RADIUS - 1e-7);
+  assert.notDeepEqual(landing, { x: 120, y: 96 });
+});
+
 test("player separation cannot nudge players into solid map obstacles", () => {
   const obstacleWorld = { width: 800, height: 520, margin: 0, obstacles: [{ x: 300, y: 180, width: 48, height: 48 }] };
   const resolved = resolvePlayerCollisions([{ x: 285, y: 200 }, { x: 285, y: 200 }], obstacleWorld);
