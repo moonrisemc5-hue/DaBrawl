@@ -1418,7 +1418,7 @@ function gadget(p){
         }
         for(const p of P){const prev=aiFramePositions.get(p);if(!prev||dt<=0)continue;let vx=(p.x-prev.x)/dt,vy=(p.y-prev.y)/dt;const cap=(BR[p.b]?.spd||150)*1.8,v=Math.hypot(vx,vy);if(v>cap){vx*=cap/v;vy*=cap/v;}p.aiVx=(p.aiVx||0)*.35+vx*.65;p.aiVy=(p.aiVy||0)*.35+vy*.65;}
         for(let i=B.length-1;i>=0;i--){
-          const b=B[i]; let dead=false; const sp=Math.hypot(b.vx,b.vy);
+          const b=B[i]; let dead=false; if(b.iceBall&&b.wait>0){b.wait=Math.max(0,b.wait-dt);continue;} const sp=Math.hypot(b.vx,b.vy);
           for(let s=0;s<3&&!dead;s++){
             const k=dt/3; b.x+=b.vx*k; b.y+=b.vy*k; b.r-=sp*k; if(b.beer||b.cigar)b.flightT=(b.flightT||0)+k;
             const ti=Math.floor(b.x/T), tj=Math.floor(b.y/T);
@@ -2072,6 +2072,7 @@ function gadget(p){
         g.strokeStyle='#bae6fd'; g.lineWidth=2+p.chg*3; g.beginPath(); g.arc(ca*31,sa*31,rr+5,0,Math.PI*2); g.stroke();
         g.restore();
       }
+      if(p.freeze>0&&p.alive){g.save();g.globalAlpha=.48;g.fillStyle='#38bdf8';g.beginPath();g.arc(0,0,24,0,Math.PI*2);g.fill();g.globalAlpha=1;g.strokeStyle='#dff8ff';g.lineWidth=2;g.beginPath();g.arc(0,0,27,0,Math.PI*2);g.stroke();g.restore();}
       if(p.fireBurn>0&&p.alive){g.save();g.globalCompositeOperation='lighter';for(let i=0;i<5;i++){const a=Date.now()*.008+i*Math.PI*2/5,rr=17+Math.sin(Date.now()*.02+i)*3;g.fillStyle=i%2?'#ff3b16':'#ffd35a';g.globalAlpha=.8;g.beginPath();g.ellipse(Math.cos(a)*rr,-7+Math.sin(a)*rr*.65,4,8,a,0,Math.PI*2);g.fill();}g.globalAlpha=1;g.restore();}
       if(p.ramuShield>0&&p.b==='ramu'){g.save();g.strokeStyle='#a8f4ff';g.lineWidth=3;g.shadowColor='#6ee7ff';g.shadowBlur=12;g.beginPath();g.arc(0,0,29+Math.sin(Date.now()*.012)*2,0,Math.PI*2);g.stroke();g.strokeStyle='#e8fcff';g.lineWidth=1.5;g.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3+Date.now()*.0005,x=Math.cos(a)*29,y=Math.sin(a)*29;i?g.lineTo(x,y):g.moveTo(x,y);}g.closePath();g.stroke();g.restore();}
       if(p.tf>0&&p.b==='ramu'){g.save();g.globalCompositeOperation='lighter';for(let i=0;i<10;i++){const a=Date.now()*.004+i*Math.PI*2/10,rr=34+Math.sin(Date.now()*.01+i)*5;g.fillStyle=p.ramuMode?'#ff6a22':'#9cecff';g.globalAlpha=.85;g.beginPath();g.arc(Math.cos(a)*rr,Math.sin(a)*rr,3,0,Math.PI*2);g.fill();}g.globalAlpha=1;g.restore();}
