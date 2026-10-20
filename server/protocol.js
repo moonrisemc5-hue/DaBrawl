@@ -42,10 +42,11 @@ export function parseClientMessage(raw) {
       if (message.aim !== undefined && !Number.isFinite(message.aim)) throw new Error("Invalid aim");
       break;
     case "action":
-      onlyKeys("type", "action", "angle", "form", "clientSentAt");
-      if (!["fire", "super", "transform", "gadget", "kame-start", "kame-release", "add-bot", "ping"].includes(message.action)) throw new Error("Unsupported action");
+      onlyKeys("type", "action", "angle", "form", "ramuMode", "clientSentAt");
+      if (!["fire", "super", "transform", "gadget", "kame-start", "kame-release", "ramu-flame-start", "ramu-flame-stop", "add-bot", "ping"].includes(message.action)) throw new Error("Unsupported action");
       if (message.angle !== undefined && !Number.isFinite(message.angle)) throw new Error("Invalid angle");
       if (message.form !== undefined && !Number.isFinite(message.form)) throw new Error("Invalid form");
+      if (message.ramuMode !== undefined && !["fire", "ice"].includes(message.ramuMode)) throw new Error("Invalid Ramu mode");
       if (message.clientSentAt !== undefined && !Number.isFinite(message.clientSentAt)) throw new Error("Invalid ping timestamp");
       break;
     case "ping":
