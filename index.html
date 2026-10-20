@@ -1081,6 +1081,7 @@
       setTimeout(()=>{ p.muiCharging=0; KM.push({o:p,a:p.a,x:p.x,y:p.y,len:MW*T,w:100,d:7000,t:.8,m:.8,tk:0,col:'#ffffff',destroys:true}); shake=35; playKameSound(); }, 1200);
     }
     function fire(p,s){
+      if(p.b==='ramu'&&(p.freeze>0||p.ramuShield>0||p.ramuLeap>0))return;
       if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet) window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,super:false});
       K=p.k; if(s&&K.lg){ leap(p,0); return; }
       if(p.b==='ramu'){
@@ -1442,7 +1443,7 @@ function gadget(p){
               }
               if(isOwner||((gameMode==='knockout'||gameMode==='duo'||gameMode==='trio')&&target.t===zone.team)){
                 const healed=Math.min(target.mh-target.hp,zone.heal);
-                if(healed>0){target.hp+=healed;puff(target.x,target.y,5,'#7df9a5',.7);}
+                if(healed>0){target.hp+=healed;F.push({k:'t',x:target.x,y:target.y-28,vx:0,vy:-38,l:.75,m:.75,tx:'+'+Math.round(healed),c:'#72ff78'});puff(target.x,target.y,5,'#7df9a5',.7);}
               }else{
                 const last=zone.lastHit.get(target)||0;
                 if(nowMs<last)continue;
