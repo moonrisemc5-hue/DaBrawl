@@ -943,7 +943,7 @@
       button.addEventListener('contextmenu',e=>e.preventDefault());
     }
     $('leaveBtn').onclick = () => { if(scr==='game' && gameMode==='showdown' && me && !me.alive && (G?.ph==='play'||G?.ph==='end')){ finish(); return; } show('menu'); isTestMode = false; };
-    $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ if(isNetworkHost) void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
+    $('again').onclick = () => { beep(500,.1); if(lastMatchWasOnline){ void window.DaBrawlNet?.requestRematch(); }else startLoadingScreen(isTestMode); };
     $('home').onclick = () => { try{localStorage.removeItem('dabrawl_active_match');}catch(_){} beep(300,.1); if(lastMatchWasOnline && isNetworkHost) void window.DaBrawlNet?.hostLeaveMatch(); else { show('menu'); isTestMode = false; } };
     $('play').onclick = () => {
       if(window.DaBrawlNet?.isInParty()){window.DaBrawlNet.toggleReady?.();return;}
@@ -1382,7 +1382,7 @@ function gadget(p){
             const ti=Math.floor(b.x/T), tj=Math.floor(b.y/T);
             if(b.r<=0){ dead=true; if(b.remoteVisual&&!b.greenBeer){degesImpactVisual(b.x,b.y,b);}else if(b.beer||b.cigar) degesSplash(b.x,b.y,b); else puff(b.x,b.y,1,'#ffe9a0',.3); }
             else if(b.bn>0 && tile(b.x,b.y)=='#'){ b.x-=b.vx*k; b.y-=b.vy*k; if(tile(b.x+b.vx*k,b.y)=='#') b.vx=-b.vx; else b.vy=-b.vy; b.bn--; }
-            else if(!b.beer&&tile(b.x,b.y)=='#'){ dead=true; if(b.cigar) degesSplash(b.x,b.y,b); if(b.s && ti>0 && tj>0 && ti<MW-1 && tj<MH-1){ M[tj][ti]='.'; if(networkMode && b.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
+            else if(tile(b.x,b.y)=='#'){ dead=true; if(b.cigar||b.beer) degesSplash(b.x,b.y,b); if(b.s && ti>0 && tj>0 && ti<MW-1 && tj<MH-1){ M[tj][ti]='.'; if(networkMode && b.o===me && window.DaBrawlNet) window.DaBrawlNet.sendAction('wall-break',0,{i:ti,j:tj}); puff(ti*T+T/2,tj*T+T/2,8,'#8a5a2b',1.2); beep(80,.2,.2,'sawtooth',-40); } else puff(b.x,b.y,2,'#fff',.4); }
             else if(networkMode && b.o?.netRemote){ /* remote owner's browser resolves hits */ }
           else for(const e of P){ if(!b.beer && !b.greenBeer && e!==b.o && e.alive && !e.lp && !(e.tf>0) && Math.hypot(e.x-b.x,e.y-b.y)<20+(b.z>9?b.z-9:0)){
             const sameTeam=e.t===b.t;
@@ -2830,10 +2830,11 @@ function gadget(p){
       if(mode==='duo'&&players.length>2){status('Duo Showdown supports a party of 2. Use Trio Showdown for 3 party members.',true);return;}
       const presence=roomChannel?.presenceState?.()||{};
       const live=Object.values(presence).flat().filter(p=>p&&p.userId);
+      const partyJoinedAt=Date.now();
       const partyMembers=players.map((p,i)=>{
         const online=live.find(x=>x.userId===p.user_id);
         if(!online?.clientId)return null;
-        return {clientId:online.clientId,name:online.name||('Player '+(i+1)),brawler:p.character_id||'kuku',partyId:currentRoom.id,partyOrder:i,joinedAt:queueStartedAt||Date.now()};
+        return {clientId:online.clientId,name:online.name||('Player '+(i+1)),brawler:p.character_id||'kuku',partyId:currentRoom.id,partyOrder:i,joinedAt:partyJoinedAt};
       }).filter(Boolean);
       if(partyMembers.length!==players.length){status('A party member is reconnecting. Wait until everyone is online, then try again.',true);return;}
       const hostClientId=live.find(x=>x.userId===user.id)?.clientId;
