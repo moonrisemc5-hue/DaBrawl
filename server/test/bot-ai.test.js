@@ -39,3 +39,30 @@ test("bot chooses a collision-safe route around an obstacle",()=>{
  assert.ok(Math.hypot(next.x-nearestX,next.y-nearestY)>=PLAYER_RADIUS-1e-7);
  assert.ok(!(Math.abs(d.input.x-1)<1e-9 && Math.abs(d.input.y)<1e-9));
 });
+
+
+test("healthy bots commit to a nearby Degeš instead of hiding",()=>{
+ const fighter={...bot,hp:7000,maxHp:7000};
+ const deges={...enemy,brawler:"deges",x:260,y:100,maxHp:7600};
+ const d=decideBotAction(fighter,[fighter,deges],world,5000);
+ assert.equal(d.targetId,"enemy");assert.equal(d.action,"fire");
+});
+
+test("critically hurt bots retreat from Degeš and dodge an approaching shot",()=>{
+ const fighter={...bot,hp:1500,maxHp:7000,x:300,y:100};
+ const deges={...enemy,brawler:"deges",x:500,y:100,maxHp:7600};
+ const retreat=decideBotAction(fighter,[fighter,deges],world,5000);
+ assert.ok(retreat.input.x<0);
+ const healthy={...fighter,hp:7000};
+ const incoming={ownerId:"enemy",team:1,x:420,y:100,angle:Math.PI,speed:300};
+ const dodge=decideBotAction(healthy,[healthy,deges],world,5000,[incoming]);
+ assert.ok(Math.abs(dodge.input.y)>.1);
+});
+
+test("critically injured Degeš bots use the stationary smoke-to-heal channel",()=>{
+ const healer={...bot,brawler:"deges",hp:1800,maxHp:7600,gadgetReadyAt:0};
+ const ally={id:"ally",team:0,x:145,y:100,hp:2500,maxHp:7000,alive:true,connected:true};
+ const foe={...enemy,x:420,y:100};
+ const d=decideBotAction(healer,[healer,ally,foe],world,5000);
+ assert.equal(d.action,"gadget");assert.equal(d.gadgetTargetId,null);
+});
