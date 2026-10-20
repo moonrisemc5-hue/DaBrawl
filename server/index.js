@@ -381,7 +381,7 @@ function stepRoom(room, dt) {
       const stats=getBrawlerStats(p),oldX=p.x,oldY=p.y;
       if(p.smokeUntil>t||p.frozenUntil>t||p.ramuShieldUntil>t||(p.ramuDiveUntil>t&&t<(p.ramuDiveMoveAt||0)))p.input={x:0,y:0};
       const droneMoving=p.brawler==="hacker"&&p.hackerDroneControl&&!(p.hackTargetId&&p.hackUntil>t);
-      const movementInput=(p.brawler==="hacker"&&!droneMoving)||(p.hackTargetId&&p.hackUntil>t)?{x:0,y:0}:p.input;
+      const movementInput=(p.brawler==="hacker")||(p.hackTargetId&&p.hackUntil>t)?{x:0,y:0}:p.input;
       if(droneMoving){const d=movementDelta(p.input.x,p.input.y,220,dt);p.hackerDroneX=clamp(p.hackerDroneX+d.x,room.world.margin+PLAYER_RADIUS,room.world.width-room.world.margin-PLAYER_RADIUS);p.hackerDroneY=clamp(p.hackerDroneY+d.y,room.world.margin+PLAYER_RADIUS,room.world.height-room.world.margin-PLAYER_RADIUS);}
       const {x:dx,y:dy}=movementDelta(movementInput.x,movementInput.y,stats.speed,dt);
       if(p.ramuDiveUntil>t&&t>=(p.ramuDiveMoveAt||0)){const divePosition=clampPlayerPosition(p.x+dx,p.y+dy,room.world,PLAYER_RADIUS);p.x=divePosition.x;p.y=divePosition.y;}
