@@ -118,7 +118,7 @@ function doFire(room, p, isSuper = false, options = {}) {
     const target=room.players.get(options.targetId||"");if(!target||!isTargetDamageable(target,p,t)||target===p)return;
     const ox=Number.isFinite(options.droneX)?options.droneX:p.hackerDroneX,oy=Number.isFinite(options.droneY)?options.droneY:p.hackerDroneY;
     if(Math.hypot(target.x-ox,target.y-oy)>stats.range)return;
-    p.lastFire=t;p.hackerAmmo=Math.max(0,(p.hackerAmmo??2)-1);if(p.hackerAmmoReloadAt<=0)p.hackerAmmoReloadAt=t+stats.cooldown;const level=Math.min(10,p.hackerUpgrades||0),damage=Math.max(1,Math.round((stats.damage+level*85)*(.88+Math.random()*.24))),types=["MALWARE DETECTED","RANSOMWARE","SPYWARE","CORRUPTED DATA"],malwareType=types[Math.floor(Math.random()*types.length)];p.hackerUpgrades=Math.min(10,level+1);
+    p.lastFire=t;p.hackerAmmo=Math.max(0,(p.hackerAmmo??2)-1);if(p.hackerAmmo===0&&p.hackerAmmoReloadAt<=0)p.hackerAmmoReloadAt=t+stats.cooldown;const level=Math.min(10,p.hackerUpgrades||0),damage=Math.max(1,Math.round((stats.damage+level*85)*(.88+Math.random()*.24))),types=["MALWARE DETECTED","RANSOMWARE","SPYWARE","CORRUPTED DATA"],malwareType=types[Math.floor(Math.random()*types.length)];p.hackerUpgrades=Math.min(10,level+1);
     target.lastHitAt=t;target.hp=Math.max(0,target.hp-damage);target.meter=clamp(target.meter+12,0,100);p.meter=clamp(p.meter+12,0,100);
     event(room,"hit",{attackerId:p.id,targetId:target.id,damage,hp:target.hp,malware:true,malwareType,upgrade:p.hackerUpgrades});
     if(target.hp<=0){target.alive=false;cancelKameCharge(target);target.input={x:0,y:0};event(room,"knockout",{playerId:target.id,by:p.id});}
