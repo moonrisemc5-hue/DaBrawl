@@ -759,7 +759,8 @@
       shachi: {nm:'SHACHI', rarity:'UNCOMMON', rarityCol:'#2cd853', hp:10000, spd:145, pel:2, dmg:1000, spr:.2, rng:160, bs:480, rel:1.2, sd:2000, sr:280, sRad:120, lg:1, gd:800, gr:80, gr2:280, w:55, z:11, cm:0.6, cls:'TANK', atkNm:'2000 DMG', supNm:'ORCA SLAM', info:'Shachi strikes enemies with twin fists!'},
       saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'TRANSFORMER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'},
       deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b16cff', hp:7600, spd:138, pel:1, dmg:1062, spr:0, rng:300, bs:430, rel:2.4, sd:1375.5, sr:110, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'1062 DMG', supNm:'BEER BARRAGE', gadgetNm:'2s SMOKE · FULL HEAL', info:'Hooded masked gangster in a black puffer and grey joggers. His gadget is a stationary two-second smoke channel that fully heals him; he remains vulnerable.'},
-      ramu: {nm:'RAMU', rarity:'MYTHIC', rarityCol:'#ef4444', hp:8000, spd:142, pel:1, dmg:1000, spr:0, rng:250, bs:480, rel:1.25, mode:1, sd:2000, sr:110, w:120, z:12, cm:0.55, freezeHits:8, fireDamage:1000, fireTickMs:350, fireInitialReach:.4, fireRange:285, fireEnergyDrain:.18, fireSuperCharge:6.6, freezeDuration:2, gadgetDiveCooldown:20, cls:'TRANSFORMER', atkNm:'ICE BURST / FIRE LANCE', supNm:'TRANSFORM MODE', gadgetNm:'ICE CUBE / FLAME DIVE', info:'Transform into fire or ice.'}
+      ramu: {nm:'RAMU', rarity:'MYTHIC', rarityCol:'#ef4444', hp:8000, spd:142, pel:1, dmg:1000, spr:0, rng:250, bs:480, rel:1.25, mode:1, sd:2000, sr:110, w:120, z:12, cm:0.55, freezeHits:8, fireDamage:1000, fireTickMs:350, fireInitialReach:.4, fireRange:285, fireEnergyDrain:.18, fireSuperCharge:6.6, freezeDuration:2, gadgetDiveCooldown:20, cls:'TRANSFORMER', atkNm:'ICE BURST / FIRE LANCE', supNm:'TRANSFORM MODE', gadgetNm:'ICE CUBE / FLAME DIVE', info:'Transform into fire or ice.'},
+      hacker: {nm:'HACKER', rarity:'LEGENDARY', rarityCol:'#39ffb6', hp:6800, spd:125, pel:1, dmg:620, spr:0, rng:470, bs:520, rel:2.8, sd:0, sr:0, w:74, z:5, cm:0.45, cls:'CONTROL / DAMAGE', atkNm:'MALWARE DRONE', supNm:'SYSTEM TAKEOVER', gadgetNm:'REMOTE LINK · 3S', info:'A long-range malware drone upgrades with every attack. Select an enemy and activate System Takeover to control them for 4 seconds.'}
     };
     const FM = [
       {},
@@ -772,6 +773,7 @@
     let K = BR.kuku;
     const NM = ["Pip","Rex","Mochi","Zed","Bolt","Nova","Juno","Taco","Blaze","Jax","Vex","Zane"];
     let P=[], B=[], F=[], MT=[], KM=[], me, G, cam={x:0,y:0}, shake=0, wf=0, touch=false, matchEliminations=0, teamEliminations=0, teamEliminationOrder={};
+    let hackerSelectedTarget=null, hackerHackTarget=null, hackerHackTimer=0, hackerBinaryRain=0;
     let selB='kuku'; try { selB = localStorage.getItem('dabrawl_b') || 'kuku'; if(!BR[selB]) selB='kuku'; } catch(e){}
     const brawlerKeys = Object.keys(BR);
     function cycleBrawler(dir){
@@ -799,7 +801,7 @@
         if(!valid){ xPos = 2.5 * T; yPos = 2.5 * T; }
       } else { xPos = (t?26.5:1.5)*T; yPos = ([5,7,10][i%3]+.5)*T; }
       const maxH = BR[b].hp;
-      return {b, k:BR[b], lp:null, h:0, ramuWaterHop:0, form:0, ramuMode:'ice', ramuTransform:b==='ramu'?1.05:0, ramuTransformTarget:b==='ramu'?'ice':'none', fireEnergy:1, fireLock:0, ramuDiveTimer:0, ramuDiveLift:0, ramuFireActive:false, ramuFireTick:0, ramuFireLength:0, ramuFireLengthMax:0, ramuWallSyncTimer:0, ramuIceBurstRemaining:0, ramuIceBurstTimer:0, ramuIceBurstIndex:0, ramuIceBurstAim:0, ramuShieldTimer:0, smokeTimer:0, freezeMeter:0, frozenTimer:0, burnTimer:0, burnTick:0, burnOwner:null, burst:0, holdT:0, chg:0, dodge:0, dodgeFx:0, tf:0, kcd:0, bt:0, kmt:0, hw:0, alt:0, t, human, name, x:xPos, y:yPos, hp:isDummy?99999:maxH, mh:isDummy?99999:maxH, am:3, sc:0, a:t?Math.PI:0, alive:true, dt:0, fl:0, dash:0, dd:0, gcd:0, cd:0, nh:9, mx:0, my:0, walk:0, rec:0, sw:0, sd:1, isDummy, autoAimTimer:0, wasOnCd:false, gasTimer:0, muiCharging:0, kaioken:0, ss2:0, ss2Cooldown:0, afterimages:[]};
+      return {b, k:BR[b], hackerDroneX:xPos+44, hackerDroneY:yPos-24, hackerDroneControl:false, hackerUpgrades:0, hackerMalwareTimer:0, lp:null, h:0, ramuWaterHop:0, form:0, ramuMode:'ice', ramuTransform:b==='ramu'?1.05:0, ramuTransformTarget:b==='ramu'?'ice':'none', fireEnergy:1, fireLock:0, ramuDiveTimer:0, ramuDiveLift:0, ramuFireActive:false, ramuFireTick:0, ramuFireLength:0, ramuFireLengthMax:0, ramuWallSyncTimer:0, ramuIceBurstRemaining:0, ramuIceBurstTimer:0, ramuIceBurstIndex:0, ramuIceBurstAim:0, ramuShieldTimer:0, smokeTimer:0, freezeMeter:0, frozenTimer:0, burnTimer:0, burnTick:0, burnOwner:null, burst:0, holdT:0, chg:0, dodge:0, dodgeFx:0, tf:0, kcd:0, bt:0, kmt:0, hw:0, alt:0, t, human, name, x:xPos, y:yPos, hp:isDummy?99999:maxH, mh:isDummy?99999:maxH, am:3, sc:0, a:t?Math.PI:0, alive:true, dt:0, fl:0, dash:0, dd:0, gcd:0, cd:0, nh:9, mx:0, my:0, walk:0, rec:0, sw:0, sd:1, isDummy, autoAimTimer:0, wasOnCd:false, gasTimer:0, muiCharging:0, kaioken:0, ss2:0, ss2Cooldown:0, afterimages:[]};
     }
     let activeLoadingTimer=null, loadingGeneration=0;
     function startLoadingScreen(test=false){
@@ -820,6 +822,7 @@
       },120);
     }
     function startGame(test=false){
+      hackerSelectedTarget=null;hackerHackTarget=null;hackerHackTimer=0;hackerBinaryRain=0;
       if(activeLoadingTimer){clearInterval(activeLoadingTimer);activeLoadingTimer=null;}
       loadingGeneration++;
       isTestMode = test; if(!test && !networkMode){try{localStorage.setItem('dabrawl_active_match','active');}catch(_){}} else {try{localStorage.removeItem('dabrawl_active_match');}catch(_){}} mapVariant=Math.floor(Math.random()*3); const n = [...NM].sort(() => Math.random()-.5);
@@ -916,6 +919,8 @@
     function initAccountControlPositions(){void loadStickPositionsAccount().then(applyControlPositions);}
     window.addEventListener('resize',applyControlPositions);
     function getTouchPos(t){ const rect = cv.getBoundingClientRect(); return { x: (t.clientX - rect.left) * (W / rect.width), y: (t.clientY - rect.top) * (H / rect.height) }; }
+    cv.addEventListener('click',e=>{if(scr!=='game'||!me||me.b!=='hacker'||touch||hackerBinaryRain>0)return;const pos=getTouchPos(e),wx=pos.x/z+cam.x,wy=pos.y/z+cam.y;let best=null,bd=34;for(const q of P){if(q===me||!q.alive||(gameMode!=='showdown'&&q.t===me.t))continue;const d=Math.hypot(q.x-wx,q.y-wy);if(d<bd){bd=d;best=q;}}if(best){hackerSelectedTarget=best;me.a=Math.atan2(best.y-me.y,best.x-me.x);beep(680,.08,.03,'triangle',100);}});
+    addEventListener('keydown',e=>{if(scr!=='game'||!me||me.b!=='hacker'||e.key!=='Tab')return;e.preventDefault();const enemies=P.filter(q=>q!==me&&q.alive&&(gameMode==='showdown'||q.t!==me.t));if(!enemies.length)return;const i=enemies.indexOf(hackerSelectedTarget);hackerSelectedTarget=enemies[(i+1)%enemies.length];me.a=Math.atan2(hackerSelectedTarget.y-me.y,hackerSelectedTarget.x-me.x);});
     cv.addEventListener('touchstart', e => {
       e.preventDefault(); touch=true;
       for(const t of e.changedTouches){
@@ -988,12 +993,13 @@
     }
     addEventListener('blur',clearGameInput);
     document.addEventListener('visibilitychange',()=>{if(document.hidden)clearGameInput();});
-    $('sup').setAttribute('aria-label','Super ability — drag to aim, tap to auto-aim');
+    $('sup').setAttribute('aria-label','Super ability — Hacker: select an enemy, then activate System Takeover; other brawlers use their normal Super');
     $('gad').setAttribute('aria-label','Gadget ability');
     $('sup').style.touchAction='none';$('gad').style.touchAction='manipulation';
     let superPointer=null,superStart=null,superCurrent=null,superDragged=false;
     function useSuperFromGesture(){
       if(scr!=='game'||!me||me.sc<1||me.tf>0)return;
+      if(me.b==='hacker'){sup(me);return;}
       // Saiyan's Super button is used for transformations before MUI. Only the
       // mastered Ultra Instinct form gets drag-to-aim for its final beam.
       const canAimSaiyan=!!(me.k?.sy&&me.form===5&&FM[me.form]?.isMUI);
@@ -1291,6 +1297,7 @@
     function sup(p){
       if(G.ph!='play'||!p.alive||p.sc<1||p.tf>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
       p.nh=0;p.hc=0;
+      if(p.b==='hacker'){const target=hackerSelectedTarget;if(!target||!target.alive||target===p||(gameMode!=='showdown'&&target.t===p.t)||Math.hypot(target.x-p.x,target.y-p.y)>430){beep(160,.16,.05,'square',-30);return;}if(networkMode){beep(160,.16,.05,'square',-30);return;}hackerHackTarget=target;hackerHackTimer=4;hackerBinaryRain=4;target.hackerControlledBy=p;target.hackerControlTimer=4;p.hackerDroneControl=false;p.sc=0;p.chg=0;p.holdT=0;shake=Math.max(shake,12);beep(880,.22,.06,'sawtooth',-260);for(let i=0;i<30;i++)puff(target.x+(Math.random()-.5)*36,target.y+(Math.random()-.5)*42,1,'#39ffb6',1.4);return;}
       if(p.b==='ramu'){
         const nextMode=p.ramuMode==='fire'?'ice':'fire';
         if(networkMode&&window.DaBrawlNet){if(p===me)window.DaBrawlNet.sendAction('super',p.a,{ramuMode:nextMode});else if(isNetworkHost&&p.isBot)window.DaBrawlNet.sendAction('super',p.a,{playerId:p.netId,ramuMode:nextMode});}
@@ -1311,6 +1318,7 @@
     }
     function fire(p,s){
       p.nh=0;p.hc=0;
+      if(p.b==='hacker'&&!s){if(p.hackerDroneControl||p.am<1||p.cd>0||p.tf>0)return;const ox=p.hackerDroneX,oy=p.hackerDroneY,target=degesAimTarget({...p,x:ox,y:oy},p.k.rng),a=target.angle,level=p.hackerUpgrades||0,damage=p.k.dmg+level*85;if(networkMode&&p===me&&window.DaBrawlNet)window.DaBrawlNet.sendAction('fire',a,{targetX:target.x,targetY:target.y});B.push({x:ox+Math.cos(a)*16,y:oy+Math.sin(a)*16,vx:Math.cos(a)*p.k.bs,vy:Math.sin(a)*p.k.bs,r:p.k.rng,flightRange:p.k.rng,d:damage,t:p.t,o:p,s:false,z:8+level*.5,col:'#39ffb6',malware:true,malwareType:['MALWARE DETECTED','RANSOMWARE','SPYWARE','CORRUPTED DATA'][Math.floor(Math.random()*4)],remoteVisual:networkMode&&p!==me});p.hackerUpgrades=Math.min(10,level+1);p.am--;p.cd=p.k.rel;p.rec=.12;shake=Math.max(shake,2);beep(520,.08,.035,'square',90);for(let i=0;i<7;i++)puff(ox+Math.cos(a)*14,oy+Math.sin(a)*14,1,'#39ffb6',.7);return;}
       if(!s && networkMode && isNetworkHost && p.isBot && !p.netRemote && window.DaBrawlNet){
         const target=p.b==='deges'?degesAimTarget(p,300):null;
         window.DaBrawlNet.sendAction('bot-fire',p.a,{playerId:p.netId,...(target?{targetX:target.x,targetY:target.y,beerRange:target.range}:{})});
@@ -1391,6 +1399,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     }
     function gadget(p){
       if(G.ph!='play'||!p.alive||p.gcd>0||p.dash>0||p.lp||p.tf>0||p.muiCharging>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
+      if(p.b==='hacker'){p.hackerDroneControl=!p.hackerDroneControl;p.gcd=3;p.chg=0;p.holdT=0;beep(p.hackerDroneControl?720:420,.12,.04,'triangle',p.hackerDroneControl?180:-100);return;}
       if(networkMode&&(p===me||(isNetworkHost&&p.isBot&&p.netId))&&window.DaBrawlNet){const extra=p!==me?{playerId:p.netId}:{};window.DaBrawlNet.sendAction('gadget',p.a,extra);}
       p.chg=0; p.holdT=0;
       if(p.b==='ramu'){
@@ -1440,7 +1449,9 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     }
     function mv(p,dx,dy){ const r=15;if(p.ramuDiveTimer>0&&p.ramuDiveLift<=0){p.x=Math.max(r,Math.min(MW*T-r,p.x+dx));p.y=Math.max(r,Math.min(MH*T-r,p.y+dy));return;}if(!hitW(p.x+dx,p.y,r))p.x+=dx;if(!hitW(p.x,p.y+dy,r))p.y+=dy; }
     function step(p,ix,iy,dt){
-      K=p.k; const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
+      K=p.k;
+      if(p.b==='hacker'&&p.hackerDroneControl){const l=Math.hypot(ix,iy);p.mx=l?ix/l:0;p.my=l?iy/l:0;if(l>.05){const m=Math.min(1,l);p.hackerDroneX=Math.max(18,Math.min(MW*T-18,p.hackerDroneX+p.mx*m*220*dt));p.hackerDroneY=Math.max(18,Math.min(MH*T-18,p.hackerDroneY+p.my*m*220*dt));}return;}
+      const isBeamShooting = KM.some(k=>k.o===p), isMaxCharging = (p.k.sy && p.k.mode===0 && p.chg>=0.95);
       if(p.muiCharging>0||isBeamShooting||isMaxCharging||(p.ramuShieldTimer||0)>0||(p.smokeTimer||0)>0||(p.ramuDiveLift||0)>0){p.mx=p.my=0;return;}
       const l = Math.hypot(ix,iy); p.mx = l?ix/l:0; p.my = l?iy/l:0;
       if(p.dash>0){ p.dash-=dt; mv(p, Math.cos(p.dd)*780*dt, Math.sin(p.dd)*780*dt); if(Math.random()<.6) puff(p.x,p.y,1,'#fff',.3); }
@@ -1448,6 +1459,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     }
     function dmg(t,b){
       if(t.ramuDiveTimer>0)return;
+      if(b?.malware){t.hackerMalwareTimer=1.2;F.push({k:'t',x:t.x,y:t.y-36,vx:0,vy:-40,l:1.1,m:1.1,tx:b.malwareType||'MALWARE DETECTED',c:'#39ffb6'});for(let i=0;i<12;i++)puff(t.x+(Math.random()-.5)*25,t.y+(Math.random()-.5)*28,1,'#39ffb6',.8);}
       if((t.shieldTimer||0)>0||(t.ramuShieldTimer||0)>0){F.push({k:'p',x:t.x+(Math.random()-.5)*24,y:t.y+(Math.random()-.5)*30,vx:0,vy:0,l:.18,m:.18,c:'#8be9ff',s:18});return;}
       // Only the target's browser changes their health. The attacker's browser sends a hit request.
       if(networkMode && t.netRemote){
@@ -1567,6 +1579,8 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     }
     function upd(dt){
       const aiFramePositions=new Map(P.map(p=>[p,{x:p.x,y:p.y}]));
+      if(hackerHackTimer>0){hackerHackTimer=Math.max(0,hackerHackTimer-dt);hackerBinaryRain=Math.max(0,hackerBinaryRain-dt);if(hackerHackTarget){hackerHackTarget.hackerControlTimer=Math.max(0,(hackerHackTarget.hackerControlTimer||0)-dt);if(hackerHackTarget.hackerControlTimer<=0){hackerHackTarget.hackerControlledBy=null;hackerHackTarget=null;}}}
+      for(const q of P){if(q.b==='hacker'&&!q.hackerDroneControl){q.hackerDroneX+=(q.x+Math.cos(q.a+0.65)*48-q.hackerDroneX)*Math.min(1,dt*2.5);q.hackerDroneY+=(q.y+Math.sin(q.a+0.65)*48-q.hackerDroneY)*Math.min(1,dt*2.5);}}
       shake = Math.max(0, shake - dt*30);
       if(G.ph=='play' && !isTestMode){ gasDist += (Math.max(MW, MH) / 960) * dt; }
       for(const p of P){
@@ -1691,9 +1705,11 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
               }else if(p.rec<=0&&p.autoAimTimer<=0&&p.smokeTimer<=0&&p.ramuShieldTimer<=0){
                 p.autoAimTarget=null;p.a=Math.atan2(my/z+cam.y-p.y,mx/z+cam.x-p.x);
               }
-              step(p,ix,iy,dt);
+              if(p.b==='hacker'&&p.hackerDroneControl)step(p,ix,iy,dt);
+              else if(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive){step(p,0,0,dt);step(hackerHackTarget,ix,iy,dt);hackerHackTarget.a=p.a;if(mdown&&!touch)tryFire(hackerHackTarget);}
+              else step(p,ix,iy,dt);
             }else step(p,0,0,dt);
-            if(mdown&&!touch) tryFire(p); if(p.k.sy) syU(p,dt);
+            if(!(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive)){if(mdown&&!touch) tryFire(p); if(p.k.sy) syU(p,dt);}
           } else ai(p,dt);
         }
         for(const p of P){const prev=aiFramePositions.get(p);if(!prev||dt<=0)continue;let vx=(p.x-prev.x)/dt,vy=(p.y-prev.y)/dt;const cap=(BR[p.b]?.spd||150)*1.8,v=Math.hypot(vx,vy);if(v>cap){vx*=cap/v;vy*=cap/v;}p.aiVx=(p.aiVx||0)*.35+vx*.65;p.aiVy=(p.aiVy||0)*.35+vy*.65;}
@@ -2392,6 +2408,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       g.restore();
     }
     function drawP(p,frameTime=performance.now()/1000){
+      if(p.b==='hacker'){g.save();g.translate(p.x,p.y);g.globalAlpha=.9;g.fillStyle='#0b1820';g.strokeStyle='#39ffb6';g.lineWidth=2;g.beginPath();g.roundRect(-25,8,50,18,4);g.fill();g.stroke();g.fillStyle='#163c37';g.fillRect(-18,11,36,10);g.fillStyle='#7bffe0';g.font='bold 7px monospace';g.fillText('ROOT_ACCESS',-17,18);g.strokeStyle='#39ffb6';g.beginPath();g.moveTo(-10,8);g.lineTo(-7,1);g.lineTo(8,1);g.lineTo(11,8);g.stroke();g.restore();}
       const v = p.preview || p.human || gameMode=='showdown' || gameMode==='duo' || sees(0,p); if(!v) return;
       const ramuLifting=p.b==='ramu'&&p.ramuDiveTimer>0&&p.ramuDiveLift>0;if(p.b==='ramu'&&p.ramuDiveTimer>0&&!ramuLifting)return;
       if(p.afterimages){
@@ -2637,6 +2654,9 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         g.setTransform(DPR*z, 0, 0, DPR*z, (-cam.x*z + (Math.random()-.5)*shake)*DPR, (-cam.y*z + (Math.random()-.5)*shake)*DPR);
         const now = performance.now()/1000;
         drawArenaTerrain(now);
+        for(const p of P)if(p.b==='hacker'&&p.alive){g.save();g.translate(p.hackerDroneX,p.hackerDroneY);g.shadowColor='#39ffb6';g.shadowBlur=14;g.fillStyle='#102a29';g.strokeStyle='#39ffb6';g.lineWidth=2;g.beginPath();g.roundRect(-13,-8,26,16,5);g.fill();g.stroke();g.shadowBlur=0;g.fillStyle='#b4fff0';g.fillRect(-5,-3,10,6);g.strokeStyle='#39ffb6';for(const d of [-1,1]){g.beginPath();g.moveTo(d*8,-5);g.lineTo(d*18,-12);g.moveTo(d*8,5);g.lineTo(d*18,12);g.stroke();g.beginPath();g.arc(d*19,-13,4,0,Math.PI*2);g.arc(d*19,13,4,0,Math.PI*2);g.stroke();}g.restore();}
+        if(me?.b==='hacker'&&hackerSelectedTarget?.alive){g.save();g.strokeStyle='#39ffb6';g.lineWidth=3;g.setLineDash([7,5]);g.beginPath();g.arc(hackerSelectedTarget.x,hackerSelectedTarget.y,28,0,Math.PI*2);g.stroke();g.setLineDash([]);g.fillStyle='#39ffb6';g.font='bold 12px monospace';g.fillText('TARGET LOCKED',hackerSelectedTarget.x-43,hackerSelectedTarget.y-36);g.restore();}
+        if(hackerBinaryRain>0){g.save();g.setTransform(1,0,0,1,0,0);g.fillStyle='rgba(0,10,18,.72)';g.fillRect(0,0,cv.width,cv.height);g.fillStyle='#39ffb6';g.font='bold 17px monospace';g.textAlign='center';g.fillText('SYSTEM TAKEOVER // '+hackerBinaryRain.toFixed(1)+'s',cv.width/2,cv.height*.18);for(let i=0;i<70;i++){const x=(i*137)%cv.width,y=((performance.now()/12+i*61)%cv.height);g.fillText(i%2?'1':'0',x,y);}g.restore();}
         if(gasDist > 0){
           g.fillStyle='rgba(34, 197, 94, 0.45)'; g.fillRect(0, 0, MW*T, gasDist*T); g.fillRect(0, (MH-gasDist)*T, MW*T, gasDist*T);
           g.fillRect(0, gasDist*T, gasDist*T, (MH-gasDist*2)*T); g.fillRect((MW-gasDist)*T, gasDist*T, gasDist*T, (MH-gasDist*2)*T);
