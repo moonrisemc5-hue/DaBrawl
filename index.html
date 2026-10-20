@@ -3309,18 +3309,20 @@ function gadget(p){
           await startOnlineMatch(next.roster,next.matchId,next.mode,activeMatchLocalId,next.hostId,next.startAt);
         }
       });
+      // Start the watchdog before channel setup, so even a synchronous setup error
+      // or a realtime client that never reports status cannot strand GET READY.
       let matchConnectWatchdog=setTimeout(()=>{
-        if(activeMatchId!==matchId || networkMode) return;
+        if(activeMatchId!==matchId) return;
         $('mmTxt').textContent='ONLINE CONNECTION TIMED OUT';
-        $('mmHint').textContent='Online sync did not connect. Starting a playable offline match instead…';
+        $('mmHint').textContent='Online sync did not finish. Starting a playable offline match instead…';
         const old=matchChannel; matchChannel=null;
         activeMatchId=null; activePlayerId=clientId;
         clearInterval(stateTimer); stateTimer=null;
         if(old) void db.removeChannel(old).catch(()=>{});
-        window.DaBrawlGame?.endNetworkGame();
-        status('Online match sync timed out; started offline quickplay so you can keep playing.',true);
+        try { window.DaBrawlGame?.endNetworkGame(); } catch(err) { console.warn('Network cleanup failed:',err); }
+        status('Online match startup timed out; started offline quickplay so you can keep playing.',true);
         startLoadingScreen(false);
-      },12000);
+      },8000);
       matchChannel.subscribe(statusValue=>{
         if(statusValue==='CHANNEL_ERROR'||statusValue==='TIMED_OUT'||statusValue==='CLOSED'){
           clearTimeout(matchConnectWatchdog);
@@ -3338,7 +3340,22 @@ function gadget(p){
         clearTimeout(matchConnectWatchdog);
         setTimeout(()=>{
           if(!matchChannel || activeMatchId!==matchId) return;
-          window.DaBrawlGame?.startNetworkGame(roster,matchId,mode,localId,hostId,startAt);
+          try {
+            window.DaBrawlGame?.startNetworkGame(roster,matchId,mode,localId,hostId,startAt);
+          } catch(err) {
+            clearTimeout(matchConnectWatchdog);
+            console.error('Could not start online match:',err);
+            const old=matchChannel; matchChannel=null;
+            activeMatchId=null; activePlayerId=clientId;
+            clearInterval(stateTimer); stateTimer=null;
+            if(old) void db.removeChannel(old).catch(()=>{});
+            try { window.DaBrawlGame?.endNetworkGame(); } catch(cleanupErr) { console.warn('Network cleanup failed:',cleanupErr); }
+            $('mmTxt').textContent='STARTUP ERROR';
+            $('mmHint').textContent='Online match failed to start. Launching offline quickplay…';
+            status('Online match failed during startup; switched to offline quickplay.',true);
+            startLoadingScreen(false);
+            return;
+          }
           clearInterval(stateTimer);
           stateTimer=setInterval(()=>{
             if(!matchChannel || activeMatchId!==matchId) return;
