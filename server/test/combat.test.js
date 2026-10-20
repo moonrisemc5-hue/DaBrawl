@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { advanceProjectile, findProjectileHit, projectileStillInRange, isTargetDamageable } from "../combat.js";
+import { advanceProjectile, findProjectileHit, projectileStillInRange, isTargetDamageable, advanceRamuFireEnergy, consumeRamuModeSuper } from "../combat.js";
 
 test("advances projectile position and traveled distance deterministically", () => {
   const projectile = { x: 10, y: 20, angle: 0, speed: 100, traveled: 5, range: 100 };
@@ -85,7 +85,7 @@ test("reports player contact order so a wall behind a target does not block the 
   assert.ok(contact.t < wall.t);
 });
 
-test("all damage sources share friendly-fire, knockout, transformation, and invulnerability rules", () => {
+test("all damage sources share friendly-fire, knockout, transformation, shield, dive, and invulnerability rules", () => {
   const attacker = { id: "attacker", team: 0 };
   const target = { id: "target", team: 1, alive: true, hp: 100 };
   assert.equal(isTargetDamageable(target, attacker, 1000), true);
@@ -95,6 +95,10 @@ test("all damage sources share friendly-fire, knockout, transformation, and invu
   assert.equal(isTargetDamageable({ ...target, invulnerableUntil: 1000 }, attacker, 1000), true);
   assert.equal(isTargetDamageable({ ...target, transformUntil: 1001 }, attacker, 1000), false);
   assert.equal(isTargetDamageable({ ...target, transformUntil: 1000 }, attacker, 1000), true);
+  assert.equal(isTargetDamageable({ ...target, ramuShieldUntil: 1001 }, attacker, 1000), false);
+  assert.equal(isTargetDamageable({ ...target, ramuShieldUntil: 1000 }, attacker, 1000), true);
+  assert.equal(isTargetDamageable({ ...target, ramuDiveUntil: 1001 }, attacker, 1000), false);
+  assert.equal(isTargetDamageable({ ...target, ramuDiveUntil: 1000 }, attacker, 1000), true);
   assert.equal(isTargetDamageable(target, target, 1000), false);
 });
 
@@ -102,4 +106,52 @@ test("projectile collision ignores a target during transformation protection", (
   const projectile = { x: 100, y: 100, ownerId: "owner", team: 0 };
   const target = { id: "target", team: 1, alive: true, x: 100, y: 100, transformUntil: 2000 };
   assert.equal(findProjectileHit(projectile, [target], 1000, 19), null);
+});
+
+
+test("projectile collision ignores a shielded or airborne Ramu",()=>{
+  const projectile={x:100,y:100,ownerId:"owner",team:0};
+  const shielded={id:"shielded",team:1,alive:true,x:100,y:100,ramuShieldUntil:2000};
+  const airborne={id:"airborne",team:1,alive:true,x:100,y:100,ramuDiveUntil:2000};
+  assert.equal(findProjectileHit(projectile,[shielded],1000,19),null);
+  assert.equal(findProjectileHit(projectile,[airborne],1000,19),null);
+});
+
+
+test("Ramu Fire energy drains continuously, locks for 200ms at empty, and only recharges after release",()=>{
+  const ramu={brawler:"ramu",ramuMode:"fire",ramuFlameHeld:true,fireEnergy:.1,fireLockUntil:0};
+  const depleted=advanceRamuFireEnergy(ramu,.5,1000,{fireEnergyDrainPerSecond:.22,fireEnergyRegenPerSecond:.13,fireLockMs:200});
+  assert.deepEqual(depleted,{changed:true,depleted:true});assert.equal(ramu.fireEnergy,0);assert.equal(ramu.fireLockUntil,1200);assert.equal(ramu.ramuFlameHeld,false);
+  advanceRamuFireEnergy(ramu,.1,1100,{fireEnergyDrainPerSecond:.22,fireEnergyRegenPerSecond:.13,fireLockMs:200});
+  assert.equal(ramu.fireEnergy,0);
+  ramu.ramuFlameHeld=false;
+  advanceRamuFireEnergy(ramu,1,1199,{fireEnergyDrainPerSecond:.22,fireEnergyRegenPerSecond:.13,fireLockMs:200});
+  assert.equal(ramu.fireEnergy,0);
+  advanceRamuFireEnergy(ramu,1,1201,{fireEnergyDrainPerSecond:.22,fireEnergyRegenPerSecond:.13,fireLockMs:200});
+  assert.equal(ramu.fireEnergy,.13);
+});
+
+test("Ramu Fire energy moves smoothly across active ticks instead of consuming a shot charge",()=>{
+  const ramu={brawler:"ramu",ramuMode:"fire",ramuFlameHeld:true,fireEnergy:1,fireLockUntil:0};
+  advanceRamuFireEnergy(ramu,.25,1000);assert.equal(ramu.fireEnergy,.955);
+  advanceRamuFireEnergy(ramu,.25,1250);assert.ok(Math.abs(ramu.fireEnergy-.91)<1e-12);
+  ramu.ramuFlameHeld=false;advanceRamuFireEnergy(ramu,.5,1500);assert.ok(Math.abs(ramu.fireEnergy-.975)<1e-12);
+});
+
+test("Ramu spends a charged Super to toggle between Fire and Ice",()=>{
+  const ramu={brawler:"ramu",ramuMode:"ice",meter:100,lastSuper:0,fireEnergy:.42,fireLockUntil:900,ramuFlameHeld:false};
+  const fire=consumeRamuModeSuper(ramu,5000);
+  assert.deepEqual(fire,{previousMode:"ice",mode:"fire",durationMs:1550});
+  assert.equal(ramu.meter,0);assert.equal(ramu.ramuMode,"fire");assert.equal(ramu.fireEnergy,1);assert.equal(ramu.fireLockUntil,0);assert.equal(ramu.transformUntil,6550);
+  ramu.meter=100;ramu.ramuFlameHeld=true;ramu.ramuFlameStartedAt=6900;ramu.fireEnergy=.7;
+  assert.equal(consumeRamuModeSuper(ramu,5500),null);
+  const ice=consumeRamuModeSuper(ramu,7000);
+  assert.deepEqual(ice,{previousMode:"fire",mode:"ice",durationMs:1050});
+  assert.equal(ramu.meter,0);assert.equal(ramu.ramuFlameHeld,false);assert.equal(ramu.ramuFlameStartedAt,0);assert.equal(ramu.ramuFlameNextHitAt,0);assert.equal(ramu.transformUntil,8050);
+});
+
+test("Ramu transform Super rejects non-Ramu and uncharged requests",()=>{
+  assert.equal(consumeRamuModeSuper({brawler:"deges",ramuMode:"fire",meter:100,lastSuper:0},5000),null);
+  assert.equal(consumeRamuModeSuper({brawler:"ramu",ramuMode:"fire",meter:99,lastSuper:0},5000),null);
+  assert.equal(consumeRamuModeSuper({brawler:"ramu",ramuMode:"base",meter:100,lastSuper:0},5000),null);
 });
