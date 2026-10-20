@@ -539,7 +539,7 @@
     let M, gasDist=0, mapVariant=0;
     function build(){
       gasDist = 0;
-      if(gameMode == 'showdown' || gameMode === 'duo'){
+      if(gameMode == 'showdown' || gameMode === 'duo' || gameMode === 'trio'){
         MW=50; MH=32;
         M = Array.from({length:MH}, (_,j) => Array.from({length:MW}, (_,i) => {
           if(i==0||j==0||i==MW-1||j==MH-1) return '#';
@@ -706,11 +706,11 @@
     function mk(t,i,human,name,b='kuku',isDummy=false){
       let xPos, yPos;
       if(isDummy){ xPos = (MW*T)/2 + (i===0?-60:60); yPos = (MH*T)/2 + (i===0?-40:40); }
-      else if(gameMode == 'showdown' || gameMode === 'duo'){
+      else if(gameMode == 'showdown' || gameMode === 'duo' || gameMode === 'trio'){
         let valid = false, attempts = 0;
         while(!valid && attempts < 500){
           attempts++;
-          const angle = gameMode==='duo' ? (t/5)*Math.PI*2 + (i===0?-0.045:0.045) : (i / 10) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+          const angle = gameMode==='duo' ? (t/5)*Math.PI*2 + (i===0?-0.045:0.045) : (i / (gameMode==='trio'?12:10)) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
           xPos = (MW * T) / 2 + Math.cos(angle) * (MW * 0.42) * T;
           yPos = (MH * T) / 2 + Math.sin(angle) * (MH * 0.42) * T;
           if(tile(xPos, yPos) == '.') valid = true;
@@ -752,6 +752,9 @@
         G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       } else if(gameMode === 'duo'){
         for(let i=1; i<10; i++) P.push(mk(Math.floor(i/2), i%2, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
+        G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
+      } else if(gameMode === 'trio'){
+        for(let i=1; i<12; i++) P.push(mk(Math.floor(i/3), i%3, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
         G = {ph:'count',t:3.2,endAt:Date.now()+3200,w:[0,0],r:1,res:''};
       } else if(gameMode == 'showdown'){
         for(let i=1; i<10; i++) P.push(mk(i, i, 0, n.pop()||('Bot'+i), ['kuku','shachi','saiyan'][Math.random()*3|0]));
@@ -1006,7 +1009,7 @@
       aimAtNearestEnemy(p);
       if(p.k.sy)sTap(p);else tryFire(p);
     }
-    const sees = (tm,p) => gameMode=='showdown' || gameMode=='duo' || p.t==tm || tile(p.x,p.y)!='b' || P.some(a => a.alive && a.t==tm && Math.hypot(a.x-p.x, a.y-p.y)<2.5*T);
+    const sees = (tm,p) => gameMode=='showdown' || gameMode=='duo' || gameMode=='trio' || p.t==tm || tile(p.x,p.y)!='b' || P.some(a => a.alive && a.t==tm && Math.hypot(a.x-p.x, a.y-p.y)<2.5*T);
     function degesImpactVisual(x,y,b){
       const radius=b.splashRadius||(b.superBeer?110:72), greenBeer=!!b.greenBeer, isBeer=!!b.beer||greenBeer;
       const color=greenBeer?'#82d856':isBeer?'#d99a42':'#c4a484', puddleColor=greenBeer?'#398b35':isBeer?'#9b5b22':'#806b59';
@@ -1195,7 +1198,7 @@ function gadget(p){
       if(b.s){ const l=Math.hypot(b.vx,b.vy); mv(t, b.vx/l*13, b.vy/l*13); }
       beep(220,.08,.08,'square',-100); if(!t.isDummy && t.hp<=0) die(t);
     }
-    function die(t){ if(!t.alive)return; t.alive=false; t.hp=0; t.dt=0; t.respawnPending=gameMode==='duo' && !isTestMode; if(gameMode==='showdown'||gameMode==='duo') t.elimOrder=++matchEliminations; if((gameMode==='duo'||gameMode==='trio')&&!P.some(p=>p!==t&&p.alive&&p.t===t.t)) teamEliminationOrder[t.t]=++teamEliminations; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); shake=10; }
+    function die(t){ if(!t.alive)return; t.alive=false; t.hp=0; t.dt=0; t.respawnPending=gameMode==='duo' && !isTestMode; if(gameMode==='showdown'||gameMode==='duo'||gameMode==='trio') t.elimOrder=++matchEliminations; if((gameMode==='duo'||gameMode==='trio')&&!P.some(p=>p!==t&&p.alive&&p.t===t.t)) teamEliminationOrder[t.t]=++teamEliminations; puff(t.x,t.y,16,'#fff',1.4); star(t.x,t.y,10); beep(400,.5,.2,'sawtooth',-330); shake=10; }
     function tryBotDegešGadget(b,dt){
       if(b.b!=='deges'||b.gcd>0)return false;
       const allies=P.filter(p=>p.alive&&p.t===b.t&&p.hp<p.mh-250&&Math.hypot(p.x-b.x,p.y-b.y)<=356&&!aiLineBlocked(b.x,b.y,p.x,p.y));
@@ -1206,7 +1209,7 @@ function gadget(p){
     function ai(b,dt){
       if(b.isDummy){
         let tg=null,bd=1e9;
-        for(const e of P){if(e===b||!e.alive||(gameMode==='duo'&&e.t===b.t)||(gameMode!=='showdown'&&gameMode!=='duo'&&e.t===b.t))continue;const d=Math.hypot(e.x-b.x,e.y-b.y);if(d<bd){bd=d;tg=e;}}
+        for(const e of P){if(e===b||!e.alive||((gameMode==='duo'||gameMode==='trio')&&e.t===b.t)||(gameMode!=='showdown'&&gameMode!=='duo'&&gameMode!=='trio'&&e.t===b.t))continue;const d=Math.hypot(e.x-b.x,e.y-b.y);if(d<bd){bd=d;tg=e;}}
         if(tg){b.a=Math.atan2(tg.y-b.y,tg.x-b.x);if(b.cd<=0&&bd<b.k.rng+25&&b.am>=1){b.am--;fire(b,0);b.cd=.6;}}
         return;
       }
@@ -1326,7 +1329,7 @@ function gadget(p){
       wf = Math.max(0, wf);
       for(let i=KM.length-1;i>=0;i--){ const k=KM[i]; k.t-=dt; if(!k.remoteVisual){ k.x=k.o.x; k.y=k.o.y; } k.tk-=dt; if(k.tk<=0){ k.tk=.1; beamHit(k); } if(k.t<=0) KM.splice(i,1); }
       if(G.ph=='count'){ G.t=Math.max(0,((G.endAt||Date.now())-Date.now())/1000); if(G.t<=0) G.ph='play'; }
-      else if(G.ph=='end'){ G.t-=dt; if(G.t<=0){ if(G.w[0]>=2||G.w[1]>=2||gameMode=='showdown'||gameMode==='duo') finish(); else { G.r++; resetRound(); } } }
+      else if(G.ph=='end'){ G.t-=dt; if(G.t<=0){ if(G.w[0]>=2||G.w[1]>=2||gameMode=='showdown'||gameMode==='duo'||gameMode==='trio') finish(); else { G.r++; resetRound(); } } }
       if(G.ph=='play'){
         for(const p of P){
           if(!p.alive) continue;
@@ -1422,11 +1425,11 @@ function gadget(p){
           }
         }
         if(!isTestMode){
-          if(gameMode == 'showdown' || gameMode == 'duel' || gameMode === 'duo'){
+          if(gameMode == 'showdown' || gameMode == 'duel' || gameMode === 'duo' || gameMode === 'trio'){
             const aliveCount = P.filter(p=>p.alive).length;
-            const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
-            if(gameMode==='duo' ? aliveTeams.filter(team=>P.some(p=>p.t===team&&p.alive)).length<=1 && !(P.some(p=>!p.alive&&p.respawnPending&&P.some(q=>q!==p&&q.t===p.t&&q.alive))) : (gameMode==='showdown' ? aliveCount<=1 : (aliveCount<=1 || !me.alive))){
-              const win = gameMode==='duo' ? aliveTeams[0]===me.t : me.alive && aliveCount==1;
+            const aliveTeams = (gameMode==='duo'||gameMode==='trio') ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
+            if((gameMode==='duo'||gameMode==='trio') ? aliveTeams.filter(team=>P.some(p=>p.t===team&&p.alive)).length<=1 && !(P.some(p=>!p.alive&&p.respawnPending&&P.some(q=>q!==p&&q.t===p.t&&q.alive))) : (gameMode==='showdown' ? aliveCount<=1 : (aliveCount<=1 || !me.alive))){
+              const win = (gameMode==='duo'||gameMode==='trio') ? aliveTeams[0]===me.t : me.alive && aliveCount==1;
               if(gameMode==='duel'){
                 const winnerTeam=win?me.t:(me.t===0?1:0);
                 if(winnerTeam===0 || winnerTeam===1) G.w[winnerTeam]++;
@@ -1464,7 +1467,7 @@ function gadget(p){
       if(scr==='res') return;
       try{localStorage.removeItem('dabrawl_active_match');}catch(_){}
       lastMatchWasOnline=!!networkMode; lastQueueMode=gameMode;
-      const aliveTeams = gameMode==='duo' ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
+      const aliveTeams = (gameMode==='duo'||gameMode==='trio') ? [...new Set(P.filter(p=>p.alive).map(p=>p.t))] : [];
       const totalTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].length : 0;
       const eliminatedTeams = gameMode==='duo' ? [...new Set(P.map(p=>p.t))].filter(team=>!aliveTeams.includes(team)).length : 0;
       const place = gameMode==='showdown' ? (me.alive ? 1 : Math.max(2, Math.min(10, 11-(me.elimOrder||matchEliminations||1)))) : (gameMode==='duo'||gameMode==='trio') ? (aliveTeams.includes(me.t) ? 1 : Math.max(2, Math.min(gameMode==='trio'?4:5, (gameMode==='trio'?5:6)-(teamEliminationOrder[me.t]||teamEliminations||1)))) : (G.w[me.t]>=2 ? 1 : 5);
@@ -2216,9 +2219,9 @@ function gadget(p){
         }
         if(wf>0){ g.fillStyle='rgba(255,255,255,'+wf*.85+')'; g.fillRect(0,0,W,H); wf = Math.max(0, wf-.025); }
         g.fillStyle='#000a'; g.beginPath(); g.roundRect(W/2-90, 8, 180, 40, 20); g.fill();
-        if(gameMode == 'showdown' || gameMode === 'duo'){
-          const aliveLeft = gameMode==='duo' ? new Set(P.filter(p=>p.alive).map(p=>p.t)).size : P.filter(p=>p.alive).length;
-          tx(gameMode==='duo'?'TEAMS LEFT: '+aliveLeft:'LEFT: '+aliveLeft, W/2, 36, 20, '#ffd21f');
+        if(gameMode == 'showdown' || gameMode === 'duo' || gameMode === 'trio'){
+          const aliveLeft = (gameMode==='duo'||gameMode==='trio') ? new Set(P.filter(p=>p.alive).map(p=>p.t)).size : P.filter(p=>p.alive).length;
+          tx((gameMode==='duo'||gameMode==='trio')?'TEAMS LEFT: '+aliveLeft:'LEFT: '+aliveLeft, W/2, 36, 20, '#ffd21f');
         } else {
           tx(G.w[0], W/2-50, 38, 30, '#6bb6ff'); tx(isTestMode?'∞':'VS', W/2, 36, 20, '#ffd21f'); tx(G.w[1], W/2+50, 38, 30, '#ff7a7a');
           for(const t of[0,1]) P.filter(p=>p.t==t).forEach((p,i) => circ(W/2+(t?1:-1)*(110+i*22), 28, 8, p.alive?(t?'#f44':'#39f'):'#555', 1));
@@ -2785,14 +2788,14 @@ function gadget(p){
           window.DaBrawlGame?.setRoomMenuState([],null,'');el('roomMenuBar').style.display='none';show('menu');status('You were removed from the party.');
         })
         .on('broadcast',{event:'party-queue-start'},async({payload})=>{
-          if(!payload||!payload.mode||!Array.isArray(payload.members)||activeMatchId)return;
+          if(!payload||!payload.mode||!Array.isArray(payload.members))return;
           const partyGroup={partyId:payload.partyId,members:payload.members};
           await leaveMatch();
           void beginMatchmaking(payload.mode,partyGroup);
         })
         .on('broadcast',{event:'party-rematch-request'},async()=>{
           const {data:{user}}=await db.auth.getUser();
-          if(user&&currentRoom?.host_id===user.id&&!activeMatchId)void startRoomGame();
+          if(user&&currentRoom?.host_id===user.id)void startRoomGame();
         })
         .on('broadcast',{event:'room-match-start'},async({payload})=>{
           if(!payload || !Array.isArray(payload.roster) || activeMatchId) return;
@@ -2832,10 +2835,10 @@ function gadget(p){
         if(!online?.clientId)return null;
         return {clientId:online.clientId,name:online.name||('Player '+(i+1)),brawler:p.character_id||'kuku',partyId:currentRoom.id,partyOrder:i,joinedAt:queueStartedAt||Date.now()};
       }).filter(Boolean);
-      const leaderIndex=partyMembers.findIndex(p=>players.find(x=>x.user_id===user.id)?.player_slot===players.find(x=>x.user_id===user.id)?.player_slot && p.clientId===live.find(x=>x.userId===user.id)?.clientId);
       if(partyMembers.length!==players.length){status('A party member is reconnecting. Wait until everyone is online, then try again.',true);return;}
-      const leader=partyMembers.find(p=>p.clientId===clientId)||partyMembers.find(p=>p.name===(user.user_metadata?.username||(user.email||'').split('@')[0]));
-      if(leaderIndex>0){const current=partyMembers.findIndex(p=>p.clientId===clientId);if(current>0){const [own]=partyMembers.splice(current,1);partyMembers.unshift(own);partyMembers.forEach((p,i)=>p.partyOrder=i);}}
+      const hostClientId=live.find(x=>x.userId===user.id)?.clientId;
+      const leaderIndex=partyMembers.findIndex(p=>p.clientId===hostClientId);
+      if(leaderIndex>0){const [leader]=partyMembers.splice(leaderIndex,1);partyMembers.unshift(leader);partyMembers.forEach((p,i)=>p.partyOrder=i);}
       const partyGroup={partyId:currentRoom.id,members:partyMembers};
       const sent=await roomChannel.send({type:'broadcast',event:'party-queue-start',payload:{partyId:partyGroup.partyId,mode,members:partyMembers}});
       if(sent?.status&&sent.status!=='ok'){status('Could not send your party to matchmaking. Check Realtime settings.',true);return;}
@@ -2864,7 +2867,8 @@ function gadget(p){
       return [...unique.values()].sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0)||(a.partyId===b.partyId?(a.partyOrder||0)-(b.partyOrder||0):0));
     }
     async function beginMatchmaking(mode, partyGroup=null){
-      // A completed private-room duel can queue again just like any other online match.
+      // Requeue only after closing the previous match connection; never launch a rematch directly.
+      if(activeMatchId) await leaveMatch();
       cancelMatchmaking(false); queueMode=mode||'knockout'; queueDone=false; queueStartedAt=Date.now();
       show('mm'); $('mmTxt').textContent='CONNECTING TO PLAYERS…'; $('mmHint').textContent='Connecting to DaBrawl online matchmaking…';
       try {
