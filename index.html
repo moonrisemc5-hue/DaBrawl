@@ -236,6 +236,10 @@
         <button class="btn" id="resetKeybinds" style="font-size:18px;margin-top:10px">RESET DEFAULTS</button>
       </section>
       <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
+        <h3 style="margin:0 0 6px;color:var(--y);font-size:24px">ACCESSIBILITY</h3>
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff;font-size:18px"><span>Disable Shaking<small style="display:block;color:#cbd5e1;font-size:13px;margin-top:4px">Turn off camera shake on your screen only.</small></span><input id="disableShakeToggle" type="checkbox" style="width:24px;height:24px;accent-color:#38bdf8"></label>
+      </section>
+      <section style="padding:14px;background:#111c35;border:2px solid #334155;border-radius:14px">
         <h3 style="margin:0 0 6px;color:var(--y);font-size:24px">ACCOUNT</h3>
         <p style="font:14px Arial,sans-serif;color:#cbd5e1;margin:0 0 10px">Sign in, create an account, manage your room, or sign out from the account screen.</p>
         <div id="settingsSignedOut" style="display:flex;flex-direction:column;gap:8px"><input id="settingsUsername" type="text" autocomplete="username" maxlength="20" placeholder="Username" style="padding:11px;border:2px solid #000;border-radius:9px;font:16px Arial,sans-serif"><input id="settingsPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Password (at least 6 characters)" style="padding:11px;border:2px solid #000;border-radius:9px;font:16px Arial,sans-serif"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="settingsSignIn">SIGN IN</button><button class="btn purple" id="settingsCreateAccount">CREATE ACCOUNT</button></div></div><div id="settingsSignedIn" style="display:none;flex-direction:column;gap:8px"><div id="settingsAccountName" style="color:#93c5fd;overflow-wrap:anywhere"></div><button class="btn purple" id="settingsSignOut">SIGN OUT</button></div><div id="settingsAccountStatus" style="font:13px Arial,sans-serif;color:#cbd5e1"></div>
@@ -972,6 +976,8 @@
       show('onlineLobby');
     };
     $('settingsBack').onclick = () => { waitingForBind=null; show('menu'); };
+    const shakeToggle=$('disableShakeToggle');
+    if(shakeToggle){shakeToggle.checked=disableShake;shakeToggle.addEventListener('change',()=>{disableShake=shakeToggle.checked;try{localStorage.setItem('dabrawl_disable_shake',disableShake?'1':'0');}catch(_){}if(disableShake)shake=0;});}
     // The legacy settingsAccount button was replaced by inline sign-in/sign-out controls.
     $('resetKeybinds').onclick = () => { keyBinds={...DEFAULT_BINDS};waitingForBind=null;$('keybindHint').textContent='Default controls restored.';saveKeyBinds(); };
     $('bk1').onclick = () => show('menu');
