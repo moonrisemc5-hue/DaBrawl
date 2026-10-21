@@ -339,7 +339,7 @@ function stepRoom(room, dt) {
   const t = now(); room.tick++; room.updatedAt = t;
   if (room.phase === "countdown" && t >= room.startedAt) { room.phase = "playing"; event(room, "match-started"); }
   if (room.phase === "playing") {
-    for(const hacker of room.players.values())if(hacker.brawler==="hacker"&&hacker.hackTargetId){const target=room.players.get(hacker.hackTargetId);if(hacker.hackUntil>t&&target?.alive){if(target.frozenUntil<=t){target.input={...hacker.input};target.aim=hacker.aim;}else target.input={x:0,y:0};target.hackedById=hacker.id;}else{if(target?.hackedById===hacker.id)target.hackedById=null;hacker.hackTargetId=null;hacker.hackUntil=0;event(room,"system-takeover-end",{playerId:hacker.id,targetId:target?.id||null});}}
+    for(const hacker of room.players.values())if(hacker.brawler==="hacker"&&hacker.hackTargetId){const target=room.players.get(hacker.hackTargetId);const outOfRange=!!target&&Math.hypot(target.x-hacker.hackerDroneX,target.y-hacker.hackerDroneY)>getBrawlerStats(hacker).range;if(hacker.hackUntil>t&&target?.alive&&!outOfRange){if(target.frozenUntil<=t){target.input={...hacker.input};target.aim=hacker.aim;}else target.input={x:0,y:0};target.hackedById=hacker.id;}else{if(target?.hackedById===hacker.id){target.hackedById=null;target.input={x:0,y:0};}const targetId=target?.id||null;hacker.hackTargetId=null;hacker.hackUntil=0;hacker.input={x:0,y:0};event(room,"system-takeover-end",{playerId:hacker.id,targetId,reason:outOfRange?"drone-range":"expired"});}}
     for (const p of room.players.values()) {
       if (p.isBot && p.alive && p.connected && t >= p.botThinkAt) {
         const decision = decideBotAction(p, [...room.players.values()], room.world, t, room.projectiles);
