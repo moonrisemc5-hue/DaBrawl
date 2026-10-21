@@ -919,14 +919,12 @@
     // Clicking back into the arena releases chat focus, restoring WASD immediately.
     cv.addEventListener('pointerdown',()=>{const input=el('dabrawlChatInput');if(input&&document.activeElement===input)input.blur();},true);
     addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive&&me.smokeTimer<=0&&me.ramuShieldTimer<=0){const wx=mx/Math.max(.01,z)+cam.x,wy=my/Math.max(.01,z)+cam.y;me.a=Math.atan2(wy-me.y,wx-me.x);me.autoAimTimer=0;me.autoAimTarget=null;} });
-    // Capture arena pointer input at window level so HUD layers cannot swallow it.
+    // Capture arena pointer input at window level so overlays cannot swallow attacks.
     addEventListener('pointerdown', e => {
       if(scr!=='game'||!me||!me.alive||stickEditMode)return;
       const rect=cv.getBoundingClientRect();
       if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)return;
       const target=e.target;
-      // Never turn UI clicks into attacks; otherwise accept arena input even when
-      // a transparent HUD wrapper sits above the canvas.
       if(target&&target.closest&&target.closest('button,input,textarea,select,[data-no-game-fire]'))return;
       const chatInput=el('dabrawlChatInput');if(chatInput&&document.activeElement===chatInput)chatInput.blur();
       if(e.pointerType==='mouse'){
@@ -934,15 +932,13 @@
         if(e.button===mouseSuperBindValue()){e.preventDefault();if(me.tf<=0)sup(me);}
         else if(e.button===mouseAttackBindValue()){
           e.preventDefault();mdown=true;
-          const wx=e.clientX/Math.max(.01,z)+cam.x,wy=e.clientY/Math.max(.01,z)+cam.y;
+          const wx=(e.clientX-rect.left)/Math.max(.01,z)+cam.x,wy=(e.clientY-rect.top)/Math.max(.01,z)+cam.y;
           me.a=Math.atan2(wy-me.y,wx-me.x);
           tryFire(me);
         }
       }else{
-        // Touch controls can be covered by non-interactive HUD layers; don't
-        // require the canvas to be the event target.
-        touch=true;
-        if(target===cv){mdown=true;tryFire(me);}
+        touch=true;mdown=true;
+        if(target===cv)tryFire(me);
       }
     },true);
     addEventListener('pointerup', e => { if(e.pointerType==='mouse'&&e.button===mouseAttackBindValue())mdown=false; else if(e.pointerType!=='mouse')mdown=false; },true);
@@ -2164,18 +2160,9 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         if(glowColor){ g.shadowBlur=0; }
       }
     };
-    const brolySprite = new Image();
-    brolySprite.src = new URL('./broly.svg', document.baseURI).href;
     function drawBroly(p){
-      // Prefer the polished scalable vector sprite; retain the canvas renderer as a load-failure fallback.
-      if(brolySprite.complete&&brolySprite.naturalWidth){
-        g.save();
-        g.translate(0,Math.sin(p.walk||0)*.6);
-        g.drawImage(brolySprite,-59,-131,118,160);
-        g.restore();
-        return;
-      }
-      // Reference-driven canvas fallback: front-facing, bold black contours, crisp flat shading.
+      // Broly has been removed as a separate asset; keep the existing canvas renderer only.
+      // Reference-driven canvas renderer: front-facing, bold black contours, crisp flat shading.
       const bob=1+Math.sin(p.walk||0)*.018, t=performance.now()/1000;
       g.save();g.scale(1.12,bob*1.12);g.lineJoin='round';g.lineCap='round';
       const poly=(pts,fill,stroke='#080911',lw=2.5)=>{
