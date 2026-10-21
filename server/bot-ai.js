@@ -96,6 +96,8 @@ function enemiesFor(bot,players){return players.filter(p=>p&&p.id!==bot.id&&p.al
 // Pure, deterministic combat policy. The server owns movement, cooldowns, damage and outcomes.
 export function decideBotAction(bot,players,world,at=Date.now(),projectiles=[]){
   if(!bot||!Array.isArray(players)||!world||!Number.isFinite(bot.x)||!Number.isFinite(bot.y))throw new TypeError("Invalid bot decision inputs");
+  // A live takeover disables every autonomous bot decision until control expires.
+  if(bot.hackedById&&Number(bot.hackUntil)>at)return {input:{x:0,y:0},aim:Number.isFinite(bot.aim)?bot.aim:0,action:null,targetId:null,gadgetTargetId:null};
   const enemies=enemiesFor(bot,players),stats=getBrawlerStats(bot);
   const smokeHealReady=bot.brawler==='deges'&&bot.hp/Math.max(1,bot.maxHp)<=.38&&(bot.gadgetReadyAt||0)<=at;
   if(!bot.alive||!enemies.length){
