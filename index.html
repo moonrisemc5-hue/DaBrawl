@@ -73,6 +73,11 @@
     #sup { right: calc(28px + env(safe-area-inset-right,0px)); bottom: calc(130px + env(safe-area-inset-bottom,0px)); width: 82px; height: 82px; font-size: 18px; background: #444; }
     #gad { right: calc(130px + env(safe-area-inset-right,0px)); bottom: calc(30px + env(safe-area-inset-bottom,0px)); width: 62px; height: 62px; font-size: 20px; background: #2a9d3c; }
     #leaveBtn { position: fixed; left: 16px; top: calc(12px + env(safe-area-inset-top,0px)); z-index: 399; display: none; pointer-events: auto; }
+    .mobile-stick { display:none; position:fixed; width:112px; height:112px; border:3px solid #ffffff88; border-radius:50%; box-sizing:border-box; background:radial-gradient(circle, #ffffff16 0 24%, #ffffff08 25% 100%); box-shadow:inset 0 0 0 2px #0005; transform:translate(-50%,-50%); z-index:65; pointer-events:none; opacity:.78; }
+    .mobile-stick::before { content:''; position:absolute; inset:17px; border:1px solid #ffffff55; border-radius:50%; }
+    .mobile-stick span { position:absolute; width:34px; height:34px; left:50%; top:50%; transform:translate(-50%,-50%); border-radius:50%; background:#dbeafe55; border:2px solid #ffffffaa; }
+    body.mobile-controls #moveStick, body.mobile-controls #aimStick { display:block; }
+    body.mobile-controls .mobile-stick { width:clamp(88px,24vw,124px); height:clamp(88px,24vw,124px); }
     .menu-bottom-controls { width:min(96vw,760px); }
     body.mobile-controls .scr { overflow:hidden; overscroll-behavior:none; padding: max(8px,env(safe-area-inset-top,0px)) 8px max(8px,env(safe-area-inset-bottom,0px)); box-sizing:border-box; }
     body.mobile-controls #brs.on { justify-content:flex-start; gap:clamp(8px,1.5vh,14px); padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px)); }
@@ -127,6 +132,8 @@
   <canvas id="c"></canvas>
   <button class="btn r" id="leaveBtn">LEAVE</button>
   <div id="hud">
+    <div id="moveStick" class="mobile-stick" aria-hidden="true"><span></span></div>
+    <div id="aimStick" class="mobile-stick" aria-hidden="true"><span></span></div>
     <button class="hb" id="sup" type="button">SUPER</button>
     <button class="hb" id="gad" type="button" aria-label="Gadget ready">⚡</button>
     <button class="btn" id="stickEditBtn" type="button" style="display:none;position:fixed;left:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:90;touch-action:manipulation">MOVE STICKS</button>
@@ -227,6 +234,17 @@
         <h3 style="margin:0 0 10px;color:var(--y);font-size:24px">CONTROLS</h3>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px"><div><div style="font-size:18px;color:#fff">Control layout</div><div style="font:13px Arial,sans-serif;color:#cbd5e1">Choose touch controls or keyboard and mouse.</div></div><div id="controlModeSwitch" role="group" aria-label="Control layout" style="display:flex;gap:6px"><button type="button" class="btn" id="pcModeBtn" style="font-size:17px;padding:7px 14px">🖥 PC</button><button type="button" class="btn" id="mobileModeBtn" style="font-size:17px;padding:7px 14px">📱 MOBILE</button></div></div>
         <div id="controlModeStatus" style="font:13px Arial,sans-serif;color:#93c5fd;margin-bottom:8px"></div>
+        <div style="margin:12px 0;padding:12px;border:1px solid #475569;border-radius:10px;background:#0b132b">
+          <h4 style="margin:0 0 6px;color:#fff;font-size:18px">Mobile control positions</h4>
+          <p style="font:13px Arial,sans-serif;color:#cbd5e1;margin:0 0 10px">Adjust each control's screen position. Changes save on this device and sync to your account when signed in.</p>
+          <div style="display:grid;grid-template-columns:1fr;gap:10px">
+            <div style="font:14px Arial,sans-serif">Movement joystick <div style="display:flex;gap:8px;align-items:center"><label style="flex:1">Left / right <input type="range" min="4" max="96" value="16" data-pos-key="m" data-pos-axis="x" style="width:100%"></label><label style="flex:1">Up / down <input type="range" min="8" max="92" value="76" data-pos-key="m" data-pos-axis="y" style="width:100%"></label></div></div>
+            <div style="font:14px Arial,sans-serif">Aim joystick <div style="display:flex;gap:8px;align-items:center"><label style="flex:1">Left / right <input type="range" min="4" max="96" value="78" data-pos-key="a" data-pos-axis="x" style="width:100%"></label><label style="flex:1">Up / down <input type="range" min="8" max="92" value="76" data-pos-key="a" data-pos-axis="y" style="width:100%"></label></div></div>
+            <div style="font:14px Arial,sans-serif">Super button <div style="display:flex;gap:8px;align-items:center"><label style="flex:1">Left / right <input type="range" min="4" max="96" value="91" data-pos-key="sup" data-pos-axis="x" style="width:100%"></label><label style="flex:1">Up / down <input type="range" min="8" max="92" value="70" data-pos-key="sup" data-pos-axis="y" style="width:100%"></label></div></div>
+            <div style="font:14px Arial,sans-serif">Gadget button <div style="display:flex;gap:8px;align-items:center"><label style="flex:1">Left / right <input type="range" min="4" max="96" value="91" data-pos-key="gad" data-pos-axis="x" style="width:100%"></label><label style="flex:1">Up / down <input type="range" min="8" max="92" value="84" data-pos-key="gad" data-pos-axis="y" style="width:100%"></label></div></div>
+          </div>
+          <button class="btn" id="resetMobilePositions" type="button" style="font-size:16px;margin-top:10px">RESET MOBILE POSITIONS</button>
+        </div>
         <div id="keybindRows" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
         <p id="keybindHint" style="font:13px Arial,sans-serif;color:#cbd5e1;margin:10px 0 0">Choose a control, then press the key you want to use.</p>
         <button class="btn" id="resetKeybinds" style="font-size:18px;margin-top:10px">RESET DEFAULTS</button>
@@ -911,11 +929,14 @@
     function saveStickPositions(){try{localStorage.setItem(STICK_POS_KEY,JSON.stringify(stickPositions));}catch(_){};void syncStickPositionsAccount();}
     async function syncStickPositionsAccount(){try{if(typeof db==='undefined'||!db?.auth)return;const {data:{user}}=await db.auth.getUser();if(!user)return;const {error}=await db.from('player_settings').upsert({user_id:user.id,settings_key:'mobile_control_positions',settings:stickPositions,updated_at:new Date().toISOString()},{onConflict:'user_id,settings_key'});if(error)console.warn('Could not sync joystick layout to account:',error.message);else stickPositionsUserId=user.id;}catch(e){console.warn('Account joystick sync unavailable:',e?.message||e);}}
     async function loadStickPositionsAccount(){try{if(typeof db==='undefined'||!db?.auth)return;const {data:{user}}=await db.auth.getUser();if(!user)return;stickPositionsUserId=user.id;const {data,error}=await db.from('player_settings').select('settings').eq('user_id',user.id).eq('settings_key','mobile_control_positions').maybeSingle();if(error){console.warn('Account joystick layout load unavailable:',error.message);return;}if(data?.settings){stickPositions=normalizeStickPositions(data.settings)||stickPositions;try{localStorage.setItem(STICK_POS_KEY,JSON.stringify(stickPositions));}catch(_){}}}catch(e){console.warn('Account joystick layout load unavailable:',e?.message||e);}}
-    function syncStickEditButton(){const b=$('stickEditBtn');if(!b)return;const visible=!!(isTestMode&&touch&&scr==='game');b.style.display=visible?'block':'none';b.textContent=stickEditMode?'DONE MOVING CONTROLS':'MOVE CONTROLS';b.style.background=stickEditMode?'#b45309':'#252b40';}
+    function syncStickEditButton(){const b=$('stickEditBtn');if(!b)return;const visible=!!(touch&&scr==='game');b.style.display=visible?'block':'none';b.textContent=stickEditMode?'DONE MOVING CONTROLS':'MOVE CONTROLS';b.style.background=stickEditMode?'#b45309':'#252b40';}
     $('stickEditBtn').addEventListener('click',()=>{stickEditMode=!stickEditMode;for(const k of ['m','a']){const p=stickOrigin(k);ts[k].ox=p.x;ts[k].oy=p.y;ts[k].x=p.x;ts[k].y=p.y;}syncStickEditButton();});
-    function positionAbilityButtons(){for(const k of ['sup','gad']){const el=$(k);if(!el)continue;const p=stickOrigin(k);el.style.position='fixed';el.style.left=(p.x-30)+'px';el.style.top=(p.y-30)+'px';el.style.right='auto';el.style.bottom='auto';el.style.zIndex='80';el.style.touchAction='none';}}
+    function positionAbilityButtons(){for(const k of ['sup','gad']){const el=$(k);if(!el)continue;const p=stickOrigin(k);el.style.position='fixed';el.style.left=(p.x-30)+'px';el.style.top=(p.y-30)+'px';el.style.right='auto';el.style.bottom='auto';el.style.zIndex='80';el.style.touchAction='none';}for(const [id,key] of [['moveStick','m'],['aimStick','a']]){const el=$(id);if(!el)continue;const p=stickOrigin(key);el.style.left=p.x+'px';el.style.top=p.y+'px';}}
     for(const id of ['sup','gad']){const el=$(id);let dragId=null;if(!el)continue;el.addEventListener('pointerdown',e=>{if(!stickEditMode)return;e.preventDefault();e.stopImmediatePropagation();dragId=e.pointerId;try{el.setPointerCapture(e.pointerId);}catch(_){}},{capture:true});el.addEventListener('pointermove',e=>{if(!stickEditMode||dragId!==e.pointerId)return;e.preventDefault();const k=id,nx=Math.max(.04,Math.min(.96,e.clientX/innerWidth)),ny=Math.max(.08,Math.min(.92,e.clientY/innerHeight));stickPositions[k]={x:nx,y:ny};saveStickPositions();applyControlPositions();},{capture:true});const endDrag=e=>{if(dragId!==e.pointerId)return;dragId=null;saveStickPositions();};el.addEventListener('pointerup',endDrag,{capture:true});el.addEventListener('pointercancel',endDrag,{capture:true});}
-    function applyControlPositions(){positionAbilityButtons();syncStickEditButton();}
+    function syncPositionSliders(){document.querySelectorAll('[data-pos-key][data-pos-axis]').forEach(input=>{const p=stickPositions[input.dataset.posKey];if(p)input.value=String(Math.round(p[input.dataset.posAxis]*100));});}
+    document.querySelectorAll('[data-pos-key][data-pos-axis]').forEach(input=>input.addEventListener('input',()=>{const key=input.dataset.posKey,axis=input.dataset.posAxis;if(!stickPositions[key])return;stickPositions[key][axis]=Number(input.value)/100;saveStickPositions();applyControlPositions();}));
+    $('resetMobilePositions').addEventListener('click',()=>{stickPositions={m:{x:.16,y:.76},a:{x:.78,y:.76},sup:{x:.91,y:.70},gad:{x:.91,y:.84}};saveStickPositions();syncPositionSliders();applyControlPositions();});
+    function applyControlPositions(){positionAbilityButtons();syncStickEditButton();syncPositionSliders();}
     function initAccountControlPositions(){void loadStickPositionsAccount().then(applyControlPositions);}
     window.addEventListener('resize',applyControlPositions);
     function getTouchPos(t){ const rect = cv.getBoundingClientRect(); return { x: (t.clientX - rect.left) * (W / rect.width), y: (t.clientY - rect.top) * (H / rect.height) }; }
@@ -974,8 +995,8 @@
                 }
                 else if(me.muiCharging<=0&&!KM.some(km=>km.o===me)){if(me.sc>0&&me.k.lg){}else tryFire(me);}
               }else{
-                // A tap / press in the neutral centre is the mobile equivalent of F.
-                autoAimTarget(me);
+                // A centre tap auto-aims and fires, matching the mobile auto-aim control.
+                if(autoAimTarget(me)&&me.muiCharging<=0&&!KM.some(km=>km.o===me))tryFire(me);
               }
             }
             }
@@ -1126,7 +1147,8 @@
     function degesAimTarget(p,maxRange){
       const sx=p.x+Math.cos(p.a)*24,sy=p.y+Math.sin(p.a)*24;
       let tx=sx+Math.cos(p.a)*maxRange,ty=sy+Math.sin(p.a)*maxRange;
-      if(p===me&&!touch&&p.autoAimTimer<=0&&scr==='game'&&Number.isFinite(mx)&&Number.isFinite(my)){tx=mx/Math.max(.01,z)+cam.x;ty=my/Math.max(.01,z)+cam.y;}
+      if(p===me&&touch&&ts.a.active){const dx=ts.a.x-ts.a.ox,dy=ts.a.y-ts.a.oy,stickDistance=Math.hypot(dx,dy),strength=Math.max(0,Math.min(1,stickDistance/60));if(stickDistance>1){tx=sx+dx/stickDistance*maxRange*strength;ty=sy+dy/stickDistance*maxRange*strength;}}
+      else if(p===me&&!touch&&p.autoAimTimer<=0&&scr==='game'&&Number.isFinite(mx)&&Number.isFinite(my)){tx=mx/Math.max(.01,z)+cam.x;ty=my/Math.max(.01,z)+cam.y;}
       else if(p.remoteBeerTarget&&Number.isFinite(p.remoteBeerTarget.x)&&Number.isFinite(p.remoteBeerTarget.y)){tx=p.remoteBeerTarget.x;ty=p.remoteBeerTarget.y;}
       const dx=tx-sx,dy=ty-sy,dist=Math.hypot(dx,dy),ux=dx/(dist||1),uy=dy/(dist||1),range=Math.max(0,Math.min(maxRange,dist));
       // Allow close/self-targeted pools instead of forcing every bottle to travel at least 70px.
@@ -1711,7 +1733,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
               if(p.b==='hacker'&&p.hackerDroneControl)step(p,ix,iy,dt);
               else if(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive){
                 const controlled=hackerHackTarget,droneX=Number.isFinite(p.hackerDroneX)?p.hackerDroneX:p.x,droneY=Number.isFinite(p.hackerDroneY)?p.hackerDroneY:p.y;
-                if(Math.hypot(controlled.x-droneX,controlled.y-droneY)>p.k.rng){p.hackTargetId=null;p.hackUntil=0;controlled.hackerControlledBy=null;controlled.hackerControlTimer=0;controlled.hackedById=null;controlled.hackUntil=0;hackerHackTimer=0;hackerHackTarget=null;step(p,0,0,dt);}
+                if(Math.hypot(controlled.x-droneX,controlled.y-droneY)>p.k.rng){p.hackTargetId=null;p.hackUntil=0;controlled.hackerControlledBy=null;controlled.hackerControlTimer=0;controlled.hackedById=null;controlled.hackUntil=0;hackerHackTimer=0;hackerBinaryRain=0;hackerHackTarget=null;step(p,0,0,dt);}
                 else {step(p,0,0,dt);const inputLen=Math.hypot(ix,iy);p.mx=inputLen?ix/inputLen:0;p.my=inputLen?iy/inputLen:0;step(controlled,ix,iy,dt);const aimX=mx/z+cam.x,aimY=my/z+cam.y;controlled.a=Math.atan2(aimY-controlled.y,aimX-controlled.x);p.a=controlled.a;if(mdown&&!touch){if(networkMode)window.DaBrawlNet?.sendAction?.('fire',controlled.a,{controlledPlayerId:controlled.netId||controlled.id});tryFire(controlled);}}
               }else if(p===me&&p.hackedById&&p.hackUntil>Date.now()){const controller=P.find(q=>(q.netId||q.id)===p.hackedById);step(p,controller?.mx||0,controller?.my||0,dt);if(controller)p.a=controller.a;}
               else step(p,ix,iy,dt);
