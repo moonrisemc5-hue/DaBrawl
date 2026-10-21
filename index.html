@@ -1298,7 +1298,7 @@
     function sup(p){
       if(G.ph!='play'||!p.alive||p.sc<1||p.tf>0||p.smokeTimer>0||p.frozenTimer>0||p.ramuDiveTimer>0||p.ramuShieldTimer>0) return;
       p.nh=0;p.hc=0;
-      if(p.b==='hacker'){const target=hackerSelectedTarget;if(!target||!target.alive||target===p||(gameMode!=='showdown'&&target.t===p.t)||Math.hypot(target.x-p.x,target.y-p.y)>430){beep(160,.16,.05,'square',-30);return;}if(networkMode&&window.DaBrawlNet)window.DaBrawlNet.sendAction('super',p.a,{targetId:target.netId||target.id});hackerHackTarget=target;hackerHackTimer=4;hackerBinaryRain=4;p.hackTargetId=target.netId||target.id;p.hackUntil=Date.now()+4000;target.hackerControlledBy=p;target.hackerControlTimer=4;target.hackedById=p.netId||p.id;target.hackUntil=Date.now()+4000;p.hackerDroneControl=false;p.sc=0;p.chg=0;p.holdT=0;shake=Math.max(shake,12);beep(880,.22,.06,'sawtooth',-260);for(let i=0;i<30;i++)puff(target.x+(Math.random()-.5)*36,target.y+(Math.random()-.5)*42,1,'#39ffb6',1.4);return;}
+      if(p.b==='hacker'){const target=hackerSelectedTarget;if(!target||!target.alive||target===p||(gameMode!=='showdown'&&target.t===p.t)||Math.hypot(target.x-p.x,target.y-p.y)>430){beep(160,.16,.05,'square',-30);return;}if(networkMode&&window.DaBrawlNet)window.DaBrawlNet.sendAction('super',p.a,{targetId:target.netId||target.id});hackerHackTarget=target;hackerHackTimer=4;hackerBinaryRain=4;p.hackTargetId=target.netId||target.id;p.hackUntil=Date.now()+4000;target.hackerControlledBy=p;target.hackerControlTimer=4;target.hackedById=p.netId||p.id;target.hackUntil=Date.now()+4000;F.push({k:'t',x:target.x,y:target.y-48,vx:0,vy:-24,l:1.8,m:1.8,tx:'CONTROLLED 0101',c:'#39ffb6'});p.hackerDroneControl=false;p.sc=0;p.chg=0;p.holdT=0;shake=Math.max(shake,12);beep(880,.22,.06,'sawtooth',-260);for(let i=0;i<30;i++)puff(target.x+(Math.random()-.5)*36,target.y+(Math.random()-.5)*42,1,'#39ffb6',1.4);return;}
       if(p.b==='ramu'){
         const nextMode=p.ramuMode==='fire'?'ice':'fire';
         if(networkMode&&window.DaBrawlNet){if(p===me)window.DaBrawlNet.sendAction('super',p.a,{ramuMode:nextMode});else if(isNetworkHost&&p.isBot)window.DaBrawlNet.sendAction('super',p.a,{playerId:p.netId,ramuMode:nextMode});}
@@ -1510,6 +1510,8 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     }
     function ai(b,dt){
       b.aiFireHeld=false;
+      // A hacked fighter is fully player-driven: no bot movement, aiming, attacks, gadgets, or supers.
+      if((b.hackedById&&b.hackUntil>Date.now())||(b.hackerControlledBy&&(b.hackerControlTimer||0)>0)){step(b,0,0,dt);b.aiFireHeld=false;return;}
       if(b.smokeTimer>0||b.frozenTimer>0){step(b,0,0,dt);return;}
       if(b.isDummy){
         let tg=null,bd=1e9;
@@ -3192,6 +3194,11 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     const el = id => document.getElementById(id);
     // Realtime chat for party rooms, online matches, and accepted friend DMs.
     let chatUser=null, chatFriendChannel=null, chatFriendId='', chatFriendName='', chatScope='party', chatBusy=false;
+    const DIRECT_CHAT_STORE='dabrawl_direct_chat_v1';
+    function directChatKey(friendId){return [String(chatUser?.id||''),String(friendId||'')].sort().join(':');}
+    function readDirectHistory(friendId){try{const all=JSON.parse(localStorage.getItem(DIRECT_CHAT_STORE)||'{}');return Array.isArray(all[directChatKey(friendId)])?all[directChatKey(friendId)]:[];}catch(_){return[];}}
+    function saveDirectMessage(payload,friendId=chatFriendId){if(!friendId||!chatUser)return;try{const all=JSON.parse(localStorage.getItem(DIRECT_CHAT_STORE)||'{}'),key=directChatKey(friendId),list=Array.isArray(all[key])?all[key]:[];list.push({text:String(payload.text||'').slice(0,240),userId:String(payload.userId||''),name:String(payload.name||'Friend').slice(0,28),sentAt:Number(payload.sentAt)||Date.now()});all[key]=list.slice(-200);localStorage.setItem(DIRECT_CHAT_STORE,JSON.stringify(all));}catch(_){if(el('dabrawlChatStatus'))el('dabrawlChatStatus').textContent='Direct chat could not be saved in this browser.';}}
+    function renderDirectHistory(friendId){const log=el('dabrawlChatLog');if(!log)return;log.replaceChildren();for(const m of readDirectHistory(friendId)){const mine=m.userId===chatUser?.id;chatAppend((mine?'You':m.name)+': '+m.text,mine?'#f8fafc':'#cbd5e1');}}
     function ensureChatUI(){
       if(el('dabrawlChatToggle'))return;
       const style=document.createElement('style');style.textContent='#dabrawlChatToggle{position:fixed;right:14px;bottom:14px;z-index:9998;background:#ffd21f;color:#111827;border:3px solid #111827;border-radius:14px;padding:10px 15px;font:bold 16px sans-serif;box-shadow:0 4px 0 #0008}#dabrawlChatPanel{display:none;position:fixed;right:12px;bottom:62px;z-index:9999;width:min(340px,calc(100vw - 24px));height:min(430px,65vh);background:#0f172a;border:2px solid #39ffb6;border-radius:14px;padding:10px;box-sizing:border-box;color:#fff;font:14px sans-serif;flex-direction:column;gap:8px}#dabrawlChatPanel select,#dabrawlChatPanel input,#dabrawlChatPanel button{font:inherit;border-radius:8px;padding:8px;border:1px solid #475569}#dabrawlChatLog{flex:1;overflow:auto;background:#020617;border-radius:8px;padding:8px;overflow-wrap:anywhere}';
@@ -3202,11 +3209,11 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       el('dabrawlChatClose').onclick=()=>panel.style.display='none';
       el('dabrawlChatScope').onchange=async()=>{chatScope=el('dabrawlChatScope').value;el('dabrawlChatFriend').style.display=chatScope==='friend'?'block':'none';el('dabrawlChatLog').replaceChildren();if(chatScope==='friend')await loadChatFriends();else chatAppend('Party chat is ready when you are in a party or online match.','#94a3b8');};
       el('dabrawlChatFriend').onchange=()=>void connectFriendChat(el('dabrawlChatFriend').value);
-      el('dabrawlChatForm').onsubmit=async e=>{e.preventDefault();const input=el('dabrawlChatInput'),message=input.value.trim();if(!message||chatBusy)return;if(!chatUser){el('dabrawlChatStatus').textContent='Sign in to send messages.';return;}chatBusy=true;try{const payload={text:message.slice(0,240),userId:chatUser.id,name:chatUser.user_metadata?.username||(chatUser.email||'').split('@')[0]||'Player',sentAt:Date.now()};const channel=chatScope==='friend'?chatFriendChannel:(roomChannel||matchChannel);if(!channel){el('dabrawlChatStatus').textContent='Join a party or online match first for party chat.';return;}const result=await channel.send({type:'broadcast',event:'chat-message',payload});if(result!=='ok'&&result?.status!=='ok')el('dabrawlChatStatus').textContent='Chat could not send. Check your connection.';else{chatAppend(payload.name+': '+payload.text,'#f8fafc');input.value='';}}catch(err){el('dabrawlChatStatus').textContent='Chat error: '+(err?.message||'connection failed');}finally{chatBusy=false;}};
+      el('dabrawlChatForm').onsubmit=async e=>{e.preventDefault();const input=el('dabrawlChatInput'),message=input.value.trim();if(!message||chatBusy)return;if(!chatUser){el('dabrawlChatStatus').textContent='Sign in to send messages.';return;}chatBusy=true;try{const payload={text:message.slice(0,240),userId:chatUser.id,name:chatUser.user_metadata?.username||(chatUser.email||'').split('@')[0]||'Player',sentAt:Date.now()};const channel=chatScope==='friend'?chatFriendChannel:(roomChannel||matchChannel);if(!channel){el('dabrawlChatStatus').textContent='Join a party or online match first for party chat.';return;}const result=await channel.send({type:'broadcast',event:'chat-message',payload});if(result!=='ok'&&result?.status!=='ok')el('dabrawlChatStatus').textContent='Chat could not send. Check your connection.';else{chatAppend((chatScope==='friend'?'You':payload.name)+': '+payload.text,'#f8fafc');if(chatScope==='friend')saveDirectMessage(payload);input.value='';}}catch(err){el('dabrawlChatStatus').textContent='Chat error: '+(err?.message||'connection failed');}finally{chatBusy=false;}};
       void db.auth.getUser().then(({data})=>{chatUser=data?.user||null;});
     }
     function chatAppend(text,color='#e2e8f0'){const log=el('dabrawlChatLog');if(!log)return;const line=document.createElement('div');line.textContent=String(text).slice(0,300);line.style.color=color;line.style.padding='3px 0';log.appendChild(line);while(log.children.length>80)log.firstChild.remove();log.scrollTop=log.scrollHeight;}
-    function receiveChat(payload){if(!payload||typeof payload.text!=='string'||payload.text.length>240||payload.userId===chatUser?.id)return;chatAppend(String(payload.name||'Friend').slice(0,28)+': '+payload.text);}
+    function receiveChat(payload){if(!payload||typeof payload.text!=='string'||payload.text.length>240||payload.userId===chatUser?.id)return;if(chatScope==='friend'&&chatFriendId)saveDirectMessage(payload,chatFriendId);chatAppend(String(payload.name||'Friend').slice(0,28)+': '+payload.text);}
     async function loadChatFriends(){
       if(!chatUser){const auth=await db.auth.getUser();chatUser=auth.data?.user||null;}if(!chatUser){el('dabrawlChatStatus').textContent='Sign in to chat with friends.';return;}
       const select=el('dabrawlChatFriend');if(!select)return;
@@ -3221,7 +3228,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     }
     async function connectFriendChat(friendId){
       if(chatFriendChannel){const old=chatFriendChannel;chatFriendChannel=null;try{await db.removeChannel(old);}catch(_){}}
-      chatFriendId=friendId;const option=el('dabrawlChatFriend')?.selectedOptions?.[0];chatFriendName=option?.dataset?.name||option?.textContent||'Friend';el('dabrawlChatLog').replaceChildren();
+      chatFriendId=friendId;const option=el('dabrawlChatFriend')?.selectedOptions?.[0];chatFriendName=option?.dataset?.name||option?.textContent||'Friend';el('dabrawlChatLog').replaceChildren();if(friendId&&chatUser)renderDirectHistory(friendId);
       if(!friendId||!chatUser){el('dabrawlChatStatus').textContent='Choose an accepted friend to start a DM.';return;}
       const pair=[chatUser.id,friendId].sort().join('-');chatFriendChannel=db.channel('dabrawl-friend-chat-'+pair,{config:{broadcast:{self:false}}}).on('broadcast',{event:'chat-message'},({payload})=>receiveChat(payload));
       chatFriendChannel.subscribe(statusValue=>{el('dabrawlChatStatus').textContent=statusValue==='SUBSCRIBED'?'Direct chat with '+chatFriendName:'Connecting to friend chat…';});
