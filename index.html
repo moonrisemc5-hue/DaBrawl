@@ -892,17 +892,22 @@
         keyBinds[waitingForBind]=next;waitingForBind=null;$('keybindHint').textContent='Controls saved on this device.';saveKeyBinds();return;
       }
       const key=e.key.toLowerCase();
+      const chatPanel=el('dabrawlChatPanel');
+      if(chatPanel&&chatPanel.style.display==='flex'){
+        // While chat is open, suppress every gameplay control and clear held inputs.
+        Object.keys(keys).forEach(k=>keys[k]=0);
+        mdown=false;
+        return;
+      }
       keys[key] = 1;
-      const chatPanel=el('dabrawlChatPanel'),chatInput=el('dabrawlChatInput');
-      const typingInChat=!!(chatPanel&&chatPanel.style.display==='flex'&&(chatPanel.contains(e.target)||document.activeElement===chatInput));
-      if(scr !== 'game' || typingInChat) return;
+      if(scr !== 'game') return;
       if(e.key.toLowerCase() === keyBinds.super){ e.preventDefault(); sup(me); }
       if(e.key.toLowerCase() === keyBinds.gadget) { e.preventDefault(); gadget(me); }
       if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); if(autoAimTarget(me)){mdown=true;tryFire(me);} }
     });
     addEventListener('keyup', e => {keys[e.key.toLowerCase()] = 0;if(e.key.toLowerCase()===keyBinds.autoAim)mdown=false;});
     addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive&&me.smokeTimer<=0&&me.ramuShieldTimer<=0){const wx=mx/Math.max(.01,z)+cam.x,wy=my/Math.max(.01,z)+cam.y;me.a=Math.atan2(wy-me.y,wx-me.x);me.autoAimTimer=0;me.autoAimTarget=null;} });
-    cv.addEventListener('mousedown', e => { if(el('dabrawlChatPanel')?.style.display==='flex')return; touch = false; if(e.button===mouseSuperBindValue()){e.preventDefault();if(me&&me.tf<=0)sup(me);} else if(e.button===mouseAttackBindValue()){e.preventDefault();mdown=true;tryFire(me);} });
+    cv.addEventListener('mousedown', e => { if(el('dabrawlChatPanel')?.style.display==='flex'){mdown=false;return;} touch = false; if(e.button===mouseSuperBindValue()){e.preventDefault();if(me&&me.tf<=0)sup(me);} else if(e.button===mouseAttackBindValue()){e.preventDefault();mdown=true;tryFire(me);} });
     cv.addEventListener('mouseup', e => { if(e.button===mouseAttackBindValue()) mdown = false; });
     cv.addEventListener('contextmenu', e => e.preventDefault());
     const ts = {m:{id:null,ox:0,oy:0,x:0,y:0,active:false}, a:{id:null,ox:0,oy:0,x:0,y:0,active:false}, s:{id:null,ox:0,oy:0,x:0,y:0,active:false}};
@@ -926,7 +931,7 @@
     function getTouchPos(t){ const rect = cv.getBoundingClientRect(); return { x: (t.clientX - rect.left) * (W / rect.width), y: (t.clientY - rect.top) * (H / rect.height) }; }
     document.addEventListener('click',e=>{if(scr!=='game'||!me||me.b!=='hacker'||hackerBinaryRain>0||e.target?.closest?.('button'))return;const pos=getTouchPos(e),wx=pos.x/z+cam.x,wy=pos.y/z+cam.y;let best=null,bd=48;for(const q of P){if(q===me||!q.alive||(gameMode!=='showdown'&&q.t===me.t))continue;const d=Math.hypot(q.x-wx,q.y-wy);if(d<bd){bd=d;best=q;}}if(best){hackerSelectedTarget=best;me.a=Math.atan2(best.y-me.y,best.x-me.x);beep(680,.08,.03,'triangle',100);}});
     addEventListener('keydown',e=>{if(scr!=='game'||!me||me.b!=='hacker'||e.key!=='Tab')return;e.preventDefault();const enemies=P.filter(q=>q!==me&&q.alive&&(gameMode==='showdown'||q.t!==me.t));if(!enemies.length)return;const i=enemies.indexOf(hackerSelectedTarget);hackerSelectedTarget=enemies[(i+1)%enemies.length];me.a=Math.atan2(hackerSelectedTarget.y-me.y,hackerSelectedTarget.x-me.x);});
-    cv.addEventListener('touchstart', e => { if(el('dabrawlChatPanel')?.style.display==='flex'&&!el('dabrawlChatPanel').contains(e.target))return;
+    cv.addEventListener('touchstart', e => { if(el('dabrawlChatPanel')?.style.display==='flex'){mdown=false;return;}
       e.preventDefault(); touch=true;
       for(const t of e.changedTouches){
         const pos=getTouchPos(t),side=pos.x<W/2?'m':'a';
