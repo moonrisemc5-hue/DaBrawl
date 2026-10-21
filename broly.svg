@@ -25,13 +25,13 @@
  </g>
 </g>
 <!-- spiky silhouette behind the face -->
-<path d="M42 113 19 79 47 91 37 48 65 74 70 18 91 61 103 4 117 60 139 22 141 76 169 50 159 91 184 82 164 116 148 130 51 130Z" fill="#030408" stroke="#000" stroke-width="4" stroke-linejoin="miter"/>
+<path d="M42 113 10 79 39 87 24 43 57 69 66 11 88 58 103 2 119 57 146 18 145 71 178 43 164 87 193 78 168 115 150 132 49 132Z" fill="#030408" stroke="#000" stroke-width="4" stroke-linejoin="miter"/>
 <!-- individual mirrored spike facets -->
 <g fill="url(#hairFacet)" stroke="#07080d" stroke-width="2" stroke-linejoin="miter">
- <path d="M44 109 20 79 48 91Z"/><path d="M51 103 38 49 66 75Z"/>
- <path d="M67 91 70 19 91 61Z"/><path d="M91 85 103 5 115 61Z"/>
- <path d="M112 91 139 22 140 76Z"/><path d="M133 103 169 50 158 91Z"/>
- <path d="M151 111 184 82 163 116Z"/>
+ <path d="M44 109 10 79 39 87Z"/><path d="M51 103 24 43 57 69Z"/>
+ <path d="M67 91 66 11 88 58Z"/><path d="M91 85 103 5 115 61Z"/>
+ <path d="M112 91 146 18 145 71Z"/><path d="M133 103 178 43 164 87Z"/>
+ <path d="M151 111 193 78 168 115Z"/>
 </g>
 <!-- long black front locks -->
 <path d="M37 119 42 82 60 105 69 72 83 103 98 78 111 105 127 77 137 105 155 86 158 117 145 132 129 124 117 135 103 124 91 136 77 125 61 135 48 127Z" fill="#030408" stroke="#000" stroke-width="3" stroke-linejoin="miter"/>
@@ -66,7 +66,7 @@
 <path d="M75 164 125 164 131 180 120 193 80 193 69 180Z" fill="#0b4c27" stroke="#080911" stroke-width="3"/>
 <path d="M79 167 121 167 125 179 117 187 83 187 75 179Z" fill="url(#green)"/>
 <!-- shoulder armor, white rim and green plates -->
-<path d="M66 177 34 166 10 161 17 184 38 202 63 201 72 190Z M134 177 166 166 190 161 183 184 162 202 137 201 128 190Z" fill="#080911" stroke="#080911" stroke-width="3"/>
+<path d="M66 177 32 164 7 158 15 184 38 204 63 202 72 190Z M134 177 168 164 193 158 185 184 162 204 137 202 128 190Z" fill="#080911" stroke="#080911" stroke-width="3"/>
 <path d="M64 177 34 169 15 165 22 182 40 197 62 196 69 188Z M136 177 166 169 185 165 178 182 160 197 138 196 131 188Z" fill="url(#armor)" stroke="#fff" stroke-width="1.5"/>
 <path d="M61 178 35 172 22 169 28 181 42 191 61 191 66 186Z M139 178 165 172 178 169 172 181 158 191 139 191 134 186Z" fill="#14c94a" stroke="#087b35" stroke-width="1.5"/>
 <!-- lower arms and aura shards -->
