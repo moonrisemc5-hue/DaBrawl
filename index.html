@@ -893,8 +893,8 @@
       }
       const key=e.key.toLowerCase();
       const chatPanel=el('dabrawlChatPanel'),chatInput=el('dabrawlChatInput');
-      const typingInChat=!!(chatPanel&&chatPanel.style.display==='flex'&&
-        (chatPanel.contains(e.target)||document.activeElement===chatInput));
+      const typingInChat=!!(chatPanel&&chatPanel.style.display==='flex'&&chatPanel.contains(e.target)&&
+        (e.target===chatInput||e.target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName||'')));
       // Keep movement working while the chat panel is merely visible. Only suppress
       // gameplay when keyboard input is actually directed into the chat UI.
       if(typingInChat){Object.keys(keys).forEach(k=>keys[k]=0);mdown=false;return;}
@@ -906,6 +906,8 @@
     }, true);
     // Capture release events too, so overlays cannot leave movement keys stuck.
     addEventListener('keyup', e => {keys[e.key.toLowerCase()] = 0;if(e.key.toLowerCase()===keyBinds.autoAim)mdown=false;}, true);
+    // Clicking back into the arena releases chat focus, restoring WASD immediately.
+    cv.addEventListener('pointerdown',()=>{const input=el('dabrawlChatInput');if(input&&document.activeElement===input)input.blur();},true);
     addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive&&me.smokeTimer<=0&&me.ramuShieldTimer<=0){const wx=mx/Math.max(.01,z)+cam.x,wy=my/Math.max(.01,z)+cam.y;me.a=Math.atan2(wy-me.y,wx-me.x);me.autoAimTimer=0;me.autoAimTarget=null;} });
     cv.addEventListener('mousedown', e => { if(el('dabrawlChatPanel')?.style.display==='flex'){mdown=false;return;} touch = false; if(e.button===mouseSuperBindValue()){e.preventDefault();if(me&&me.tf<=0)sup(me);} else if(e.button===mouseAttackBindValue()){e.preventDefault();mdown=true;tryFire(me);} });
     cv.addEventListener('mouseup', e => { if(e.button===mouseAttackBindValue()) mdown = false; });
