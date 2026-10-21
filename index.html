@@ -893,8 +893,8 @@
       }
       const key=e.key.toLowerCase();
       const chatPanel=el('dabrawlChatPanel'),chatInput=el('dabrawlChatInput');
-      const typingInChat=!!(chatPanel&&chatPanel.style.display==='flex'&&
-        (chatPanel.contains(e.target)||document.activeElement===chatInput));
+      const typingInChat=!!(chatPanel&&chatPanel.style.display==='flex'&&chatPanel.contains(e.target)&&
+        (e.target===chatInput||e.target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName||'')));
       // Keep movement working while the chat panel is merely visible. Only suppress
       // gameplay when keyboard input is actually directed into the chat UI.
       if(typingInChat){Object.keys(keys).forEach(k=>keys[k]=0);mdown=false;return;}
@@ -903,8 +903,11 @@
       if(e.key.toLowerCase() === keyBinds.super){ e.preventDefault(); sup(me); }
       if(e.key.toLowerCase() === keyBinds.gadget) { e.preventDefault(); gadget(me); }
       if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); if(autoAimTarget(me)){mdown=true;tryFire(me);} }
-    });
-    addEventListener('keyup', e => {keys[e.key.toLowerCase()] = 0;if(e.key.toLowerCase()===keyBinds.autoAim)mdown=false;});
+    }, true);
+    // Capture release events too, so overlays cannot leave movement keys stuck.
+    addEventListener('keyup', e => {keys[e.key.toLowerCase()] = 0;if(e.key.toLowerCase()===keyBinds.autoAim)mdown=false;}, true);
+    // Clicking back into the arena releases chat focus, restoring WASD immediately.
+    cv.addEventListener('pointerdown',()=>{const input=el('dabrawlChatInput');if(input&&document.activeElement===input)input.blur();},true);
     addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive&&me.smokeTimer<=0&&me.ramuShieldTimer<=0){const wx=mx/Math.max(.01,z)+cam.x,wy=my/Math.max(.01,z)+cam.y;me.a=Math.atan2(wy-me.y,wx-me.x);me.autoAimTimer=0;me.autoAimTarget=null;} });
     cv.addEventListener('mousedown', e => { if(el('dabrawlChatPanel')?.style.display==='flex'){mdown=false;return;} touch = false; if(e.button===mouseSuperBindValue()){e.preventDefault();if(me&&me.tf<=0)sup(me);} else if(e.button===mouseAttackBindValue()){e.preventDefault();mdown=true;tryFire(me);} });
     cv.addEventListener('mouseup', e => { if(e.button===mouseAttackBindValue()) mdown = false; });
@@ -2166,13 +2169,25 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         g.fillStyle='#fff';g.beginPath();g.arc(s*9+3,-22,1.35,0,Math.PI*2);g.fill();
       }
       // Tall, dramatic, near-mirrored black spikes with cool slate edge highlights.
+      // Build each hair lock as a mirrored pair, with the tallest locks centered.
       const spikes=[
-        [[-19,-29],[-31,-46],[-25,-27]], [[-24,-25],[-37,-35],[-29,-18]],
-        [[-16,-28],[-19,-50],[-9,-31]], [[-9,-29],[-3,-62],[4,-30]],
-        [[-2,-29],[5,-55],[10,-28]], [[7,-29],[16,-51],[16,-26]],
-        [[15,-28],[29,-44],[23,-22]], [[22,-23],[37,-31],[27,-14]]
+        [[0,-29],[-3,-72],[6,-31]],
+        [[-4,-29],[-14,-65],[-8,-30]],
+        [[-10,-29],[-25,-57],[-16,-27]],
+        [[-16,-28],[-38,-47],[-24,-23]],
+        [[-21,-26],[-43,-36],[-28,-18]],
+        [[-25,-23],[-48,-25],[-30,-14]],
+        [[-8,-29],[-7,-52],[1,-30]]
       ];
-      for(const pts of spikes){poly(pts,'#030408','#000',1.5);g.strokeStyle='#34394a';g.lineWidth=1.2;g.beginPath();g.moveTo(pts[0][0]+1,pts[0][1]+1);g.lineTo(pts[1][0]+1,pts[1][1]+1);g.stroke();}
+      for(const pts of spikes){
+        for(const side of [-1,1]){
+          const mirrored=pts.map(([x,y])=>[x*side,y]);
+          poly(mirrored,'#030408','#000',1.5);
+          g.strokeStyle='#34394a';g.lineWidth=1.2;g.beginPath();
+          g.moveTo(mirrored[0][0]+side,mirrored[0][1]+1);
+          g.lineTo(mirrored[1][0]+side,mirrored[1][1]+1);g.stroke();
+        }
+      }
       // Dense central fringe and thick angular brows, matching the concept's silhouette.
       poly([[-24,-28],[-18,-35],[-13,-27],[-7,-36],[-2,-25],[5,-35],[10,-25],[17,-32],[20,-21],[13,-13],[-13,-13],[-21,-18]],'#030408','#000',1.8);
       poly([[-18,-27],[-8,-29],[-2,-26],[-2,-23],[-10,-25],[-17,-24]],'#07080c',null);
