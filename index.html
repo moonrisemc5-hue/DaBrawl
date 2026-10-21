@@ -2127,69 +2127,127 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       }
     };
     function drawBroly(p){
-      // Clean, symmetrical, flat-shaded Broly sprite based on the approved concept art.
+      // Reference-driven Broly model: front-facing, bold black contours, crisp flat shading.
       const bob=1+Math.sin(p.walk||0)*.018, t=performance.now()/1000;
       g.save();g.scale(1.12,bob*1.12);g.lineJoin='round';g.lineCap='round';
-      const poly=(pts,fill,stroke='#080911',lw=2.5)=>{g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fillStyle=fill;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=lw;g.stroke();}};
-      // Symmetrical emerald aura fins, layered behind the shoulders.
-      for(const s of [-1,1]){
-        g.save();g.scale(s,1);
-        poly([[8,3],[29,-8],[24,3],[43,5],[30,13],[41,23],[23,20],[15,29],[9,16]],'#146a35','#123d2b',1.5);
-        poly([[13,8],[27,1],[23,10],[35,12],[24,18],[30,25],[19,20]],'#39d83b','#217f32',1.4);
-        poly([[16,10],[21,6],[20,13],[28,15],[22,19],[26,23],[18,19]],'#9cff4a','#4abf37',1.2);
-        // white-edged green shoulder blades
-        poly([[13,-3],[32,-7],[28,1],[35,3],[29,9],[17,7]],'#20bd4a','#f3f4f8',2.2);
+      const poly=(pts,fill,stroke='#080911',lw=2.5)=>{
+        g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));
+        g.closePath();g.fillStyle=fill;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=lw;g.stroke();}
+      };
+      const mirror=(pts,fill,stroke='#080911',lw=2.5)=>{for(const side of [-1,1])poly(pts.map(([x,y])=>[x*side,y]),fill,stroke,lw);};
+      // Layered green energy silhouette behind the body, with bright lime shards.
+      g.save();g.globalCompositeOperation='source-over';
+      for(const side of [-1,1]){
+        g.save();g.scale(side,1);
+        poly([[8,4],[28,-7],[23,3],[42,2],[32,12],[45,15],[31,22],[24,30],[16,24],[12,15]],'#0c5a2d','#0b3423',1.5);
+        poly([[12,8],[28,1],[24,9],[37,11],[27,18],[32,24],[20,21]],'#1bcf39','#14762b',1.3);
+        poly([[14,12],[23,7],[20,14],[30,17],[23,22],[27,26],[17,21]],'#a5ff45','#4bc62f',1.2);
+        poly([[17,15],[22,11],[21,17],[26,19],[22,23]],'#d0ff57','#73d92f',.9);
+        // Shoulder armor: white outer rim, emerald inner plate.
+        poly([[12,-8],[31,-11],[28,-3],[36,1],[30,8],[16,6]],'#fbfbff','#080911',2.5);
+        poly([[14,-6],[29,-9],[26,-2],[32,1],[27,5],[17,4]],'#16c94b','#087a35',1.1);
+        // Additional aura shards frame the waist and forearms.
+        poly([[12,12],[20,16],[16,20],[25,23],[17,24],[12,20]],'#5bea36','#2b9b2a',1.1);
+        poly([[15,18],[21,21],[18,26],[24,28],[15,26]],'#b7ff4a','#4ebd2b',1);
         g.restore();
       }
-      // Broad purple torso, squared belt and green collar.
-      poly([[-15,-1],[-23,3],[-20,15],[-13,20],[-11,26],[11,26],[13,20],[20,15],[23,3],[15,-1]],'#30204f','#080911',3);
-      poly([[-10,-4],[10,-4],[13,4],[8,8],[-8,8],[-13,4]],'#60e72e','#1c5e25',1.8);
-      poly([[-13,18],[13,18],[15,25],[-15,25]],'#10121c','#080911',1.5);
-      poly([[-8,20],[8,20],[8,25],[-8,25]],'#f7f7fb',null);
-      poly([[-5,20],[5,20],[5,27],[-5,27]],'#20b84c',null);
-      // Mirrored muscular arms with green wrist energy.
-      for(const s of [-1,1]){
-        g.save();g.scale(s,1);
-        poly([[13,1],[20,1],[27,8],[24,15],[18,13],[14,8]],'#30204f','#080911',2.4);
-        poly([[21,4],[30,4],[34,8],[29,13],[22,10]],'#20b84a','#12642e',1.4);
-        poly([[25,7],[31,6],[29,10],[33,12],[27,12]],'#8df53d','#39b82e',1.1);
-        g.restore();
+      // Back aura glints.
+      for(let i=0;i<12;i++){
+        const side=i%2?1:-1, phase=t*1.8+i*1.7;
+        g.globalAlpha=.75;
+        poly([[side*(16+i%4*3),4+i%5*3],[side*(23+i%5*3),-1+i%4*5],[side*(20+i%4*3),9+i%5*3]],i%3?'#46ed35':'#a6ff43','#36a72b',.8);
       }
-      // Round tan weights with dark brown rims and matching engraved bands.
-      const weight=(x,y,r)=>{g.fillStyle='#201512';g.beginPath();g.arc(x,y,r+2,0,Math.PI*2);g.fill();g.strokeStyle='#09090d';g.lineWidth=2.5;g.stroke();g.fillStyle='#4a2f23';g.beginPath();g.arc(x,y,r-1,0,Math.PI*2);g.fill();g.fillStyle='#dca66e';g.beginPath();g.arc(x,y,r-4,0,Math.PI*2);g.fill();g.fillStyle='#f6c78e';g.fillRect(x-r*.35,y-r*.34,r*.65,2);g.fillStyle='#9a6847';g.fillRect(x-r*.34,y-1,r*.65,2);g.fillRect(x-r*.27,y+4,r*.52,2);};
-      weight(22,-23,12);weight(22,13,12);
-      // Face, ears and oversized black-rimmed eyes.
-      g.fillStyle='#c98d55';g.strokeStyle='#080911';g.lineWidth=3;g.beginPath();g.ellipse(0,-19,22,24,0,0,Math.PI*2);g.fill();g.stroke();
-      for(const s of [-1,1]){g.fillStyle='#c98d55';g.beginPath();g.ellipse(s*21,-18,3.5,6,0,0,Math.PI*2);g.fill();g.stroke();}
-      for(const s of [-1,1]){
-        g.fillStyle='#05060a';g.beginPath();g.ellipse(s*9,-19,9.4,8.7,0,0,Math.PI*2);g.fill();
-        g.fillStyle='#fff';g.beginPath();g.ellipse(s*9+1,-20,5.8,5.8,0,0,Math.PI*2);g.fill();
-        g.fillStyle='#05060a';g.beginPath();g.arc(s*9+2,-20,3.5,0,Math.PI*2);g.fill();
-        g.fillStyle='#fff';g.beginPath();g.arc(s*9+3,-22,1.35,0,Math.PI*2);g.fill();
+      g.globalAlpha=1;g.restore();
+      // Arms, purple suit and muscular silhouette.
+      mirror([[12,-5],[20,-5],[27,2],[25,11],[19,15],[13,9]],'#34215f','#080911',2.8);
+      mirror([[20,3],[27,3],[31,8],[27,13],[21,10]],'#281b4d','#080911',2.2);
+      mirror([[22,6],[29,6],[27,10],[31,12],[24,12]],'#29d94c','#117132',1.1);
+      mirror([[24,10],[29,11],[27,15],[30,18],[24,16]],'#8bff3c','#43b52d',1);
+      poly([[-15,-4],[-22,0],[-21,10],[-16,17],[-12,22],[-10,27],[10,27],[12,22],[16,17],[21,10],[22,0],[15,-4],[10,1],[-10,1]],'#30205f','#080911',3.1);
+      // Purple armor/shading planes.
+      poly([[-15,2],[-8,5],[-4,16],[-12,22],[-17,15],[-19,7]],'#45317b','#17112f',1.5);
+      poly([[15,2],[8,5],[4,16],[12,22],[17,15],[19,7]],'#45317b','#17112f',1.5);
+      poly([[-10,5],[0,10],[10,5],[7,17],[0,20],[-7,17]],'#251846','#17112f',1.2);
+      // Bright green collar/chest inset.
+      poly([[-10,-7],[10,-7],[13,0],[8,5],[-8,5],[-13,0]],'#73f33d','#0c5427',2);
+      poly([[-7,-4],[7,-4],[8,0],[5,2],[-5,2],[-8,0]],'#35d92e',null);
+      // Belt and centered white buckle with green tab.
+      poly([[-13,19],[13,19],[15,26],[-15,26]],'#11131e','#080911',1.8);
+      poly([[-8,20],[8,20],[8,25],[-8,25]],'#fafaff',null);
+      poly([[-5,20],[5,20],[5,27],[-5,27]],'#21c64b','#128a36',.7);
+      poly([[-3,27],[3,27],[5,29],[-5,29]],'#d66bb5','#8e397f',.7);
+      // Face shape with tan highlight, ears and jaw contour.
+      g.fillStyle='#080911';g.beginPath();g.moveTo(-21,-25);g.quadraticCurveTo(-23,-43,-10,-44);g.lineTo(10,-44);g.quadraticCurveTo(23,-42,21,-25);g.lineTo(18,-10);g.quadraticCurveTo(12,-1,0,0);g.quadraticCurveTo(-12,-1,-18,-10);g.closePath();g.fill();
+      g.fillStyle='#e7a565';g.beginPath();g.moveTo(-19,-25);g.quadraticCurveTo(-21,-41,-9,-42);g.lineTo(9,-42);g.quadraticCurveTo(21,-40,19,-25);g.lineTo(16,-12);g.quadraticCurveTo(10,-3,0,-3);g.quadraticCurveTo(-10,-3,-16,-12);g.closePath();g.fill();
+      // Subtle warm cheek highlights, mirrored.
+      mirror([[10,-13],[14,-18],[15,-12],[11,-9]],'#f4bd7b',null);
+      for(const side of [-1,1]){
+        g.fillStyle='#080911';g.beginPath();g.ellipse(side*20,-25,4.1,6.1,side*.12,0,Math.PI*2);g.fill();
+        g.fillStyle='#d9975d';g.beginPath();g.ellipse(side*20,-25,2.4,4.2,side*.12,0,Math.PI*2);g.fill();
       }
-      // Tall, dramatic, near-mirrored black spikes with cool slate edge highlights.
-      // Build each hair lock as a mirrored pair, with the tallest locks centered.
-      const spikes=[
-        [[0,-29],[-2,-78],[5,-31]], [[-3,-29],[-12,-68],[-7,-30]],
-        [[-8,-29],[-21,-61],[-14,-27]], [[-14,-28],[-34,-52],[-22,-24]],
-        [[-20,-26],[-43,-39],[-27,-19]], [[-24,-23],[-50,-27],[-29,-14]],
-        [[-7,-29],[-7,-54],[1,-30]], [[-1,-29],[8,-66],[8,-30]]
+      // Big white eyes, black circular surrounds, dark pupils and catchlights.
+      for(const side of [-1,1]){
+        g.fillStyle='#05060a';g.beginPath();g.ellipse(side*8.6,-23,9.8,9.5,0,0,Math.PI*2);g.fill();
+        g.fillStyle='#fff';g.beginPath();g.ellipse(side*8.1,-23.5,6.2,6.6,side*.08,0,Math.PI*2);g.fill();
+        g.fillStyle='#080911';g.beginPath();g.arc(side*9.2,-23.5,3.6,0,Math.PI*2);g.fill();
+        g.fillStyle='#fff';g.beginPath();g.arc(side*10.1,-26,1.45,0,Math.PI*2);g.fill();
+      }
+      // Heavy angular brows, symmetrical and close to the eye line.
+      poly([[-18,-31],[-11,-34],[-4,-31],[-2,-27],[-9,-29],[-16,-28]],'#05060a',null);
+      poly([[18,-31],[11,-34],[4,-31],[2,-27],[9,-29],[16,-28]],'#05060a',null);
+      // Tall layered black hair: broad crown, sharp mirrored spikes and slate edge highlights.
+      // Rear silhouette is drawn first so no spike looks pasted on top.
+      const hairLocks=[
+        [[-22,-32],[-43,-46],[-31,-27]],
+        [[-19,-34],[-38,-63],[-23,-43]],
+        [[-13,-36],[-29,-76],[-12,-48]],
+        [[-8,-38],[-16,-91],[-3,-48]],
+        [[-2,-39],[-4,-103],[5,-47]],
+        [[2,-39],[13,-88],[11,-45]],
+        [[8,-37],[25,-80],[17,-44]],
+        [[14,-34],[39,-62],[23,-39]],
+        [[20,-30],[47,-43],[28,-33]],
+        [[-24,-28],[-51,-29],[-30,-20]]
       ];
-      for(const pts of spikes){
-        for(const side of [-1,1]){
-          const mirrored=pts.map(([x,y])=>[x*side,y]);
-          poly(mirrored,'#030408','#000',1.5);
-          g.strokeStyle='#34394a';g.lineWidth=1.2;g.beginPath();
-          g.moveTo(mirrored[0][0]+side,mirrored[0][1]+1);
-          g.lineTo(mirrored[1][0]+side,mirrored[1][1]+1);g.stroke();
-        }
+      for(const pts of hairLocks){
+        poly(pts,'#030408','#000',2);
+        g.strokeStyle='#34394b';g.lineWidth=1.15;g.beginPath();g.moveTo(pts[0][0]+1,pts[0][1]+1);g.lineTo(pts[1][0]+1,pts[1][1]+1);g.stroke();
       }
-      // Dense central fringe and thick angular brows, matching the concept's silhouette.
-      poly([[-24,-28],[-18,-35],[-13,-27],[-7,-36],[-2,-25],[5,-35],[10,-25],[17,-32],[20,-21],[13,-13],[-13,-13],[-21,-18]],'#030408','#000',1.8);
-      poly([[-18,-27],[-8,-29],[-2,-26],[-2,-23],[-10,-25],[-17,-24]],'#07080c',null);
-      poly([[2,-26],[9,-29],[18,-26],[17,-23],[8,-25],[2,-23]],'#07080c',null);
-      // Small emerald glints move subtly without changing the silhouette.
-      g.fillStyle='#b4ff4a';for(let i=0;i<5;i++){const a=t*1.1+i*2.4;g.globalAlpha=.38+.28*Math.sin(a);g.fillRect(Math.cos(a)*31-1,Math.sin(a)*24-12,2.5,2.5);}g.globalAlpha=1;
+      // Dense jagged fringe across forehead; alternating long pointed locks.
+      poly([[-23,-35],[-19,-45],[-13,-35],[-8,-44],[-3,-34],[2,-45],[7,-34],[13,-42],[18,-33],[22,-37],[18,-24],[12,-20],[7,-26],[2,-20],[-3,-26],[-8,-20],[-14,-25],[-19,-23]],'#030408','#000',2);
+      poly([[-16,-35],[-12,-40],[-10,-31],[-7,-34],[-6,-27],[-12,-28]],'#10121b',null);
+      poly([[2,-35],[6,-40],[8,-31],[12,-34],[13,-27],[7,-28]],'#10121b',null);
+      // Cool blue-gray facets on the spikes create the reference's sharp illustrated sheen.
+      const facets=[
+        [[-4,-43],[-12,-83],[-5,-58]],
+        [[-15,-41],[-25,-66],[-18,-49]],
+        [[7,-43],[17,-73],[11,-49]],
+        [[17,-39],[34,-58],[21,-44]],
+        [[-26,-29],[-43,-43],[-31,-32]],
+        [[-7,-47],[-9,-70],[-5,-50]]
+      ];
+      for(const pts of facets)poly(pts,'#202333',null);
+      // Two round brown wrist weights on the character's right side, stacked vertically.
+      const weight=(x,y,r)=>{
+        g.fillStyle='#211611';g.beginPath();g.arc(x,y,r+2,0,Math.PI*2);g.fill();
+        g.strokeStyle='#09090d';g.lineWidth=2.5;g.stroke();
+        g.fillStyle='#4a3024';g.beginPath();g.arc(x,y,r-1,0,Math.PI*2);g.fill();
+        g.fillStyle='#d99c61';g.beginPath();g.arc(x,y,r-3.5,0,Math.PI*2);g.fill();
+        g.fillStyle='#f4bd7b';g.beginPath();g.arc(x-2,y-2,r*.57,0,Math.PI*2);g.fill();
+        g.fillStyle='#95613f';g.fillRect(x-r*.36,y-r*.22,r*.62,2.1);
+        g.fillStyle='#bd8452';g.fillRect(x-r*.36,y-r*.08,r*.62,1.4);
+        g.fillStyle='#95613f';g.fillRect(x-r*.30,y+r*.12,r*.54,2.1);
+        g.strokeStyle='#e9b477';g.lineWidth=.8;g.beginPath();g.arc(x,y,r-4.4,Math.PI*1.1,Math.PI*1.85);g.stroke();
+      };
+      weight(23,-28,12);weight(23,12,12);
+      // Aura shards in the foreground overlap the lower arms like the reference image.
+      for(let i=0;i<10;i++){
+        const side=i%2?1:-1, x=side*(13+(i%4)*3), y=9+(i%5)*2;
+        poly([[x,y],[x+side*9,y+3],[x+side*3,y+7],[x+side*11,y+11],[x,y+10],[x-side*3,y+5]],i%3?'#42ed35':'#a7ff43','#43b52e',1);
+      }
+      // Small white rivets and restrained green glints.
+      g.fillStyle='#fff';g.beginPath();g.arc(-17,10,1.4,0,Math.PI*2);g.fill();
+      g.fillStyle='#b8ff4a';for(let i=0;i<5;i++){const a=t*1.1+i*2.4;g.globalAlpha=.35+.25*Math.sin(a);g.fillRect(Math.cos(a)*31-1,Math.sin(a)*24-12,2.2,2.2);}g.globalAlpha=1;
       g.restore();
     }
     function drawSh(p){
