@@ -2990,6 +2990,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       },
       applyRemoteAction(msg){
         if(!msg)return;
+        if(msg.systemCrash===true&&msg.targetId){const frozenTarget=P.find(q=>(q.netId||q.id)===msg.targetId);if(frozenTarget){frozenTarget.frozenTimer=Math.max(frozenTarget.frozenTimer||0,2);frozenTarget.systemCrashTimer=2;F.push({k:'t',x:frozenTarget.x,y:frozenTarget.y-47,vx:0,vy:-45,l:1.3,m:1.3,tx:'!',c:'#ff3030'});for(let i=0;i<12;i++)puff(frozenTarget.x+(Math.random()-.5)*26,frozenTarget.y+(Math.random()-.5)*28,1,'#ff3030',1);}}
         if(msg.action==='wall-state'){
           const i=Number(msg.i??msg.col),j=Number(msg.j??msg.row);
           if(Number.isInteger(i)&&Number.isInteger(j)&&i>0&&j>0&&i<MW-1&&j<MH-1)setLocalWallState(i,j,msg);
@@ -3223,7 +3224,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       chatFriendId=friendId;const option=el('dabrawlChatFriend')?.selectedOptions?.[0];chatFriendName=option?.dataset?.name||option?.textContent||'Friend';el('dabrawlChatLog').replaceChildren();
       if(!friendId||!chatUser){el('dabrawlChatStatus').textContent='Choose an accepted friend to start a DM.';return;}
       const pair=[chatUser.id,friendId].sort().join('-');chatFriendChannel=db.channel('dabrawl-friend-chat-'+pair,{config:{broadcast:{self:false}}}).on('broadcast',{event:'chat-message'},({payload})=>receiveChat(payload));
-      const result=await chatFriendChannel.subscribe();el('dabrawlChatStatus').textContent=result==='SUBSCRIBED'?'Direct chat with '+chatFriendName:'Connecting to friend chat…';
+      chatFriendChannel.subscribe(statusValue=>{el('dabrawlChatStatus').textContent=statusValue==='SUBSCRIBED'?'Direct chat with '+chatFriendName:'Connecting to friend chat…';});
     }
     ensureChatUI();
     function status(msg, bad=false){ const n=el('onlineStatus'); n.textContent=msg; n.style.color=bad?'#fca5a5':'#cbd5e1'; }
