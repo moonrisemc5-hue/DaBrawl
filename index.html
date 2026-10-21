@@ -1583,7 +1583,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     function upd(dt){
       const aiFramePositions=new Map(P.map(p=>[p,{x:p.x,y:p.y}]));
       if(hackerHackTimer>0){hackerHackTimer=Math.max(0,hackerHackTimer-dt);hackerBinaryRain=Math.max(0,hackerBinaryRain-dt);if(hackerHackTarget){hackerHackTarget.hackerControlTimer=Math.max(0,(hackerHackTarget.hackerControlTimer||0)-dt);if(hackerHackTarget.hackerControlTimer<=0){const controller=hackerHackTarget.hackerControlledBy;if(controller){controller.hackTargetId=null;controller.hackUntil=0;}hackerHackTarget.hackerControlledBy=null;hackerHackTarget.hackedById=null;hackerHackTarget.hackUntil=0;hackerHackTarget=null;}}}
-      for(const q of P){if(q.b==='hacker'){q.hackerDroneX=Math.max(18,Math.min(MW*T-18,q.hackerDroneX));q.hackerDroneY=Math.max(18,Math.min(MH*T-18,q.hackerDroneY));}}
+      for(const q of P){if(q.b==='hacker'){q.hackerDroneX=Math.max(18,Math.min(MW*T-18,q.hackerDroneX));q.hackerDroneY=Math.max(18,Math.min(MH*T-18,q.hackerDroneY));if(q===me&&hackerHackTimer>0&&hackerHackTarget&&Math.hypot(hackerHackTarget.x-q.hackerDroneX,hackerHackTarget.y-q.hackerDroneY)>q.k.rng){const target=hackerHackTarget;q.hackTargetId=null;q.hackUntil=0;target.hackerControlledBy=null;target.hackerControlTimer=0;target.hackedById=null;target.hackUntil=0;hackerHackTimer=0;hackerHackTarget=null;F.push({k:'t',x:q.x,y:q.y-42,vx:0,vy:-22,l:1.2,m:1.2,tx:'DRONE RANGE LOST',c:'#ff6060'});}}}
       shake = Math.max(0, shake - dt*30);
       if(G.ph=='play' && !isTestMode){ gasDist += (Math.max(MW, MH) / 960) * dt; }
       for(const p of P){
@@ -1709,7 +1709,11 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
                 p.autoAimTarget=null;p.a=Math.atan2(my/z+cam.y-p.y,mx/z+cam.x-p.x);
               }
               if(p.b==='hacker'&&p.hackerDroneControl)step(p,ix,iy,dt);
-              else if(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive){step(p,0,0,dt);const inputLen=Math.hypot(ix,iy);p.mx=inputLen?ix/inputLen:0;p.my=inputLen?iy/inputLen:0;step(hackerHackTarget,ix,iy,dt);hackerHackTarget.a=p.a;if(networkMode){if(mdown&&!touch)window.DaBrawlNet?.sendAction?.('fire',p.a);}else if(mdown&&!touch)tryFire(hackerHackTarget);}else if(p===me&&p.hackedById&&p.hackUntil>Date.now()){const controller=P.find(q=>(q.netId||q.id)===p.hackedById);step(p,controller?.mx||0,controller?.my||0,dt);if(controller)p.a=controller.a;}
+              else if(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive){
+                const controlled=hackerHackTarget,droneX=Number.isFinite(p.hackerDroneX)?p.hackerDroneX:p.x,droneY=Number.isFinite(p.hackerDroneY)?p.hackerDroneY:p.y;
+                if(Math.hypot(controlled.x-droneX,controlled.y-droneY)>p.k.rng){p.hackTargetId=null;p.hackUntil=0;controlled.hackerControlledBy=null;controlled.hackerControlTimer=0;controlled.hackedById=null;controlled.hackUntil=0;hackerHackTimer=0;hackerHackTarget=null;step(p,0,0,dt);}
+                else {step(p,0,0,dt);const inputLen=Math.hypot(ix,iy);p.mx=inputLen?ix/inputLen:0;p.my=inputLen?iy/inputLen:0;step(controlled,ix,iy,dt);const aimX=mx/z+cam.x,aimY=my/z+cam.y;controlled.a=Math.atan2(aimY-controlled.y,aimX-controlled.x);p.a=controlled.a;if(mdown&&!touch){if(networkMode)window.DaBrawlNet?.sendAction?.('fire',controlled.a,{controlledPlayerId:controlled.netId||controlled.id});tryFire(controlled);}}
+              }else if(p===me&&p.hackedById&&p.hackUntil>Date.now()){const controller=P.find(q=>(q.netId||q.id)===p.hackedById);step(p,controller?.mx||0,controller?.my||0,dt);if(controller)p.a=controller.a;}
               else step(p,ix,iy,dt);
             }else step(p,0,0,dt);
             if(!(p.b==='hacker'&&hackerHackTimer>0&&hackerHackTarget?.alive)&&!(p===me&&p.hackedById&&p.hackUntil>Date.now())){if(mdown&&!touch) tryFire(p); if(p.k.sy) syU(p,dt);}
