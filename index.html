@@ -760,6 +760,7 @@
       saiyan: {nm:'SAIYAN', rarity:'LEGENDARY', rarityCol:'#fff024', sy:1, mode:0, hp:6500, spd:150, pel:1, dmg:400, spr:0, rng:65, bs:600, rel:1.2, sd:200, sr:0, w:65, z:5, kd:700, kmax:2200, cm:0.18, cls:'TRANSFORMER', atkNm:'400 / KAME', supNm:'TRANSFORM', info:'Transforms through Dragon Ball forms!'},
       deges: {nm:'DEGEŠ', rarity:'EPIC', rarityCol:'#b16cff', hp:7600, spd:138, pel:1, dmg:1062, spr:0, rng:300, bs:430, rel:2.4, sd:1375.5, sr:110, w:95, z:5, cm:0.55, cls:'SUPPORT', atkNm:'1062 DMG', supNm:'BEER BARRAGE', gadgetNm:'2s SMOKE · FULL HEAL', info:'Hooded masked gangster in a black puffer and grey joggers. His gadget is a stationary two-second smoke channel that fully heals him; he remains vulnerable.'},
       ramu: {nm:'RAMU', rarity:'MYTHIC', rarityCol:'#ef4444', hp:8000, spd:142, pel:1, dmg:1000, spr:0, rng:250, bs:480, rel:1.25, mode:1, sd:2000, sr:110, w:120, z:12, cm:0.55, freezeHits:8, fireDamage:1000, fireTickMs:350, fireInitialReach:.4, fireRange:285, fireEnergyDrain:.18, fireSuperCharge:6.6, freezeDuration:2, gadgetDiveCooldown:20, cls:'TRANSFORMER', atkNm:'ICE BURST / FIRE LANCE', supNm:'TRANSFORM MODE', gadgetNm:'ICE CUBE / FLAME DIVE', info:'Transform into fire or ice.'},
+      broly: {nm:'BROLY', rarity:'MYTHIC', rarityCol:'#b16cff', hp:11000, spd:125, pel:1, dmg:0, spr:0, rng:0, bs:480, rel:1.5, sd:0, sr:0, w:150, z:5, cm:0.55, cls:'TANK', atkNm:'COMING SOON', supNm:'COMING SOON', info:'A powerful Mythic tank. Attacks and Super are still in development.'},
       hacker: {nm:'HACKER', rarity:'LEGENDARY', rarityCol:'#39ffb6', hp:6800, spd:125, pel:1, dmg:620, spr:0, rng:280, bs:520, rel:1.0, sd:0, sr:0, w:74, z:5, cm:0.45, cls:'CONTROL / DAMAGE', atkNm:'MALWARE INSTALL', supNm:'SYSTEM TAKEOVER', gadgetNm:'REMOTE LINK · 2S', info:'Move and park the drone, then select a target to install increasingly powerful malware. A rare System Crash freezes enemies for 2 seconds.'}
     };
     const FM = [
@@ -2115,6 +2116,55 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         if(glowColor){ g.shadowBlur=0; }
       }
     };
+    function drawBroly(p){
+      // Broly's first playable-preview silhouette, closely following the user's Paint reference.
+      // Keep this hand-drawn pixel-art style on the canvas; combat abilities are intentionally not assigned yet.
+      const bob=1+Math.sin(p.walk||0)*.025, t=performance.now()/1000;
+      g.save();g.scale(1.12,bob*1.12);
+      // green energy / shoulder spikes behind the body
+      g.save();g.globalAlpha=.92;
+      for(const side of [-1,1]){
+        g.fillStyle='#277b35';g.beginPath();g.moveTo(side*8,-1);g.lineTo(side*34,-16);g.lineTo(side*25,2);g.lineTo(side*47,8);g.lineTo(side*26,13);g.lineTo(side*38,27);g.lineTo(side*14,20);g.closePath();g.fill();
+        g.fillStyle='#79e83b';for(let i=0;i<5;i++){g.save();g.translate(side*(19+i*3),8+i*2);g.rotate(side*(.25+i*.1));g.fillRect(-4,-7,8,14);g.restore();}
+      }g.restore();
+      // purple muscular torso, green collar and belt
+      g.fillStyle='#34204f';g.strokeStyle='#090a12';g.lineWidth=3;
+      g.beginPath();g.moveTo(-15,-2);g.lineTo(-24,3);g.lineTo(-20,16);g.lineTo(-13,20);g.lineTo(-12,25);g.lineTo(12,25);g.lineTo(13,20);g.lineTo(20,16);g.lineTo(24,3);g.lineTo(15,-2);g.closePath();g.fill();g.stroke();
+      g.fillStyle='#6be52d';g.fillRect(-10,-4,20,7);g.strokeStyle='#17451c';g.lineWidth=2;g.strokeRect(-10,-4,20,7);
+      g.fillStyle='#17172a';g.fillRect(-12,19,24,5);g.fillStyle='#f0f0f0';g.fillRect(-8,20,16,4);g.fillStyle='#24b64b';g.fillRect(-5,20,10,6);
+      // arms with green bracers and jagged energy cuffs
+      for(const side of [-1,1]){
+        g.fillStyle='#302049';g.strokeStyle='#090a12';g.lineWidth=3;g.beginPath();g.moveTo(side*14,1);g.lineTo(side*23,2);g.lineTo(side*31,12);g.lineTo(side*25,18);g.lineTo(side*16,12);g.closePath();g.fill();g.stroke();
+        g.fillStyle='#21b94a';g.beginPath();g.moveTo(side*22,4);g.lineTo(side*31,4);g.lineTo(side*36,10);g.lineTo(side*29,13);g.lineTo(side*22,10);g.closePath();g.fill();
+      }
+      // round brown wrist weights, one higher on the right and one lower
+      for(const [x,y,r] of [[22,-24,13],[22,12,13]]){
+        g.fillStyle='#39251b';g.strokeStyle='#100d12';g.lineWidth=4;g.beginPath();g.arc(x,y,r+1,0,Math.PI*2);g.fill();g.stroke();
+        g.fillStyle='#d6a16b';g.beginPath();g.arc(x,y,r-3,0,Math.PI*2);g.fill();
+        g.fillStyle='#f1c28a';g.fillRect(x-5,y-5,10,2);g.fillStyle='#9b6945';g.fillRect(x-6,y+1,12,2);g.fillRect(x-4,y+5,8,2);
+      }
+      // face
+      g.fillStyle='#c98e55';g.strokeStyle='#09090d';g.lineWidth=3;g.beginPath();g.ellipse(0,-19,22,25,0,0,Math.PI*2);g.fill();g.stroke();
+      // ears
+      g.fillStyle='#c98e55';g.beginPath();g.ellipse(-21,-19,4,7,0,0,Math.PI*2);g.fill();g.stroke();g.beginPath();g.ellipse(21,-19,4,7,0,0,Math.PI*2);g.fill();g.stroke();
+      // big eyes and heavy black brows
+      for(const side of [-1,1]){
+        g.fillStyle='#05060a';g.beginPath();g.ellipse(side*9,-20,9,8,side*.08,0,Math.PI*2);g.fill();
+        g.fillStyle='#fff';g.beginPath();g.ellipse(side*9+1,-21,5.4,5.1,0,0,Math.PI*2);g.fill();
+        g.fillStyle='#05060a';g.beginPath();g.arc(side*9+2,-21,3.3,0,Math.PI*2);g.fill();
+        g.fillStyle='#fff';g.beginPath();g.arc(side*9+3,-23,1.2,0,Math.PI*2);g.fill();
+        g.strokeStyle='#08080d';g.lineWidth=5;g.beginPath();g.moveTo(side*3,-29);g.lineTo(side*15,-31);g.stroke();
+      }
+      // enormous black spiky hair silhouette, layered like the hand-drawn reference
+      g.fillStyle='#030408';g.strokeStyle='#000';g.lineWidth=2.5;g.lineJoin='miter';g.beginPath();
+      [[-19,-27],[-29,-42],[-25,-27],[-35,-32],[-28,-17],[-18,-23],[-14,-42],[-8,-29],[-2,-55],[4,-31],[14,-51],[15,-28],[28,-42],[24,-22],[36,-30],[26,-13],[15,-10],[8,-14],[-4,-12],[-13,-14]].forEach(([x,y])=>g.lineTo(x,y));
+      g.closePath();g.fill();g.stroke();
+      // stray jagged fringe locks across forehead
+      g.fillStyle='#05060a';g.beginPath();g.moveTo(-19,-29);g.lineTo(-12,-21);g.lineTo(-7,-29);g.lineTo(-2,-19);g.lineTo(5,-30);g.lineTo(8,-21);g.lineTo(16,-28);g.lineTo(12,-15);g.lineTo(-14,-14);g.closePath();g.fill();
+      // tiny green energy flecks
+      g.fillStyle='#6fff42';for(let i=0;i<5;i++){const a=t*1.2+i*2.4;g.globalAlpha=.45+.35*Math.sin(a);g.fillRect(Math.cos(a)*31-1,Math.sin(a)*24-12,3,3);}g.globalAlpha=1;
+      g.restore();
+    }
     function drawSh(p){
       const ca=Math.cos(p.a),sa=Math.sin(p.a),u=p.rec>0?1-p.rec/.22:1;
       g.scale(1,1+Math.sin(p.walk)*.05);
@@ -2460,7 +2510,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         g.fillStyle='#11131e';g.strokeStyle='#39ffb6';g.lineWidth=2;g.beginPath();g.roundRect(-17,5,34,17,5);g.fill();g.stroke();g.fillStyle='#292d42';g.fillRect(-12,8,24,10);g.strokeStyle='#b9c5d9';g.lineWidth=1;for(let yy=10;yy<17;yy+=3){g.beginPath();g.moveTo(-10,yy);g.lineTo(10,yy);g.stroke();}g.fillStyle='#39ffb6';g.fillRect(-2,7,4,12);
         g.save();g.translate(Math.cos(p.a)*15,Math.sin(p.a)*12+16);g.rotate(p.a);g.fillStyle='#111522';g.strokeStyle='#39ffb6';g.lineWidth=2;g.beginPath();g.moveTo(-11,-5);g.lineTo(10,-5);g.lineTo(13,4);g.lineTo(-13,4);g.closePath();g.fill();g.stroke();g.fillStyle='#163b38';g.fillRect(-8,-4,16,6);g.fillStyle='#39ffb6';g.font='bold 4px monospace';g.fillText('ROOT',-5,0);g.restore();
       }
-      else if(p.b == 'shachi') drawSh(p);
+      else if(p.b === 'broly') drawBroly(p);\n      else if(p.b == 'shachi') drawSh(p);
       else if(p.b == 'saiyan') drawSa(p);
       else if(p.b === 'ramu'){if(p.preview)drawRamu(p,frameTime);else{drawRamuCached(p,frameTime);drawRamuHandsOverlay(p);}if(p.ramuShieldTimer>0)drawRamuShield();}
       else if(p.b === 'deges') {
