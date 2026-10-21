@@ -2720,6 +2720,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
           else { g.globalAlpha=Math.min(1,u*2); tx(f.tx,f.x,f.y,20,f.c||'#ffe14d'); g.globalAlpha=1; }
         }
         for(const p of [...P].sort((a,b)=>a.y-b.y)) drawP(p,now);
+        for(const p of P)if(p.alive&&(p.systemCrashTimer||0)>0){g.save();g.fillStyle='#ff3030';g.strokeStyle='#fff';g.lineWidth=2;g.beginPath();g.arc(p.x,p.y-4,12,0,Math.PI*2);g.fill();g.stroke();g.fillStyle='#fff';g.font='bold 19px monospace';g.textAlign='center';g.textBaseline='middle';g.fillText('!',p.x,p.y-4);g.restore();}
         for(const k of KM){
           const u=k.t/k.m, L=k.len*Math.min(1,(1-u)*7), w=k.w*(u>.15?1:u/.15);
           g.save(); g.translate(k.x,k.y); g.rotate(k.a); g.globalAlpha=.3; g.fillStyle=k.col; g.fillRect(0,-w,L,w*2);
