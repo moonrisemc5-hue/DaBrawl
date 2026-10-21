@@ -2510,7 +2510,8 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         g.fillStyle='#11131e';g.strokeStyle='#39ffb6';g.lineWidth=2;g.beginPath();g.roundRect(-17,5,34,17,5);g.fill();g.stroke();g.fillStyle='#292d42';g.fillRect(-12,8,24,10);g.strokeStyle='#b9c5d9';g.lineWidth=1;for(let yy=10;yy<17;yy+=3){g.beginPath();g.moveTo(-10,yy);g.lineTo(10,yy);g.stroke();}g.fillStyle='#39ffb6';g.fillRect(-2,7,4,12);
         g.save();g.translate(Math.cos(p.a)*15,Math.sin(p.a)*12+16);g.rotate(p.a);g.fillStyle='#111522';g.strokeStyle='#39ffb6';g.lineWidth=2;g.beginPath();g.moveTo(-11,-5);g.lineTo(10,-5);g.lineTo(13,4);g.lineTo(-13,4);g.closePath();g.fill();g.stroke();g.fillStyle='#163b38';g.fillRect(-8,-4,16,6);g.fillStyle='#39ffb6';g.font='bold 4px monospace';g.fillText('ROOT',-5,0);g.restore();
       }
-      else if(p.b === 'broly') drawBroly(p);\n      else if(p.b == 'shachi') drawSh(p);
+      else if(p.b === 'broly') drawBroly(p);
+      else if(p.b == 'shachi') drawSh(p);
       else if(p.b == 'saiyan') drawSa(p);
       else if(p.b === 'ramu'){if(p.preview)drawRamu(p,frameTime);else{drawRamuCached(p,frameTime);drawRamuHandsOverlay(p);}if(p.ramuShieldTimer>0)drawRamuShield();}
       else if(p.b === 'deges') {
