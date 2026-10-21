@@ -41,7 +41,7 @@ function makePlayer(user, msg, slot) {
   const brawler = BRAWLERS[msg.brawler] ? msg.brawler : "default";
   return { id: user.id, name: cleanText(msg.name), brawler, team: slot % 2, slot,
     x: slot % 2 ? 620 : 180, y: 150 + Math.floor(slot / 2) * 70, aim: slot % 2 ? Math.PI : 0,
-    hackerDroneX:(slot % 2 ? 620 : 180)+44,hackerDroneY:126,hackerDroneControl:false,hackerUpgrades:0,hackerAmmo:2,hackerAmmoReloadAt:0,hackerReloadMs:1600,
+    hackerDroneX:(slot % 2 ? 620 : 180)+44,hackerDroneY:126,hackerDroneControl:false,hackerUpgrades:0,hackerAmmo:2,hackerAmmoReloadAt:0,hackerReloadMs:1000,
     hp: BRAWLERS[brawler].hp, maxHp: BRAWLERS[brawler].hp, alive: true, meter: 0,
     form: 0, ramuMode: "ice", fireEnergy: 1, fireLockUntil: 0, ramuFlameHeld: false, ramuFlameStartedAt: 0, ramuFlameLength: 0, ramuFlameNextHitAt: 0, ramuDiveUntil: 0, ramuDiveMoveAt: 0, ramuShieldUntil: 0, freezeMeter: 0, frozenUntil: 0,
     burnUntil: 0, burnNextAt: 0, burnOwnerId: null, smokeUntil: 0,
@@ -55,7 +55,7 @@ function emit(room, type, data = {}) {
 function snapshot(room) {
   return { mode: room.mode, phase: room.phase, startedAt: room.startedAt, endsAt: room.endsAt,
     winner: room.winner, ownerId: room.ownerId, tick: room.tick, destroyedWalls: room.world.destroyedWalls, wallStates: snapshotArenaWallStates(room.world), beams: room.beams.map(b => ({ id:b.id, ownerId:b.ownerId, x:b.x, y:b.y, aim:b.aim, length:b.length, width:b.width, expiresAt:b.expiresAt })), players: [...room.players.values()].map(p => ({
-      id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,hackerDroneX:p.hackerDroneX,hackerDroneY:p.hackerDroneY,hackerDroneControl:!!p.hackerDroneControl,hackerUpgrades:p.hackerUpgrades||0,hackerAmmo:p.hackerAmmo??2,hackerReloadMs:p.hackerReloadMs||1600,
+      id:p.id,name:p.name,brawler:p.brawler,team:p.team,slot:p.slot,x:p.x,y:p.y,aim:p.aim,hackerDroneX:p.hackerDroneX,hackerDroneY:p.hackerDroneY,hackerDroneControl:!!p.hackerDroneControl,hackerUpgrades:p.hackerUpgrades||0,hackerAmmo:p.hackerAmmo??2,hackerReloadMs:p.hackerReloadMs||1000,
       hp:p.hp,maxHp:p.maxHp,alive:p.alive,meter:p.meter,form:p.form,ramuMode:p.ramuMode,fireEnergy:p.fireEnergy,hackTargetId:p.hackTargetId||null,hackedById:p.hackedById||null,hackUntil:p.hackUntil||0,fireLockMs:Math.max(0,(p.fireLockUntil||0)-now()),
       ramuDiveUntil:p.ramuDiveUntil||0,ramuDiveMoveMs:Math.max(0,(p.ramuDiveMoveAt||0)-now()),ramuFlameHeld:!!p.ramuFlameHeld,ramuShieldMs:Math.max(0,(p.ramuShieldUntil||0)-now()),freezeMeter:p.freezeMeter||0,frozenMs:Math.max(0,(p.frozenUntil||0)-now()),burnMs:Math.max(0,(p.burnUntil||0)-now()),smokeMs:Math.max(0,(p.smokeUntil||0)-now()),
       gadgetCharges:gadgetCharges(p),gadgetCooldownMs:Math.max(0,p.gadgetReadyAt-now()),
@@ -118,7 +118,7 @@ function doFire(room, p, isSuper = false, options = {}) {
     const target=room.players.get(options.targetId||"");if(!target||!isTargetDamageable(target,p,t)||target===p)return;
     const ox=Number.isFinite(options.droneX)?options.droneX:p.hackerDroneX,oy=Number.isFinite(options.droneY)?options.droneY:p.hackerDroneY;
     if(Math.hypot(target.x-ox,target.y-oy)>stats.range)return;
-    p.lastFire=t;p.hackerAmmo=Math.max(0,(p.hackerAmmo??2)-1);if(p.hackerAmmo===0&&p.hackerAmmoReloadAt<=0)p.hackerAmmoReloadAt=t+(p.hackerReloadMs||1600);const level=Math.min(10,p.hackerUpgrades||0),damage=Math.max(1,Math.round(stats.damage*(1+level*.04))),malwareType="MALWARE INSTALL";p.hackerUpgrades=Math.min(10,level+1);
+    p.lastFire=t;p.hackerAmmo=Math.max(0,(p.hackerAmmo??2)-1);if(p.hackerAmmo===0&&p.hackerAmmoReloadAt<=0)p.hackerAmmoReloadAt=t+(p.hackerReloadMs||1000);const level=Math.min(10,p.hackerUpgrades||0),damage=Math.max(1,Math.round(stats.damage*(1+level*.04))),malwareType="MALWARE INSTALL";p.hackerUpgrades=Math.min(10,level+1);
     target.lastHitAt=t;target.hp=Math.max(0,target.hp-damage);target.meter=clamp(target.meter+12,0,100);p.meter=clamp(p.meter+12,0,100);
     const systemCrash=options.systemCrash===true;if(systemCrash){target.frozenUntil=t+2000;target.input={x:0,y:0};event(room,"system-crash",{attackerId:p.id,targetId:target.id,durationMs:2000});}event(room,"hit",{attackerId:p.id,targetId:target.id,damage,hp:target.hp,malware:true,malwareType,systemCrash,upgrade:p.hackerUpgrades});
     if(target.hp<=0){target.alive=false;cancelKameCharge(target);target.input={x:0,y:0};event(room,"knockout",{playerId:target.id,by:p.id});}
@@ -339,7 +339,7 @@ function stepRoom(room, dt) {
   const t = now(); room.tick++; room.updatedAt = t;
   if (room.phase === "countdown" && t >= room.startedAt) { room.phase = "playing"; event(room, "match-started"); }
   if (room.phase === "playing") {
-    for(const hacker of room.players.values())if(hacker.brawler==="hacker"&&hacker.hackTargetId){const target=room.players.get(hacker.hackTargetId);if(hacker.hackUntil>t&&target?.alive){target.input={...hacker.input};target.aim=hacker.aim;target.hackedById=hacker.id;}else{if(target?.hackedById===hacker.id)target.hackedById=null;hacker.hackTargetId=null;hacker.hackUntil=0;event(room,"system-takeover-end",{playerId:hacker.id,targetId:target?.id||null});}}
+    for(const hacker of room.players.values())if(hacker.brawler==="hacker"&&hacker.hackTargetId){const target=room.players.get(hacker.hackTargetId);if(hacker.hackUntil>t&&target?.alive){if(target.frozenUntil<=t){target.input={...hacker.input};target.aim=hacker.aim;}else target.input={x:0,y:0};target.hackedById=hacker.id;}else{if(target?.hackedById===hacker.id)target.hackedById=null;hacker.hackTargetId=null;hacker.hackUntil=0;event(room,"system-takeover-end",{playerId:hacker.id,targetId:target?.id||null});}}
     for (const p of room.players.values()) {
       if (p.isBot && p.alive && p.connected && t >= p.botThinkAt) {
         const decision = decideBotAction(p, [...room.players.values()], room.world, t, room.projectiles);
@@ -621,7 +621,7 @@ wss.on("connection", (ws,_req,meta) => {
       } else if (m.type==="ready") { updateReady(room, player, m.ready); sendState(room); }
       else if (m.type==="input") {
         const seq=Math.floor(finite(m.seq,-1)); if (seq<=player.seq) return;
-        player.seq=seq;if(player.hackedById){const controller=room.players.get(player.hackedById);if(controller&&controller.hackUntil>now()){player.lastSeen=now();ws.send(JSON.stringify({type:"ack",seq,serverTime:now()}));return;}player.hackedById=null;}player.input=validAxes(m.x,m.y);if(player.smokeUntil<=now()&&player.frozenUntil<=now()&&player.ramuShieldUntil<=now())player.aim=clamp(finite(m.aim,player.aim),-Math.PI*2,Math.PI*2);
+        player.seq=seq;const axes=validAxes(m.x,m.y);if(player.hackedById){const controller=room.players.get(player.hackedById);if(controller&&controller.hackUntil>now()){player.lastSeen=now();ws.send(JSON.stringify({type:"ack",seq,serverTime:now()}));return;}player.hackedById=null;}if(player.brawler==="hacker"&&player.hackTargetId&&player.hackUntil>now()){const target=room.players.get(player.hackTargetId);if(target?.alive&&target.frozenUntil<=now()){target.input=axes;target.aim=clamp(finite(m.aim,target.aim),-Math.PI*2,Math.PI*2);player.input={x:0,y:0};player.aim=clamp(finite(m.aim,player.aim),-Math.PI*2,Math.PI*2);}else player.input={x:0,y:0};}else player.input=axes;if(player.smokeUntil<=now()&&player.frozenUntil<=now()&&player.ramuShieldUntil<=now())player.aim=clamp(finite(m.aim,player.aim),-Math.PI*2,Math.PI*2);
         player.lastSeen=now(); ws.send(JSON.stringify({type:"ack",seq,serverTime:now()}));
       } else if (m.type==="action") {
         if (m.action==="fire") {if(m.angle!==undefined)player.aim=clamp(finite(m.angle,player.aim),-Math.PI*2,Math.PI*2);doFire(room,player,false,{droneX:m.droneX,droneY:m.droneY,targetId:m.targetId});}
