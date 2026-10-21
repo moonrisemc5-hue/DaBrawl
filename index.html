@@ -891,8 +891,11 @@
         if(conflict){$('keybindHint').textContent='That key is already assigned to '+bindLabels[conflict]+'. Choose another key.';return;}
         keyBinds[waitingForBind]=next;waitingForBind=null;$('keybindHint').textContent='Controls saved on this device.';saveKeyBinds();return;
       }
-      const chatPanel=el('dabrawlChatPanel'),chatInput=el('dabrawlChatInput');if(chatPanel&&chatPanel.style.display==='flex'&&(chatPanel.contains(e.target)||document.activeElement===chatInput)){if(!chatPanel.contains(e.target)){e.preventDefault();e.stopPropagation();}return;}
-      keys[e.key.toLowerCase()] = 1; if(scr != 'game') return;
+      const key=e.key.toLowerCase();
+      keys[key] = 1;
+      const chatPanel=el('dabrawlChatPanel'),chatInput=el('dabrawlChatInput');
+      const typingInChat=!!(chatPanel&&chatPanel.style.display==='flex'&&(chatPanel.contains(e.target)||document.activeElement===chatInput));
+      if(scr !== 'game' || typingInChat) return;
       if(e.key.toLowerCase() === keyBinds.super){ e.preventDefault(); sup(me); }
       if(e.key.toLowerCase() === keyBinds.gadget) { e.preventDefault(); gadget(me); }
       if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); if(autoAimTarget(me)){mdown=true;tryFire(me);} }
