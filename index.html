@@ -1108,17 +1108,21 @@
     $('modePickerBack').onclick=()=>show('menu');
     $('bk2').onclick = () => { clearInterval(mmI); clearTimeout(mmTimeout); mmI=null; mmTimeout=null; if(window.DaBrawlNet) window.DaBrawlNet.cancelMatchmaking(); show('menu'); };
     function aimAtNearestEnemy(p){
-      let bestDistance=p.b==='ramu'?Math.hypot(MW*T,MH*T):600,bestEnemy=null;
+      // Mobile auto-aim must select a target the current attack can realistically reach,
+      // not snap across the whole map (especially with Ramu's old map-wide search).
+      const range=p.b==='ramu'?(p.ramuMode==='fire'?(p.k?.fireRange||285):(p.k?.rng||250))
+        :p.b==='deges'?430:Math.max(80,p.k?.rng||230);
+      let bestDistance=range,bestEnemy=null;
       for(const enemy of P){
-        if(enemy===p||!enemy.alive||(gameMode!=='showdown'&&enemy.t===p.t)||!sees(p.t,enemy))continue;
-        if(p.b==='ramu'&&aiLineBlocked(p.x,p.y,enemy.x,enemy.y))continue;
+        if(enemy===p||!enemy.alive||enemy.lp||enemy.tf>0||(gameMode!=='showdown'&&enemy.t===p.t)||!sees(p.t,enemy))continue;
+        if(aiLineBlocked(p.x,p.y,enemy.x,enemy.y))continue;
         const distance=Math.hypot(enemy.x-p.x,enemy.y-p.y);
         if(distance<bestDistance){bestDistance=distance;bestEnemy=enemy;}
       }
       if(bestEnemy){
         if(p.b==='deges'){const lead=aiPredictPoint(p,bestEnemy,430,.45);p.a=Math.atan2(lead.y-p.y,lead.x-p.x);p.remoteBeerTarget={x:lead.x,y:lead.y};}
         else p.a=Math.atan2(bestEnemy.y-p.y,bestEnemy.x-p.x);
-        p.autoAimTarget=bestEnemy;p.autoAimTimer=p.b==='ramu'?2.5:.4;return true;
+        p.autoAimTarget=bestEnemy;p.autoAimTimer=.4;return true;
       }
       p.autoAimTarget=null;p.autoAimTimer=0;return false;
     }
@@ -1605,7 +1609,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     function upd(dt){
       const aiFramePositions=new Map(P.map(p=>[p,{x:p.x,y:p.y}]));
       if(hackerHackTimer>0){hackerHackTimer=Math.max(0,hackerHackTimer-dt);hackerBinaryRain=Math.max(0,hackerBinaryRain-dt);if(hackerHackTarget){hackerHackTarget.hackerControlTimer=Math.max(0,(hackerHackTarget.hackerControlTimer||0)-dt);if(hackerHackTarget.hackerControlTimer<=0){const controller=hackerHackTarget.hackerControlledBy;if(controller){controller.hackTargetId=null;controller.hackUntil=0;}hackerHackTarget.hackerControlledBy=null;hackerHackTarget.hackedById=null;hackerHackTarget.hackUntil=0;hackerHackTarget=null;}}}
-      for(const q of P){if(q.b==='hacker'){q.hackerDroneX=Math.max(18,Math.min(MW*T-18,q.hackerDroneX));q.hackerDroneY=Math.max(18,Math.min(MH*T-18,q.hackerDroneY));if(q===me&&hackerHackTimer>0&&hackerHackTarget&&Math.hypot(hackerHackTarget.x-q.hackerDroneX,hackerHackTarget.y-q.hackerDroneY)>q.k.rng){const target=hackerHackTarget;q.hackTargetId=null;q.hackUntil=0;target.hackerControlledBy=null;target.hackerControlTimer=0;target.hackedById=null;target.hackUntil=0;hackerHackTimer=0;hackerHackTarget=null;F.push({k:'t',x:q.x,y:q.y-42,vx:0,vy:-22,l:1.2,m:1.2,tx:'DRONE RANGE LOST',c:'#ff6060'});}}}
+      for(const q of P){if(q.b==='hacker'){q.hackerDroneX=Math.max(18,Math.min(MW*T-18,q.hackerDroneX));q.hackerDroneY=Math.max(18,Math.min(MH*T-18,q.hackerDroneY));if(q===me&&hackerHackTimer>0&&hackerHackTarget&&Math.hypot(hackerHackTarget.x-q.hackerDroneX,hackerHackTarget.y-q.hackerDroneY)>q.k.rng){const target=hackerHackTarget;q.hackTargetId=null;q.hackUntil=0;target.hackerControlledBy=null;target.hackerControlTimer=0;target.hackedById=null;target.hackUntil=0;hackerHackTimer=0;hackerBinaryRain=0;hackerHackTarget=null;F.push({k:'t',x:q.x,y:q.y-42,vx:0,vy:-22,l:1.2,m:1.2,tx:'DRONE RANGE LOST',c:'#ff6060'});}}}
       shake = Math.max(0, shake - dt*30);
       if(G.ph=='play' && !isTestMode){ gasDist += (Math.max(MW, MH) / 960) * dt; }
       for(const p of P){
