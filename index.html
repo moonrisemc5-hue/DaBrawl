@@ -3189,6 +3189,43 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
     const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     let currentRoom = null, roomChannel = null, desiredRoomInviteSlot=2, pendingRoomJoinSlot=null;
     const el = id => document.getElementById(id);
+    // Realtime chat for party rooms, online matches, and accepted friend DMs.
+    let chatUser=null, chatFriendChannel=null, chatFriendId='', chatFriendName='', chatScope='party', chatBusy=false;
+    function ensureChatUI(){
+      if(el('dabrawlChatToggle'))return;
+      const style=document.createElement('style');style.textContent='#dabrawlChatToggle{position:fixed;right:14px;bottom:14px;z-index:9998;background:#ffd21f;color:#111827;border:3px solid #111827;border-radius:14px;padding:10px 15px;font:bold 16px sans-serif;box-shadow:0 4px 0 #0008}#dabrawlChatPanel{display:none;position:fixed;right:12px;bottom:62px;z-index:9999;width:min(340px,calc(100vw - 24px));height:min(430px,65vh);background:#0f172a;border:2px solid #39ffb6;border-radius:14px;padding:10px;box-sizing:border-box;color:#fff;font:14px sans-serif;flex-direction:column;gap:8px}#dabrawlChatPanel select,#dabrawlChatPanel input,#dabrawlChatPanel button{font:inherit;border-radius:8px;padding:8px;border:1px solid #475569}#dabrawlChatLog{flex:1;overflow:auto;background:#020617;border-radius:8px;padding:8px;overflow-wrap:anywhere}';
+      document.head.appendChild(style);
+      const toggle=document.createElement('button');toggle.id='dabrawlChatToggle';toggle.textContent='CHAT';toggle.onclick=()=>{const panel=el('dabrawlChatPanel');panel.style.display=panel.style.display==='flex'?'none':'flex';if(panel.style.display==='flex')void loadChatFriends();};document.body.appendChild(toggle);
+      const panel=document.createElement('div');panel.id='dabrawlChatPanel';panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;font-weight:bold;color:#39ffb6"><span>FRIENDS & PARTY CHAT</span><button id="dabrawlChatClose" type="button">✕</button></div><select id="dabrawlChatScope"><option value="party">Party / match chat</option><option value="friend">Friend DM</option></select><select id="dabrawlChatFriend" style="display:none"><option value="">Choose a friend…</option></select><div id="dabrawlChatLog" aria-live="polite"><div style="color:#94a3b8">Open chat to connect.</div></div><form id="dabrawlChatForm" style="display:flex;gap:6px"><input id="dabrawlChatInput" maxlength="240" placeholder="Write a message…" style="flex:1;min-width:0"><button type="submit">SEND</button></form><div id="dabrawlChatStatus" style="font-size:11px;color:#94a3b8">Party chat uses your current room or match.</div>';
+      document.body.appendChild(panel);
+      el('dabrawlChatClose').onclick=()=>panel.style.display='none';
+      el('dabrawlChatScope').onchange=async()=>{chatScope=el('dabrawlChatScope').value;el('dabrawlChatFriend').style.display=chatScope==='friend'?'block':'none';el('dabrawlChatLog').replaceChildren();if(chatScope==='friend')await loadChatFriends();else chatAppend('Party chat is ready when you are in a party or online match.','#94a3b8');};
+      el('dabrawlChatFriend').onchange=()=>void connectFriendChat(el('dabrawlChatFriend').value);
+      el('dabrawlChatForm').onsubmit=async e=>{e.preventDefault();const input=el('dabrawlChatInput'),message=input.value.trim();if(!message||chatBusy)return;if(!chatUser){el('dabrawlChatStatus').textContent='Sign in to send messages.';return;}chatBusy=true;try{const payload={text:message.slice(0,240),userId:chatUser.id,name:chatUser.user_metadata?.username||(chatUser.email||'').split('@')[0]||'Player',sentAt:Date.now()};const channel=chatScope==='friend'?chatFriendChannel:(roomChannel||matchChannel);if(!channel){el('dabrawlChatStatus').textContent='Join a party or online match first for party chat.';return;}const result=await channel.send({type:'broadcast',event:'chat-message',payload});if(result!=='ok'&&result?.status!=='ok')el('dabrawlChatStatus').textContent='Chat could not send. Check your connection.';else{chatAppend(payload.name+': '+payload.text,'#f8fafc');input.value='';}}catch(err){el('dabrawlChatStatus').textContent='Chat error: '+(err?.message||'connection failed');}finally{chatBusy=false;}};
+      void db.auth.getUser().then(({data})=>{chatUser=data?.user||null;});
+    }
+    function chatAppend(text,color='#e2e8f0'){const log=el('dabrawlChatLog');if(!log)return;const line=document.createElement('div');line.textContent=String(text).slice(0,300);line.style.color=color;line.style.padding='3px 0';log.appendChild(line);while(log.children.length>80)log.firstChild.remove();log.scrollTop=log.scrollHeight;}
+    function receiveChat(payload){if(!payload||typeof payload.text!=='string'||payload.text.length>240||payload.userId===chatUser?.id)return;chatAppend(String(payload.name||'Friend').slice(0,28)+': '+payload.text);}
+    async function loadChatFriends(){
+      if(!chatUser){const auth=await db.auth.getUser();chatUser=auth.data?.user||null;}if(!chatUser){el('dabrawlChatStatus').textContent='Sign in to chat with friends.';return;}
+      const select=el('dabrawlChatFriend');if(!select)return;
+      const {data:rows,error}=await db.from('dabrawl_friend_requests').select('requester_id,addressee_id,status').or('requester_id.eq.'+chatUser.id+',addressee_id.eq.'+chatUser.id).eq('status','accepted');
+      if(error){el('dabrawlChatStatus').textContent='Could not load friends: '+error.message;return;}
+      const ids=[...new Set((rows||[]).map(r=>r.requester_id===chatUser.id?r.addressee_id:r.requester_id))];
+      const {data:profiles}=ids.length?await db.from('dabrawl_player_profiles').select('user_id,username').in('user_id',ids):{data:[]};
+      const selected=select.value;select.innerHTML='<option value="">Choose a friend…</option>';
+      for(const id of ids){const opt=document.createElement('option');opt.value=id;opt.textContent=(profiles||[]).find(p=>p.user_id===id)?.username||'Friend';opt.dataset.name=opt.textContent;select.appendChild(opt);}
+      if(selected&&ids.includes(selected))select.value=selected;
+      if(select.value)await connectFriendChat(select.value);else if(!ids.length)el('dabrawlChatStatus').textContent='No accepted friends yet.';
+    }
+    async function connectFriendChat(friendId){
+      if(chatFriendChannel){const old=chatFriendChannel;chatFriendChannel=null;try{await db.removeChannel(old);}catch(_){}}
+      chatFriendId=friendId;const option=el('dabrawlChatFriend')?.selectedOptions?.[0];chatFriendName=option?.dataset?.name||option?.textContent||'Friend';el('dabrawlChatLog').replaceChildren();
+      if(!friendId||!chatUser){el('dabrawlChatStatus').textContent='Choose an accepted friend to start a DM.';return;}
+      const pair=[chatUser.id,friendId].sort().join('-');chatFriendChannel=db.channel('dabrawl-friend-chat-'+pair,{config:{broadcast:{self:false}}}).on('broadcast',{event:'chat-message'},({payload})=>receiveChat(payload));
+      const result=await chatFriendChannel.subscribe();el('dabrawlChatStatus').textContent=result==='SUBSCRIBED'?'Direct chat with '+chatFriendName:'Connecting to friend chat…';
+    }
+    ensureChatUI();
     function status(msg, bad=false){ const n=el('onlineStatus'); n.textContent=msg; n.style.color=bad?'#fca5a5':'#cbd5e1'; }
     const PROTOTYPE_WS_URL = 'wss://xqbfjpjdweibdbpeefze.supabase.co/functions/v1/dabrawl-match-prototype';
     async function updateAuthUI(){
@@ -3409,6 +3446,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         .on('postgres_changes',{event:'*',schema:'public',table:'game_rooms',filter:'id=eq.'+currentRoom.id},()=>{void refreshRoom();})
         .on('presence',{event:'sync'},()=>{void refreshRoom();})
         .on('broadcast',{event:'room-refresh'},()=>{void refreshRoom();})
+        .on('broadcast',{event:'chat-message'},({payload})=>receiveChat(payload))
         .on('broadcast',{event:'brawler-showcase'},({payload})=>{if(payload?.brawler&&payload?.userId)setTimeout(()=>window.DaBrawlGame?.playRoomMemberShowcase?.(payload.userId,payload.brawler),250);})
         .on('broadcast',{event:'room-disbanded'},({payload})=>{
           if(!currentRoom||payload?.roomId!==currentRoom.id)return;
@@ -3563,6 +3601,7 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       matchChannel.on('broadcast',{event:'match-state'},({payload})=>{if(Array.isArray(payload?.players))for(const player of payload.players){window.DaBrawlGame?.applyRemoteState(player);seenAt.set(player.id,Date.now());}if(payload?.hostId===activeMatchHostId&&payload?.world)window.DaBrawlGame?.applyRemoteWorldState?.(payload.world);});
       matchChannel.on('broadcast',{event:'player-state'},({payload})=>{if(payload?.player) {window.DaBrawlGame?.applyRemoteState(payload.player);seenAt.set(payload.player.id,Date.now());}});
       matchChannel.on('broadcast',{event:'player-action'},({payload})=>window.DaBrawlGame?.applyRemoteAction(payload));
+      matchChannel.on('broadcast',{event:'chat-message'},({payload})=>receiveChat(payload));
       matchChannel.on('broadcast',{event:'match-ended'},({payload})=>{ if(!payload || activeMatchId!==matchId) return; window.DaBrawlGame?.applyMatchResult?.(payload); });
       matchChannel.on('broadcast',{event:'match-control'},async({payload})=>{
         if(!payload || activeMatchId!==matchId || payload.hostId!==activeMatchHostId) return;
