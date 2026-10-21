@@ -892,13 +892,12 @@
         keyBinds[waitingForBind]=next;waitingForBind=null;$('keybindHint').textContent='Controls saved on this device.';saveKeyBinds();return;
       }
       const key=e.key.toLowerCase();
-      const chatPanel=el('dabrawlChatPanel');
-      if(chatPanel&&chatPanel.style.display==='flex'){
-        // While chat is open, suppress every gameplay control and clear held inputs.
-        Object.keys(keys).forEach(k=>keys[k]=0);
-        mdown=false;
-        return;
-      }
+      const chatPanel=el('dabrawlChatPanel'),chatInput=el('dabrawlChatInput');
+      const typingInChat=!!(chatPanel&&chatPanel.style.display==='flex'&&
+        (chatPanel.contains(e.target)||document.activeElement===chatInput));
+      // Keep movement working while the chat panel is merely visible. Only suppress
+      // gameplay when keyboard input is actually directed into the chat UI.
+      if(typingInChat){Object.keys(keys).forEach(k=>keys[k]=0);mdown=false;return;}
       keys[key] = 1;
       if(scr !== 'game') return;
       if(e.key.toLowerCase() === keyBinds.super){ e.preventDefault(); sup(me); }
