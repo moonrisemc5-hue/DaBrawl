@@ -903,8 +903,9 @@
       if(e.key.toLowerCase() === keyBinds.super){ e.preventDefault(); sup(me); }
       if(e.key.toLowerCase() === keyBinds.gadget) { e.preventDefault(); gadget(me); }
       if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); if(autoAimTarget(me)){mdown=true;tryFire(me);} }
-    });
-    addEventListener('keyup', e => {keys[e.key.toLowerCase()] = 0;if(e.key.toLowerCase()===keyBinds.autoAim)mdown=false;});
+    }, true);
+    // Capture key release even if a HUD/overlay stops the bubbling event.
+    addEventListener('keyup', e => {keys[e.key.toLowerCase()] = 0;if(e.key.toLowerCase()===keyBinds.autoAim)mdown=false;}, true);
     addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive&&me.smokeTimer<=0&&me.ramuShieldTimer<=0){const wx=mx/Math.max(.01,z)+cam.x,wy=my/Math.max(.01,z)+cam.y;me.a=Math.atan2(wy-me.y,wx-me.x);me.autoAimTimer=0;me.autoAimTarget=null;} });
     cv.addEventListener('mousedown', e => { if(el('dabrawlChatPanel')?.style.display==='flex'){mdown=false;return;} touch = false; if(e.button===mouseSuperBindValue()){e.preventDefault();if(me&&me.tf<=0)sup(me);} else if(e.button===mouseAttackBindValue()){e.preventDefault();mdown=true;tryFire(me);} });
     cv.addEventListener('mouseup', e => { if(e.button===mouseAttackBindValue()) mdown = false; });
