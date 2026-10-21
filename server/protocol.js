@@ -42,7 +42,7 @@ export function parseClientMessage(raw) {
       if (message.aim !== undefined && !Number.isFinite(message.aim)) throw new Error("Invalid aim");
       break;
     case "action":
-      onlyKeys("type", "action", "angle", "form", "ramuMode", "clientSentAt", "targetId", "droneX", "droneY");
+      onlyKeys("type", "action", "angle", "form", "ramuMode", "clientSentAt", "targetId", "droneX", "droneY", "systemCrash");
       if (!["fire", "super", "transform", "gadget", "kame-start", "kame-release", "ramu-flame-start", "ramu-flame-stop", "add-bot", "ping"].includes(message.action)) throw new Error("Unsupported action");
       if (message.angle !== undefined && !Number.isFinite(message.angle)) throw new Error("Invalid angle");
       if (message.form !== undefined && !Number.isFinite(message.form)) throw new Error("Invalid form");
@@ -52,6 +52,7 @@ export function parseClientMessage(raw) {
       if (message.droneX !== undefined && !Number.isFinite(message.droneX)) throw new Error("Invalid drone X");
       if (message.droneY !== undefined && !Number.isFinite(message.droneY)) throw new Error("Invalid drone Y");
       if (message.targetId !== undefined && typeof message.targetId !== "string") throw new Error("Invalid target ID");
+      if (message.systemCrash !== undefined && typeof message.systemCrash !== "boolean") throw new Error("Invalid System Crash flag");
       break;
     case "ping":
       onlyKeys("type", "clientSentAt");
