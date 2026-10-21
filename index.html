@@ -893,10 +893,12 @@
       }
       const key=e.key.toLowerCase();
       const chatPanel=el('dabrawlChatPanel'),chatInput=el('dabrawlChatInput');
-      const typingInChat=!!(chatInput&&document.activeElement===chatInput&&chatPanel&&chatPanel.style.display==='flex');
-      // Keep movement working while the chat panel is merely visible. Only suppress
-      // gameplay when keyboard input is actually directed into the chat UI.
-      if(typingInChat){Object.keys(keys).forEach(k=>keys[k]=0);mdown=false;return;}
+      const movementKey=[keyBinds.up,keyBinds.down,keyBinds.left,keyBinds.right,'arrowup','arrowdown','arrowleft','arrowright'].includes(key);
+      const chatHasFocus=!!(chatInput&&document.activeElement===chatInput&&chatPanel&&chatPanel.style.display==='flex');
+      // Movement keys always control the active match, even if chat accidentally
+      // retained focus. Other typing stays in chat and must not trigger abilities.
+      if(chatHasFocus&&!movementKey){Object.keys(keys).forEach(k=>keys[k]=0);mdown=false;return;}
+      if(chatHasFocus&&movementKey)chatInput.blur();
       keys[key] = 1;
       if(scr !== 'game') return;
       if(e.key.toLowerCase() === keyBinds.super){ e.preventDefault(); sup(me); }
@@ -908,8 +910,25 @@
     // Clicking back into the arena releases chat focus, restoring WASD immediately.
     cv.addEventListener('pointerdown',()=>{const input=el('dabrawlChatInput');if(input&&document.activeElement===input)input.blur();},true);
     addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive&&me.smokeTimer<=0&&me.ramuShieldTimer<=0){const wx=mx/Math.max(.01,z)+cam.x,wy=my/Math.max(.01,z)+cam.y;me.a=Math.atan2(wy-me.y,wx-me.x);me.autoAimTimer=0;me.autoAimTarget=null;} });
-    cv.addEventListener('mousedown', e => { const chatInput=el('dabrawlChatInput'); if(chatInput&&document.activeElement===chatInput){chatInput.blur();} touch = false; if(e.button===mouseSuperBindValue()){e.preventDefault();if(me&&me.tf<=0)sup(me);} else if(e.button===mouseAttackBindValue()){e.preventDefault();mdown=true;tryFire(me);} });
-    cv.addEventListener('mouseup', e => { if(e.button===mouseAttackBindValue()) mdown = false; });
+    // Capture arena pointer input at window level so HUD layers cannot swallow it.
+    addEventListener('pointerdown', e => {
+      if(scr!=='game'||!me||!me.alive||stickEditMode)return;
+      const rect=cv.getBoundingClientRect();
+      if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)return;
+      const target=e.target;
+      if(target&&target.closest&&target.closest('button,input,textarea,select,[data-no-game-fire]'))return;
+      const chatInput=el('dabrawlChatInput');if(chatInput&&document.activeElement===chatInput)chatInput.blur();
+      if(e.pointerType==='mouse'){
+        touch=false;
+        if(e.button===mouseSuperBindValue()){e.preventDefault();if(me.tf<=0)sup(me);}
+        else if(e.button===mouseAttackBindValue()){e.preventDefault();mdown=true;tryFire(me);}
+      }else if(target===cv){
+        touch=true;mdown=true;tryFire(me);
+      }
+    },true);
+    addEventListener('pointerup', e => { if(e.pointerType==='mouse'&&e.button===mouseAttackBindValue())mdown=false; else if(e.pointerType!=='mouse')mdown=false; },true);
+    addEventListener('blur',()=>{Object.keys(keys).forEach(k=>keys[k]=0);mdown=false;});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){Object.keys(keys).forEach(k=>keys[k]=0);mdown=false;}});
     cv.addEventListener('contextmenu', e => e.preventDefault());
     const ts = {m:{id:null,ox:0,oy:0,x:0,y:0,active:false}, a:{id:null,ox:0,oy:0,x:0,y:0,active:false}, s:{id:null,ox:0,oy:0,x:0,y:0,active:false}};
     const STICK_POS_KEY='dabrawl_stick_positions_v2';
@@ -2126,8 +2145,18 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         if(glowColor){ g.shadowBlur=0; }
       }
     };
+    const brolySprite = new Image();
+    brolySprite.src = new URL('./broly.svg', document.baseURI).href;
     function drawBroly(p){
-      // Reference-driven Broly model: front-facing, bold black contours, crisp flat shading.
+      // Prefer the polished scalable vector sprite; retain the canvas renderer as a load-failure fallback.
+      if(brolySprite.complete&&brolySprite.naturalWidth){
+        g.save();
+        g.translate(0,Math.sin(p.walk||0)*.6);
+        g.drawImage(brolySprite,-59,-131,118,160);
+        g.restore();
+        return;
+      }
+      // Reference-driven canvas fallback: front-facing, bold black contours, crisp flat shading.
       const bob=1+Math.sin(p.walk||0)*.018, t=performance.now()/1000;
       g.save();g.scale(1.12,bob*1.12);g.lineJoin='round';g.lineCap='round';
       const poly=(pts,fill,stroke='#080911',lw=2.5)=>{
@@ -2177,8 +2206,12 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       poly([[-5,20],[5,20],[5,27],[-5,27]],'#21c64b','#128a36',.7);
       poly([[-3,27],[3,27],[5,29],[-5,29]],'#d66bb5','#8e397f',.7);
       // Face shape with tan highlight, ears and jaw contour.
-      g.fillStyle='#080911';g.beginPath();g.moveTo(-21,-25);g.quadraticCurveTo(-23,-43,-10,-44);g.lineTo(10,-44);g.quadraticCurveTo(23,-42,21,-25);g.lineTo(18,-10);g.quadraticCurveTo(12,-1,0,0);g.quadraticCurveTo(-12,-1,-18,-10);g.closePath();g.fill();
-      g.fillStyle='#e7a565';g.beginPath();g.moveTo(-19,-25);g.quadraticCurveTo(-21,-41,-9,-42);g.lineTo(9,-42);g.quadraticCurveTo(21,-40,19,-25);g.lineTo(16,-12);g.quadraticCurveTo(10,-3,0,-3);g.quadraticCurveTo(-10,-3,-16,-12);g.closePath();g.fill();
+      g.fillStyle='#080911';g.beginPath();g.moveTo(-22,-25);g.quadraticCurveTo(-24,-43,-10,-45);g.lineTo(10,-45);g.quadraticCurveTo(24,-43,22,-25);g.lineTo(18,-11);g.quadraticCurveTo(12,-1,0,1);g.quadraticCurveTo(-12,-1,-18,-11);g.closePath();g.fill();
+      const skin=g.createLinearGradient(-5,-44,7,1);skin.addColorStop(0,'#ffd08a');skin.addColorStop(.48,'#efb16e');skin.addColorStop(1,'#d99354');
+      g.fillStyle=skin;g.beginPath();g.moveTo(-19.5,-25);g.quadraticCurveTo(-21.5,-41.5,-9,-42.5);g.lineTo(9,-42.5);g.quadraticCurveTo(21.5,-41.5,19.5,-25);g.lineTo(16,-12.5);g.quadraticCurveTo(10,-3,0,-3);g.quadraticCurveTo(-10,-3,-16,-12.5);g.closePath();g.fill();
+      // Matched cheek planes and a small nose bridge keep the face readable at game scale.
+      mirror([[11,-16],[15,-19],[14,-11],[10,-9]],'#f8c17e',null);
+      g.fillStyle='#c9854d';g.beginPath();g.moveTo(-1,-19);g.lineTo(1,-19);g.lineTo(2,-14);g.lineTo(0,-13);g.lineTo(-2,-14);g.closePath();g.fill();
       // Subtle warm cheek highlights, mirrored.
       mirror([[10,-13],[14,-18],[15,-12],[11,-9]],'#f4bd7b',null);
       for(const side of [-1,1]){
@@ -2198,20 +2231,25 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
       // Tall layered black hair: broad crown, sharp mirrored spikes and slate edge highlights.
       // Rear silhouette is drawn first so no spike looks pasted on top.
       const hairLocks=[
-        [[-22,-32],[-43,-46],[-31,-27]],
-        [[-19,-34],[-38,-63],[-23,-43]],
-        [[-13,-36],[-29,-76],[-12,-48]],
-        [[-8,-38],[-16,-91],[-3,-48]],
-        [[-2,-39],[-4,-103],[5,-47]],
-        [[2,-39],[13,-88],[11,-45]],
-        [[8,-37],[25,-80],[17,-44]],
-        [[14,-34],[39,-62],[23,-39]],
-        [[20,-30],[47,-43],[28,-33]],
-        [[-24,-28],[-51,-29],[-30,-20]]
+        [[0,-38],[-3,-106],[6,-45]],
+        [[-4,-38],[-17,-92],[-6,-47]],
+        [[-8,-37],[-29,-78],[-13,-47]],
+        [[-13,-35],[-41,-62],[-20,-43]],
+        [[-18,-32],[-51,-43],[-25,-35]],
+        [[-22,-28],[-50,-26],[-28,-19]],
+        [[-6,-39],[-8,-67],[1,-46]]
       ];
       for(const pts of hairLocks){
-        poly(pts,'#030408','#000',2);
-        g.strokeStyle='#34394b';g.lineWidth=1.15;g.beginPath();g.moveTo(pts[0][0]+1,pts[0][1]+1);g.lineTo(pts[1][0]+1,pts[1][1]+1);g.stroke();
+        for(const side of [-1,1]){
+          const lock=pts.map(([x,y])=>[x*side,y]);
+          poly(lock,'#030408','#000',2);
+          // Narrow cool slate facet on each spike; mirrored so the silhouette stays balanced.
+          poly([[lock[0][0]+side*1.1,lock[0][1]+1],[lock[1][0]+side*1.2,lock[1][1]+2],[lock[2][0]-side*.5,lock[2][1]+1]],'#242738',null);
+          g.strokeStyle='#596078';g.lineWidth=1.05;g.beginPath();
+          g.moveTo(lock[0][0]+side*1.3,lock[0][1]+1);
+          g.lineTo(lock[1][0]+side*1.1,lock[1][1]+2);
+          g.stroke();
+        }
       }
       // Dense jagged fringe across forehead; alternating long pointed locks.
       poly([[-23,-35],[-19,-45],[-13,-35],[-8,-44],[-3,-34],[2,-45],[7,-34],[13,-42],[18,-33],[22,-37],[18,-24],[12,-20],[7,-26],[2,-20],[-3,-26],[-8,-20],[-14,-25],[-19,-23]],'#030408','#000',2);
@@ -2234,12 +2272,14 @@ function ramuFireTrailVisual(x,y,angle=-Math.PI/2,scale=1,count=18){
         g.fillStyle='#4a3024';g.beginPath();g.arc(x,y,r-1,0,Math.PI*2);g.fill();
         g.fillStyle='#d99c61';g.beginPath();g.arc(x,y,r-3.5,0,Math.PI*2);g.fill();
         g.fillStyle='#f4bd7b';g.beginPath();g.arc(x-2,y-2,r*.57,0,Math.PI*2);g.fill();
-        g.fillStyle='#95613f';g.fillRect(x-r*.36,y-r*.22,r*.62,2.1);
-        g.fillStyle='#bd8452';g.fillRect(x-r*.36,y-r*.08,r*.62,1.4);
-        g.fillStyle='#95613f';g.fillRect(x-r*.30,y+r*.12,r*.54,2.1);
+        g.fillStyle='#95613f';g.fillRect(x-r*.34,y-r*.19,r*.68,2.05);
+        g.fillStyle='#f0b77a';g.fillRect(x-r*.34,y-r*.23,r*.68,.75);
+        g.fillStyle='#bd8452';g.fillRect(x-r*.34,y-r*.025,r*.68,1.55);
+        g.fillStyle='#95613f';g.fillRect(x-r*.29,y+r*.14,r*.58,1.9);
+        g.fillStyle='#e5aa6e';g.fillRect(x-r*.29,y+r*.11,r*.58,.7);
         g.strokeStyle='#e9b477';g.lineWidth=.8;g.beginPath();g.arc(x,y,r-4.4,Math.PI*1.1,Math.PI*1.85);g.stroke();
       };
-      weight(23,-28,12);weight(23,12,12);
+      weight(29,-29,9.5);weight(29,12,10);
       // Aura shards in the foreground overlap the lower arms like the reference image.
       for(let i=0;i<10;i++){
         const side=i%2?1:-1, x=side*(13+(i%4)*3), y=9+(i%5)*2;
