@@ -1,103 +1,103 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 270" width="200" height="270">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
 <defs>
-  <linearGradient id="skin" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="#ffd18a"/><stop offset=".48" stop-color="#efb16e"/><stop offset="1" stop-color="#d78e50"/></linearGradient>
-  <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#45317c"/><stop offset=".48" stop-color="#30205f"/><stop offset="1" stop-color="#1e163e"/></linearGradient>
-  <linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#9bff4c"/><stop offset=".55" stop-color="#31df3d"/><stop offset="1" stop-color="#0e9b38"/></linearGradient>
-  <linearGradient id="armor" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#faffff"/><stop offset="1" stop-color="#c8d5e5"/></linearGradient>
-  <linearGradient id="weight" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffcc86"/><stop offset=".55" stop-color="#e7a563"/><stop offset="1" stop-color="#c68148"/></linearGradient>
-  <linearGradient id="hairFacet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#66708c"/><stop offset=".45" stop-color="#292d40"/><stop offset="1" stop-color="#0a0b12"/></linearGradient>
+ <linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#171b2b"/><stop offset=".48" stop-color="#03050c"/><stop offset="1" stop-color="#000106"/></linearGradient>
+ <linearGradient id="facet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#66708e"/><stop offset=".45" stop-color="#252b40"/><stop offset="1" stop-color="#070912"/></linearGradient>
+ <linearGradient id="skin" x1="0" y1="0" x2=".2" y2="1"><stop stop-color="#ffd28b"/><stop offset=".55" stop-color="#f2b66f"/><stop offset="1" stop-color="#c98245"/></linearGradient>
+ <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#3c2a79"/><stop offset=".55" stop-color="#21164e"/><stop offset="1" stop-color="#110e32"/></linearGradient>
+ <linearGradient id="lime" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d0ff56"/><stop offset=".5" stop-color="#63f33a"/><stop offset="1" stop-color="#20bd32"/></linearGradient>
+ <linearGradient id="armor" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#c7d5e8"/></linearGradient>
+ <linearGradient id="weight" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffd18d"/><stop offset=".55" stop-color="#e5a363"/><stop offset="1" stop-color="#bd7946"/></linearGradient>
+ <radialGradient id="aura"><stop stop-color="#7dff3e" stop-opacity=".5"/><stop offset="1" stop-color="#42ff29" stop-opacity="0"/></radialGradient>
 </defs>
-<!-- rear aura, mirrored shards -->
-<g stroke-linejoin="miter" stroke-linecap="round">
- <g fill="#0b562b" stroke="#092f20" stroke-width="2">
-  <path d="M83 147 28 119 47 146 8 145 31 171 10 180 45 194 31 213 69 213 84 233 101 202Z"/>
-  <path d="M117 147 172 119 153 146 192 145 169 171 190 180 155 194 169 213 131 213 116 233 99 202Z"/>
- </g>
- <g fill="#24d83a" stroke="#13842f" stroke-width="1.6">
-  <path d="M80 158 29 140 48 160 21 166 53 182 38 194 72 195 85 218 99 190Z"/>
-  <path d="M120 158 171 140 152 160 179 166 147 182 162 194 128 195 115 218 101 190Z"/>
- </g>
- <g fill="#9dff43" stroke="#50c52f" stroke-width="1.2">
-  <path d="M76 174 43 157 58 176 39 179 63 192 55 201 79 201 91 220 99 198Z"/>
-  <path d="M124 174 157 157 142 176 161 179 137 192 145 201 121 201 109 220 101 198Z"/>
-  <path d="M64 194 86 204 77 215 94 225 76 226 70 215Z"/>
-  <path d="M136 194 114 204 123 215 106 225 124 226 130 215Z"/>
- </g>
+<!-- bright jagged aura behind the whole silhouette -->
+<ellipse cx="150" cy="263" rx="142" ry="26" fill="#243da8" opacity=".34"/>
+<ellipse cx="150" cy="249" rx="126" ry="36" fill="url(#aura)"/>
+<g stroke-linejoin="miter">
+ <path d="M58 205 8 188 40 181 17 157 53 167 34 139 69 157 66 124 94 151 110 184Z" fill="#1b7834"/>
+ <path d="M242 205 292 188 260 181 283 157 247 167 266 139 231 157 234 124 206 151 190 184Z" fill="#1b7834"/>
+ <path d="M52 243 12 224 38 220 21 204 55 211 40 191 75 204 85 229Z" fill="#31d73b"/>
+ <path d="M248 243 288 224 262 220 279 204 245 211 260 191 225 204 215 229Z" fill="#31d73b"/>
+ <path d="M57 261 20 244 47 242 28 225 63 231 48 211 82 224 101 247Z" fill="#a5ff42"/>
+ <path d="M243 261 280 244 253 242 272 225 237 231 252 211 218 224 199 247Z" fill="#a5ff42"/>
+ <path d="M72 246 46 224 70 228 56 205 83 216 76 192 101 213 109 241Z" fill="#b6ff45"/>
+ <path d="M228 246 254 224 230 228 244 205 217 216 224 192 199 213 191 241Z" fill="#b6ff45"/>
+ <path d="M88 256 67 239 87 241 76 224 101 231 112 249Z" fill="#42e638"/>
+ <path d="M212 256 233 239 213 241 224 224 199 231 188 249Z" fill="#42e638"/>
 </g>
-<!-- spiky silhouette behind the face -->
-<path d="M42 113 10 79 39 87 24 43 57 69 66 11 88 58 103 2 119 57 146 18 145 71 178 43 164 87 193 78 168 115 150 132 49 132Z" fill="#030408" stroke="#000" stroke-width="4" stroke-linejoin="miter"/>
-<!-- individual mirrored spike facets -->
-<g fill="url(#hairFacet)" stroke="#07080d" stroke-width="2" stroke-linejoin="miter">
- <path d="M44 109 10 79 39 87Z"/><path d="M51 103 24 43 57 69Z"/>
- <path d="M67 91 66 11 88 58Z"/><path d="M91 85 103 5 115 61Z"/>
- <path d="M112 91 146 18 145 71Z"/><path d="M133 103 178 43 164 87Z"/>
- <path d="M151 111 193 78 168 115Z"/>
+<!-- huge black spiked hair silhouette -->
+<path d="M48 147 18 117 52 121 38 63 73 91 69 25 105 64 101 3 132 45 151 -5 170 47 198 4 201 61 237 29 226 86 261 72 239 119 260 119 232 151 70 158Z" fill="url(#hair)" stroke="#03040a" stroke-width="5" stroke-linejoin="miter"/>
+<!-- blue-slate facets on individual spikes -->
+<g fill="url(#facet)" stroke="#080a13" stroke-width="2.5" stroke-linejoin="miter">
+ <path d="M49 145 18 117 52 121Z"/><path d="M62 132 38 63 73 91Z"/><path d="M82 119 69 25 105 64Z"/>
+ <path d="M105 104 101 3 132 45Z"/><path d="M132 91 151 -5 157 65Z"/><path d="M160 92 198 4 177 69Z"/>
+ <path d="M184 107 201 61 237 29 209 94Z"/><path d="M207 120 261 72 239 119Z"/>
 </g>
-<!-- long black front locks -->
-<path d="M37 119 42 82 60 105 69 72 83 103 98 78 111 105 127 77 137 105 155 86 158 117 145 132 129 124 117 135 103 124 91 136 77 125 61 135 48 127Z" fill="#030408" stroke="#000" stroke-width="3" stroke-linejoin="miter"/>
-<g fill="#24283a">
- <path d="M44 96 42 82 60 105Z"/><path d="M70 95 69 72 83 103Z"/><path d="M98 96 98 78 111 105Z"/><path d="M127 95 127 77 137 105Z"/><path d="M155 101 158 117 145 132Z"/>
-</g>
-<g stroke="#606983" stroke-width="2" fill="none" stroke-linecap="round">
- <path d="M43 96 26 83"/><path d="M57 98 45 60"/><path d="M78 93 75 35"/><path d="M101 88 103 18"/><path d="M123 94 136 39"/><path d="M145 101 165 64"/>
-</g>
-<!-- ears and face -->
-<path d="M49 120 Q39 114 39 130 Q40 144 54 143 L61 131Z M151 120 Q161 114 161 130 Q160 144 146 143 L139 131Z" fill="#080911"/>
-<path d="M49 121 Q42 120 44 132 Q46 139 54 138Z M151 121 Q158 120 156 132 Q154 139 146 138Z" fill="#d99457"/>
-<path d="M48 111 Q49 91 72 91 L128 91 Q151 91 152 111 L147 140 Q141 158 124 166 Q100 178 76 166 Q59 158 53 140Z" fill="#080911" stroke="#080911" stroke-width="4"/>
-<path d="M53 112 Q54 96 73 96 L127 96 Q146 96 147 112 L142 138 Q136 154 122 162 Q100 173 78 162 Q64 154 58 138Z" fill="url(#skin)"/>
-<!-- cheek planes -->
-<path d="M58 135 67 148 73 153 64 150Z M142 135 133 148 127 153 136 150Z" fill="#f6bf7d" opacity=".8"/>
-<!-- eyes: bold dark rings, white crescents, pupils and glints -->
-<g>
- <path d="M55 125 Q57 111 75 112 Q91 112 96 128 Q94 147 77 149 Q58 149 55 125Z" fill="#05060a"/>
- <path d="M104 128 Q109 112 125 112 Q143 111 145 125 Q142 149 123 149 Q106 147 104 128Z" fill="#05060a"/>
- <path d="M63 124 Q66 116 77 118 Q87 120 89 132 Q86 143 76 142 Q65 141 63 124Z" fill="#fff"/>
- <path d="M111 132 Q113 120 124 118 Q135 116 137 124 Q135 141 124 142 Q114 143 111 132Z" fill="#fff"/>
- <ellipse cx="80" cy="128" rx="7" ry="9" fill="#080911"/><ellipse cx="120" cy="128" rx="7" ry="9" fill="#080911"/>
- <circle cx="83" cy="124" r="2.5" fill="#fff"/><circle cx="123" cy="124" r="2.5" fill="#fff"/>
-</g>
-<!-- angry, mirrored brows -->
-<path d="M54 113 72 107 91 115 94 121 75 116 56 119Z M146 113 128 107 109 115 106 121 125 116 144 119Z" fill="#05060a"/>
-<!-- neck and broad purple torso -->
-<path d="M76 164 124 164 131 187 143 195 151 224 136 239 64 239 49 224 57 195 69 187Z" fill="#080911" stroke="#080911" stroke-width="3"/>
-<path d="M75 166 125 166 130 186 143 196 147 222 133 232 67 232 53 222 57 196 70 186Z" fill="url(#purple)"/>
-<path d="M58 190 75 185 87 205 72 222 56 214Z M142 190 125 185 113 205 128 222 144 214Z" fill="#493582" stroke="#1b1235" stroke-width="2"/>
-<path d="M75 164 125 164 131 180 120 193 80 193 69 180Z" fill="#0b4c27" stroke="#080911" stroke-width="3"/>
-<path d="M79 167 121 167 125 179 117 187 83 187 75 179Z" fill="url(#green)"/>
-<!-- shoulder armor, white rim and green plates -->
-<path d="M66 177 32 164 7 158 15 184 38 204 63 202 72 190Z M134 177 168 164 193 158 185 184 162 204 137 202 128 190Z" fill="#080911" stroke="#080911" stroke-width="3"/>
-<path d="M64 177 34 169 15 165 22 182 40 197 62 196 69 188Z M136 177 166 169 185 165 178 182 160 197 138 196 131 188Z" fill="url(#armor)" stroke="#fff" stroke-width="1.5"/>
-<path d="M61 178 35 172 22 169 28 181 42 191 61 191 66 186Z M139 178 165 172 178 169 172 181 158 191 139 191 134 186Z" fill="#14c94a" stroke="#087b35" stroke-width="1.5"/>
-<!-- lower arms and aura shards -->
-<path d="M57 196 45 206 55 218 67 216 72 207Z M143 196 155 206 145 218 133 216 128 207Z" fill="#2b1b51" stroke="#080911" stroke-width="3"/>
-<g fill="#a3ff42" stroke="#4fc52e" stroke-width="1.5" stroke-linejoin="miter">
- <path d="M61 206 36 201 48 216 27 218 50 234 64 232 70 221Z"/>
- <path d="M139 206 164 201 152 216 173 218 150 234 136 232 130 221Z"/>
- <path d="M74 217 53 224 67 240 80 238Z M126 217 147 224 133 240 120 238Z"/>
- <path d="M49 226 61 231 57 243 72 248 53 248 42 237Z M151 226 139 231 143 243 128 248 147 248 158 237Z"/>
+<!-- long forward locks framing the forehead -->
+<path d="M65 76 95 99 109 125 95 119 105 145 82 132 72 110Z" fill="#05060d" stroke="#010208" stroke-width="3"/>
+<path d="M107 54 132 83 131 114 120 103 116 128 101 105Z" fill="#080a13" stroke="#02030a" stroke-width="3"/>
+<path d="M151 36 164 79 156 108 148 94 140 118 136 83Z" fill="#080a13" stroke="#02030a" stroke-width="3"/>
+<path d="M196 57 189 94 172 116 176 91 164 108 172 76Z" fill="#05060d" stroke="#010208" stroke-width="3"/>
+<path d="M225 86 213 120 194 135 201 112 187 126 198 96Z" fill="#080a13" stroke="#010208" stroke-width="3"/>
+<!-- armor and shoulders behind head -->
+<path d="M20 153 77 156 93 181 65 196 45 181Z" fill="url(#armor)" stroke="#070914" stroke-width="4"/>
+<path d="M29 157 76 160 86 179 66 188 47 176Z" fill="#14c84a" stroke="#087c36" stroke-width="2"/>
+<path d="M280 153 223 156 207 181 235 196 255 181Z" fill="url(#armor)" stroke="#070914" stroke-width="4"/>
+<path d="M271 157 224 160 214 179 234 188 253 176Z" fill="#14c84a" stroke="#087c36" stroke-width="2"/>
+<!-- torso and arms -->
+<path d="M72 176 95 164 120 174 180 174 205 164 228 178 220 219 198 247 102 247 80 219Z" fill="url(#purple)" stroke="#080714" stroke-width="5"/>
+<path d="M72 177 93 180 108 207 94 226 77 212 64 191Z" fill="#2e206a" stroke="#080714" stroke-width="4"/>
+<path d="M228 177 207 180 192 207 206 226 223 212 236 191Z" fill="#2e206a" stroke="#080714" stroke-width="4"/>
+<!-- green collar -->
+<path d="M116 171 184 171 173 197 127 197Z" fill="#091b18" stroke="#080714" stroke-width="4"/>
+<path d="M124 177 176 177 169 191 131 191Z" fill="#75ff3d" stroke="#188b35" stroke-width="2"/>
+<!-- face silhouette -->
+<path d="M91 108 109 91 143 85 174 91 199 108 204 141 194 166 177 183 151 191 125 184 104 169 93 147Z" fill="#05060b" stroke="#05060b" stroke-width="6"/>
+<path d="M99 113 115 99 143 94 172 99 192 114 195 140 186 160 171 174 150 181 128 175 111 161 101 142Z" fill="url(#skin)" stroke="#11101a" stroke-width="3"/>
+<!-- ear shapes -->
+<path d="M99 133 88 126 91 145 105 153Z" fill="#e6a15d" stroke="#0a0911" stroke-width="3"/>
+<path d="M196 132 208 126 205 145 192 153Z" fill="#e6a15d" stroke="#0a0911" stroke-width="3"/>
+<!-- brows, heavy and sharply angled -->
+<path d="M104 119 122 111 142 119 137 128 120 124 109 130Z" fill="#05050a"/>
+<path d="M159 119 177 111 193 120 188 130 174 124 163 128Z" fill="#05050a"/>
+<!-- oversized eyes with thick round outlines -->
+<ellipse cx="126" cy="139" rx="24" ry="22" fill="#fff" stroke="#03040a" stroke-width="6"/>
+<ellipse cx="173" cy="139" rx="24" ry="22" fill="#fff" stroke="#03040a" stroke-width="6"/>
+<ellipse cx="131" cy="140" rx="13" ry="15" fill="#090b10"/>
+<ellipse cx="168" cy="140" rx="13" ry="15" fill="#090b10"/>
+<circle cx="135" cy="134" r="5.5" fill="#fff"/>
+<circle cx="172" cy="134" r="5.5" fill="#fff"/>
+<!-- hairline locks over the brows -->
+<path d="M100 96 112 111 109 126 100 119 93 106Z" fill="#03040a"/>
+<path d="M133 89 141 108 137 124 129 113Z" fill="#03040a"/>
+<path d="M166 90 160 110 165 124 173 109Z" fill="#03040a"/>
+<path d="M190 101 181 116 186 127 195 113Z" fill="#03040a"/>
+<!-- nose and small determined mouth -->
+<path d="M149 143 144 155 151 158 157 155" fill="none" stroke="#b97742" stroke-width="3" stroke-linecap="round"/>
+<path d="M132 165 Q151 172 169 164" fill="none" stroke="#7b3f2b" stroke-width="3" stroke-linecap="round"/>
+<!-- chunky forearms and bright lime energy gauntlets -->
+<path d="M66 193 83 202 97 222 83 237 68 223 52 207Z" fill="#342477" stroke="#080714" stroke-width="4"/>
+<path d="M234 193 217 202 203 222 217 237 232 223 248 207Z" fill="#342477" stroke="#080714" stroke-width="4"/>
+<g stroke="#268d2e" stroke-width="2" stroke-linejoin="miter">
+ <path d="M44 208 65 202 81 218 71 235 53 227 39 217Z" fill="#67ed38"/>
+ <path d="M55 226 76 214 92 230 80 246 62 240Z" fill="#b6ff45"/>
+ <path d="M256 208 235 202 219 218 229 235 247 227 261 217Z" fill="#67ed38"/>
+ <path d="M245 226 224 214 208 230 220 246 238 240Z" fill="#b6ff45"/>
 </g>
 <!-- waist and white buckle -->
-<path d="M67 225 133 225 137 245 63 245Z" fill="#11131e" stroke="#080911" stroke-width="3"/>
-<path d="M81 228 119 228 119 243 81 243Z" fill="#f8faff" stroke="#fff" stroke-width="2"/>
-<path d="M89 230 111 230 111 249 89 249Z" fill="#20c84a" stroke="#087a35" stroke-width="1.5"/>
-<path d="M93 249 107 249 113 255 87 255Z" fill="#c85ba9" stroke="#81346e" stroke-width="1.5"/>
-<!-- wrist weights on the character's right, with dark rim and engraved bars -->
-<g transform="translate(151 87)">
- <circle r="23" fill="#211611" stroke="#09090d" stroke-width="3"/>
- <circle r="18.5" fill="url(#weight)"/>
- <circle cx="-3" cy="-4" r="10.5" fill="#f5bd7a" opacity=".5"/>
- <path d="M-9 -4 H8 M-9 1 H8" stroke="#99613e" stroke-width="3.2" stroke-linecap="round"/>
- <path d="M-8 5 H7" stroke="#bd8452" stroke-width="2" stroke-linecap="round"/>
+<path d="M111 231 189 231 183 258 117 258Z" fill="#17113e" stroke="#080714" stroke-width="4"/>
+<path d="M132 235 168 235 168 254 132 254Z" fill="none" stroke="#f6f7ff" stroke-width="6" stroke-linejoin="round"/>
+<path d="M139 258 161 258 156 269 144 269Z" fill="#25d64b"/>
+<!-- round wooden weights in front of each side, matching the reference -->
+<g transform="rotate(-10 225 111)">
+ <circle cx="225" cy="111" r="29" fill="#080914" opacity=".65" transform="translate(3 4)"/>
+ <circle cx="225" cy="111" r="27" fill="url(#weight)" stroke="#070914" stroke-width="5"/>
+ <rect x="208" y="101" width="34" height="5" rx="2.5" fill="#a76b40" opacity=".8"/>
+ <rect x="210" y="112" width="30" height="5" rx="2.5" fill="#a76b40" opacity=".8"/>
 </g>
-<g transform="translate(149 180)">
- <circle r="22" fill="#211611" stroke="#09090d" stroke-width="3"/>
- <circle r="17.5" fill="url(#weight)"/>
- <circle cx="-3" cy="-4" r="10" fill="#f5bd7a" opacity=".48"/>
- <path d="M-8 -4 H8 M-8 1 H8" stroke="#99613e" stroke-width="3" stroke-linecap="round"/>
- <path d="M-7 5 H7" stroke="#bd8452" stroke-width="2" stroke-linecap="round"/>
+<g transform="rotate(-10 226 204)">
+ <circle cx="226" cy="204" r="28" fill="#080914" opacity=".65" transform="translate(3 4)"/>
+ <circle cx="226" cy="204" r="26" fill="url(#weight)" stroke="#070914" stroke-width="5"/>
+ <rect x="210" y="194" width="32" height="5" rx="2.5" fill="#a76b40" opacity=".8"/>
+ <rect x="212" y="205" width="28" height="5" rx="2.5" fill="#a76b40" opacity=".8"/>
 </g>
-<!-- rivets and green glints -->
-<circle cx="67" cy="209" r="3" fill="#fff" stroke="#d9e4f4" stroke-width="1"/>
-<g fill="#d0ff5a" opacity=".9"><path d="M26 202 30 210 26 218 22 210Z"/><path d="M174 202 178 210 174 218 170 210Z"/><path d="M43 245 47 251 43 257 39 251Z"/><path d="M157 245 161 251 157 257 153 251Z"/></g>
 </svg>
