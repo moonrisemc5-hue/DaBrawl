@@ -892,8 +892,12 @@
         keyBinds[waitingForBind]=next;waitingForBind=null;$('keybindHint').textContent='Controls saved on this device.';saveKeyBinds();return;
       }
       const key=e.key.toLowerCase();
+      // Normalize physical movement keys as well as the displayed key name. This
+      // keeps movement reliable across keyboard layouts and browsers.
+      const physicalKey = ({KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',ArrowUp:'arrowup',ArrowDown:'arrowdown',ArrowLeft:'arrowleft',ArrowRight:'arrowright'})[e.code];
+      if(physicalKey) keys[physicalKey]=1;
       const chatPanel=el('dabrawlChatPanel'),chatInput=el('dabrawlChatInput');
-      const movementKey=[keyBinds.up,keyBinds.down,keyBinds.left,keyBinds.right,'arrowup','arrowdown','arrowleft','arrowright'].includes(key);
+      const movementKey=[keyBinds.up,keyBinds.down,keyBinds.left,keyBinds.right,'arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(key)||!!physicalKey;
       const chatHasFocus=!!(chatInput&&document.activeElement===chatInput&&chatPanel&&chatPanel.style.display==='flex');
       // Movement keys always control the active match, even if chat accidentally
       // retained focus. Other typing stays in chat and must not trigger abilities.
@@ -906,7 +910,12 @@
       if(e.key.toLowerCase() === keyBinds.autoAim){ e.preventDefault(); if(autoAimTarget(me)){mdown=true;tryFire(me);} }
     }, true);
     // Capture release events too, so overlays cannot leave movement keys stuck.
-    addEventListener('keyup', e => {keys[e.key.toLowerCase()] = 0;if(e.key.toLowerCase()===keyBinds.autoAim)mdown=false;}, true);
+    addEventListener('keyup', e => {
+      keys[e.key.toLowerCase()] = 0;
+      const physicalKey = ({KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',ArrowUp:'arrowup',ArrowDown:'arrowdown',ArrowLeft:'arrowleft',ArrowRight:'arrowright'})[e.code];
+      if(physicalKey) keys[physicalKey]=0;
+      if(e.key.toLowerCase()===keyBinds.autoAim)mdown=false;
+    }, true);
     // Clicking back into the arena releases chat focus, restoring WASD immediately.
     cv.addEventListener('pointerdown',()=>{const input=el('dabrawlChatInput');if(input&&document.activeElement===input)input.blur();},true);
     addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; touch = false; if(scr==='game'&&me&&me.alive&&me.smokeTimer<=0&&me.ramuShieldTimer<=0){const wx=mx/Math.max(.01,z)+cam.x,wy=my/Math.max(.01,z)+cam.y;me.a=Math.atan2(wy-me.y,wx-me.x);me.autoAimTimer=0;me.autoAimTarget=null;} });
@@ -916,14 +925,24 @@
       const rect=cv.getBoundingClientRect();
       if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)return;
       const target=e.target;
+      // Never turn UI clicks into attacks; otherwise accept arena input even when
+      // a transparent HUD wrapper sits above the canvas.
       if(target&&target.closest&&target.closest('button,input,textarea,select,[data-no-game-fire]'))return;
       const chatInput=el('dabrawlChatInput');if(chatInput&&document.activeElement===chatInput)chatInput.blur();
       if(e.pointerType==='mouse'){
         touch=false;
         if(e.button===mouseSuperBindValue()){e.preventDefault();if(me.tf<=0)sup(me);}
-        else if(e.button===mouseAttackBindValue()){e.preventDefault();mdown=true;tryFire(me);}
-      }else if(target===cv){
-        touch=true;mdown=true;tryFire(me);
+        else if(e.button===mouseAttackBindValue()){
+          e.preventDefault();mdown=true;
+          const wx=e.clientX/Math.max(.01,z)+cam.x,wy=e.clientY/Math.max(.01,z)+cam.y;
+          me.a=Math.atan2(wy-me.y,wx-me.x);
+          tryFire(me);
+        }
+      }else{
+        // Touch controls can be covered by non-interactive HUD layers; don't
+        // require the canvas to be the event target.
+        touch=true;
+        if(target===cv){mdown=true;tryFire(me);}
       }
     },true);
     addEventListener('pointerup', e => { if(e.pointerType==='mouse'&&e.button===mouseAttackBindValue())mdown=false; else if(e.pointerType!=='mouse')mdown=false; },true);
